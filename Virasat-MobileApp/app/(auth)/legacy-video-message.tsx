@@ -1,0 +1,739 @@
+import { useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
+import {
+  CameraView,
+  useCameraPermissions,
+} from 'expo-camera';
+
+import { colors } from '@/src/theme/colors';
+import { typography } from '@/src/theme/typography';
+import {
+  markLegacyCategoryComplete,
+  parseLegacyCategories,
+} from '@/src/utils/legacy-flow';
+import { uploadLegacyItem } from '@/src/api/vault.api';
+import { getApiErrorMessage } from '@/src/utils/api-error';
+
+const MAX_DURATION_SECONDS = 5 * 60;
+
+export default function LegacyVideoMessageScreen() {
+  const params = useLocalSearchParams<{
+    category?: string;
+    categories?: string;
+  }>();
+  const cameraRef = useRef<CameraView>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  const [recording, setRecording] = useState(false);
+  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const startRecording = async () => {
+    if (!cameraRef.current || recording) {
+      return;
+    }
+
+    setError('');
+    setRecordedUri(null);
+    setRecording(true);
+
+    try {
+      const result = await cameraRef.current.recordAsync({
+        maxDuration: MAX_DURATION_SECONDS,
+      });
+
+      if (result?.uri) {
+        setRecordedUri(result.uri);
+      }
+    } catch {
+      setError('We could not record the video. Please try again.');
+    } finally {
+      setRecording(false);
+    }
+  };
+
+  const stopRecording = () => {
+    cameraRef.current?.stopRecording();
+  };
+
+  const handleSave = async () => {
+    if (!recordedUri) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await uploadLegacyItem({
+        type: 'VIDEO',
+        category: 'VIDEOS',
+        title: 'Video message',
+        description: 'A video message was recorded on the owner’s device.',
+        file: {
+          uri: recordedUri,
+          name: `virasat-video-${Date.now()}.mp4`,
+          mimeType: 'video/mp4',
+        },
+      });
+      const category = parseLegacyCategories(params.category)[0];
+
+      if (category) {
+        markLegacyCategoryComplete(category);
+      }
+
+      router.replace({
+        pathname: '/(auth)/legacy-category',
+        params: {
+          categories: params.categories ?? category ?? 'VIDEOS',
+        },
+      });
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'We could not save your video message. Please try again.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRetake = () => {
+    setError('');
+    setRecordedUri(null);
+  };
+
+  if (!permission) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary.forest} />
+          <Text style={styles.loadingText}>
+            Checking camera permission...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={styles.backButton}
+            >
+              <Text style={styles.backArrow}>‹</Text>
+            </Pressable>
+
+            <Text style={styles.brand}>VIRASAT</Text>
+          </View>
+
+          <View style={styles.permissionBlock}>
+            <View style={styles.permissionIcon}>
+              <Text style={styles.permissionSymbol}>▶</Text>
+            </View>
+
+            <Text style={styles.title}>
+              Camera access is needed
+            </Text>
+
+            <Text style={styles.subtitle}>
+              Virasat needs access to your camera so you can
+              record a private video message for your loved ones.
+            </Text>
+
+            <Pressable
+              onPress={requestPermission}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={styles.primaryButtonText}>
+                Allow Camera Access
+              </Text>
+              <Text style={styles.primaryButtonArrow}>→</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Go Back
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => {
+              if (recording) {
+                stopRecording();
+              } else {
+                router.back();
+              }
+            }}
+            hitSlop={12}
+            style={styles.backButton}
+          >
+            <Text style={styles.backArrow}>‹</Text>
+          </Pressable>
+
+          <Text style={styles.brand}>VIRASAT</Text>
+        </View>
+
+        <View style={styles.progressContainer}>
+          {Array.from({ length: 10 }).map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.progressItem,
+                index <= 8 && styles.progressItemActive,
+              ]}
+            />
+          ))}
+        </View>
+
+        <View style={styles.heading}>
+          <Text style={styles.eyebrow}>YOUR DIGITAL LEGACY</Text>
+
+          <Text style={styles.title}>
+            Leave a video message
+          </Text>
+
+          <Text style={styles.subtitle}>
+            Say what you want your loved ones to hear.
+            You can record a message of up to 5 minutes.
+          </Text>
+        </View>
+
+        {!recordedUri ? (
+          <View style={styles.cameraCard}>
+            <View style={styles.cameraFrame}>
+              <CameraView
+                ref={cameraRef}
+                style={styles.camera}
+                facing="front"
+                mode="video"
+              />
+
+              <View style={styles.cameraOverlay}>
+                {recording ? (
+                  <View style={styles.recordingBadge}>
+                    <View style={styles.recordingDot} />
+                    <Text style={styles.recordingText}>
+                      Recording
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.readyBadge}>
+                    <Text style={styles.readyText}>
+                      Ready to record
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.cameraControls}>
+              {recording ? (
+                <Pressable
+                  onPress={stopRecording}
+                  style={({ pressed }) => [
+                    styles.stopButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <View style={styles.stopInner} />
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={startRecording}
+                  style={({ pressed }) => [
+                    styles.recordButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <View style={styles.recordInner} />
+                </Pressable>
+              )}
+            </View>
+
+            <Text style={styles.controlHint}>
+              {recording
+                ? 'Tap the button to stop recording'
+                : 'Tap the button to start recording'}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.previewCard}>
+            <View style={styles.previewIcon}>
+              <Text style={styles.previewSymbol}>✓</Text>
+            </View>
+
+            <Text style={styles.previewTitle}>
+              Video recorded
+            </Text>
+
+            <Text style={styles.previewText}>
+              Your message is ready. Preview/review controls
+              will be connected to encrypted vault storage next.
+            </Text>
+
+            <View style={styles.fileCard}>
+              <Text style={styles.fileIcon}>▶</Text>
+
+              <View style={styles.fileContent}>
+                <Text style={styles.fileTitle}>
+                  Personal video message
+                </Text>
+                <Text style={styles.fileSubtitle}>
+                  Ready to save securely
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={handleRetake}
+              style={styles.retakeButton}
+            >
+              <Text style={styles.retakeText}>
+                Record Again
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {error ? (
+          <Text style={styles.error}>{error}</Text>
+        ) : null}
+
+        <View style={styles.securityCard}>
+          <View style={styles.securityIcon}>
+            <Text style={styles.lock}>🔒</Text>
+          </View>
+
+          <View style={styles.securityContent}>
+            <Text style={styles.securityTitle}>
+              Private by design
+            </Text>
+
+            <Text style={styles.securityText}>
+              Your video is intended for your Virasat vault and
+              should remain private until your release conditions
+              are met.
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          disabled={!recordedUri || saving}
+          onPress={handleSave}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            (!recordedUri || saving) && styles.primaryButtonDisabled,
+            pressed && recordedUri && !saving && styles.buttonPressed,
+          ]}
+        >
+          {saving ? (
+            <ActivityIndicator color={colors.neutral.white} />
+          ) : (
+            <>
+              <Text style={styles.primaryButtonText}>
+                Save Video Message
+              </Text>
+              <Text style={styles.primaryButtonArrow}>→</Text>
+            </>
+          )}
+        </Pressable>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.brand.ivory,
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 35,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 13,
+    color: colors.neutral.textSecondary,
+  },
+  header: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  backArrow: {
+    fontSize: 34,
+    fontWeight: '300',
+    color: colors.primary.deepForest,
+  },
+  brand: {
+    fontFamily: typography.fonts.playfair.bold,
+    fontSize: 18,
+    letterSpacing: 3,
+    color: colors.primary.deepForest,
+  },
+  progressContainer: {
+    marginTop: 27,
+    flexDirection: 'row',
+    gap: 5,
+  },
+  progressItem: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.neutral.border,
+  },
+  progressItemActive: {
+    backgroundColor: colors.primary.forest,
+  },
+  heading: {
+    marginTop: 35,
+    marginBottom: 20,
+  },
+  eyebrow: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: colors.primary.forest,
+  },
+  title: {
+    marginTop: 7,
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: 29,
+    lineHeight: 38,
+    color: colors.primary.deepForest,
+  },
+  subtitle: {
+    marginTop: 8,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 13,
+    lineHeight: 21,
+    color: colors.neutral.textSecondary,
+  },
+  cameraCard: {
+    overflow: 'hidden',
+    borderRadius: 20,
+    backgroundColor: colors.neutral.white,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+  },
+  cameraFrame: {
+    height: 390,
+    backgroundColor: colors.primary.deepForest,
+    overflow: 'hidden',
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraOverlay: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    right: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  recordingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6,63,52,0.82)',
+  },
+  recordingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.semantic.error,
+    marginRight: 7,
+  },
+  recordingText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 10,
+    color: colors.neutral.white,
+  },
+  readyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6,63,52,0.72)',
+  },
+  readyText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 10,
+    color: colors.neutral.white,
+  },
+  cameraControls: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 18,
+  },
+  recordButton: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 4,
+    borderColor: colors.primary.forest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.neutral.white,
+  },
+  recordInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.semantic.error,
+  },
+  stopButton: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 4,
+    borderColor: colors.primary.forest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.neutral.white,
+  },
+  stopInner: {
+    width: 25,
+    height: 25,
+    borderRadius: 6,
+    backgroundColor: colors.semantic.error,
+  },
+  controlHint: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 18,
+    textAlign: 'center',
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: colors.neutral.textSecondary,
+  },
+  previewCard: {
+    padding: 22,
+    borderRadius: 20,
+    backgroundColor: colors.neutral.white,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    alignItems: 'center',
+  },
+  previewIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: colors.brand.sage,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewSymbol: {
+    fontSize: 24,
+    color: colors.primary.forest,
+  },
+  previewTitle: {
+    marginTop: 14,
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: 22,
+    color: colors.primary.deepForest,
+  },
+  previewText: {
+    marginTop: 7,
+    textAlign: 'center',
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.neutral.textSecondary,
+  },
+  fileCard: {
+    width: '100%',
+    marginTop: 18,
+    padding: 13,
+    borderRadius: 14,
+    backgroundColor: colors.brand.mint,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fileIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    backgroundColor: colors.brand.sage,
+    overflow: 'hidden',
+    fontSize: 16,
+    color: colors.primary.forest,
+    paddingTop: 10,
+  },
+  fileContent: {
+    flex: 1,
+    marginLeft: 11,
+  },
+  fileTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 12,
+    color: colors.neutral.textPrimary,
+  },
+  fileSubtitle: {
+    marginTop: 3,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: colors.neutral.textSecondary,
+  },
+  retakeButton: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  retakeText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 12,
+    color: colors.primary.forest,
+  },
+  securityCard: {
+    flexDirection: 'row',
+    marginTop: 18,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.brand.mint,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+  },
+  securityIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.neutral.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lock: {
+    fontSize: 17,
+  },
+  securityContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  securityTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 12,
+    color: colors.primary.deepForest,
+  },
+  securityText: {
+    marginTop: 4,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    lineHeight: 17,
+    color: colors.neutral.textSecondary,
+  },
+  primaryButton: {
+    marginTop: 18,
+    minHeight: 54,
+    borderRadius: 14,
+    backgroundColor: colors.primary.forest,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.45,
+  },
+  primaryButtonText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
+    color: colors.neutral.white,
+  },
+  primaryButtonArrow: {
+    marginLeft: 12,
+    fontSize: 18,
+    color: colors.neutral.white,
+  },
+  secondaryButton: {
+    marginTop: 10,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 13,
+    color: colors.primary.forest,
+  },
+  buttonPressed: {
+    opacity: 0.82,
+  },
+  error: {
+    marginTop: 10,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.semantic.error,
+  },
+  permissionBlock: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+  permissionIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.brand.sage,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permissionSymbol: {
+    fontSize: 25,
+    color: colors.primary.forest,
+  },
+});
