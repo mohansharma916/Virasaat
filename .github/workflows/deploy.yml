@@ -55,7 +55,7 @@ jobs:
 
               set -e
 
-              cd /opt/VirasaatServer
+              cd /opt/VirasaatServer/Virasaat
 
               echo "Pulling latest code..."
               git fetch origin
