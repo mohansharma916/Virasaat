@@ -61,6 +61,8 @@ jobs:
               git fetch origin
               git reset --hard origin/main
 
+              cd virasaat-server
+
               echo "Building containers..."
               docker compose build
 
