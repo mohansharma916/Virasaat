@@ -69,10 +69,7 @@ jobs:
               echo "Starting database..."
               docker compose up -d postgres
 
-              echo "Running migrations..."
-              docker compose run --rm api \
-                npm run migration:run
-
+              
               echo "Deploying API..."
               docker compose up -d
 
