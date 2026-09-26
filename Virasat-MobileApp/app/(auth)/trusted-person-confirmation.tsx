@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { createItemRequestKey } from '@/src/api/vault.api';
+import { useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -8,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   router,
@@ -17,25 +18,34 @@ import {
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { setTrustedPersonSummary } from '@/src/utils/legacy-flow';
-import { createRecipient } from '@/src/api/recipients.api';
+import { createRecipient, updateRecipient, inviteRecipient } from '@/src/api/recipients.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { addRecipient, refreshVaultData } from '@/src/store/vault.slice';
 
 export default function TrustedPersonConfirmationScreen() {
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const params = useLocalSearchParams<{
     name?: string;
     relationship?: string;
     email?: string;
     phone?: string;
     notificationMode?: string;
+    recipientId?: string;
+    verificationRequired?: string;
   }>();
 
   const isInformNow =
     params.notificationMode === 'INFORM_NOW';
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const busy = useRef(false);
+  const requestKey = useRef(createItemRequestKey());
+  const savedId = useRef(params.recipientId);
 
   const handleConfirm = async () => {
+    if (busy.current) return;
     const name = params.name?.trim();
     const email = params.email?.trim();
 
@@ -45,20 +55,32 @@ export default function TrustedPersonConfirmationScreen() {
     }
 
     try {
+      busy.current = true;
       setSaving(true);
       setError('');
-      const recipient = await createRecipient({
-        name,
-        email,
-        phone: params.phone?.trim() || undefined,
-        relationship: params.relationship?.trim() || undefined,
-      });
+      const recipient = savedId.current
+        ? await updateRecipient(savedId.current, {
+            name,
+            verificationRequired: params.verificationRequired !== 'false',
+            phone: params.phone?.trim() || undefined,
+            relationship: params.relationship?.trim() || undefined,
+          })
+        : await createRecipient({
+            requestKey: requestKey.current,
+            name,
+            verificationRequired: params.verificationRequired !== 'false',
+            email,
+            phone: params.phone?.trim() || undefined,
+            relationship: params.relationship?.trim() || undefined,
+          });
+      savedId.current = recipient.id;
+      if (params.recipientId) {
+        await dispatch(refreshVaultData()).unwrap();
+      } else {
+        dispatch(addRecipient(recipient));
+      }
 
-      setTrustedPersonSummary({
-        name: recipient.name,
-        relationship: recipient.relationship || 'Trusted person',
-        email: recipient.email,
-      });
+      if (isInformNow) await inviteRecipient(recipient.id);
 
       router.replace({
         pathname: '/(auth)/trusted-person-success',
@@ -70,6 +92,7 @@ export default function TrustedPersonConfirmationScreen() {
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'We could not add this trusted person. Please try again.'));
     } finally {
+      busy.current = false;
       setSaving(false);
     }
   };
@@ -100,23 +123,6 @@ export default function TrustedPersonConfirmationScreen() {
           <Text style={styles.brand}>
             VIRASAT
           </Text>
-        </View>
-
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  index <= 8 &&
-                    styles.progressItemActive,
-                ]}
-              />
-            )
-          )}
         </View>
 
         {/* Hero */}
@@ -223,7 +229,7 @@ export default function TrustedPersonConfirmationScreen() {
             <Text style={styles.notificationText}>
               {isInformNow
                 ? 'An invitation will be sent after you confirm.'
-                : 'No invitation will be sent now. They will only be contacted if your legacy process is activated.'}
+                : 'No invitation will be sent. Saving this person does not grant access to any item.'}
             </Text>
           </View>
         </View>
@@ -249,8 +255,11 @@ export default function TrustedPersonConfirmationScreen() {
             </Text>
           </View>
         </View>
+      </ScrollView>
 
-        {/* Confirmation */}
+      {/* Sticky Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable
           disabled={saving}
@@ -275,13 +284,7 @@ export default function TrustedPersonConfirmationScreen() {
             </>
           )}
         </Pressable>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Text style={styles.footer}>
-          Step 9 of 10
-        </Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -570,9 +573,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 27,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -590,7 +600,7 @@ const styles = StyleSheet.create({
   },
 
   error: {
-    marginTop: 12,
+    marginBottom: 10,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.regular,
     fontSize: 11,
@@ -610,7 +620,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 17,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
     fontSize: 11,
     color: colors.neutral.textMuted,

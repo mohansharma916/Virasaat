@@ -9,6 +9,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { UpdatePolicyDto } from './dto/update-policy.dto';
+
 import { ReleaseService } from './release.service';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -38,7 +40,7 @@ export class ReleaseController {
   @Patch('policy')
   async updatePolicy(
     @Req() req: any,
-    @Body() body: any,
+    @Body() body: UpdatePolicyDto,
   ) {
     return this.releaseService.updatePolicy(
       req.user.id,
@@ -89,11 +91,7 @@ export class ReleaseController {
     @Param('id') caseId: string,
     @Body() dto: ReviewReleaseCaseDto,
   ) {
-    return this.releaseService.reviewCase(
-      req.user.id,
-      caseId,
-      dto,
-    );
+    return this.releaseService.reviewCase(req.user.id, caseId, dto);
   }
 
   // -----------------------------
@@ -106,11 +104,7 @@ export class ReleaseController {
     @Param('id') caseId: string,
     @Body() dto: AuthorizeReleaseDto,
   ) {
-    return this.releaseService.authorizeRelease(
-      req.user.id,
-      caseId,
-      dto,
-    );
+    return this.releaseService.authorizeRelease(req.user.id, caseId, dto);
   }
 
   // -----------------------------
@@ -122,9 +116,7 @@ export class ReleaseController {
     @Param('recipientId')
     recipientId: string,
   ) {
-    return this.releaseService.verifyAuthorization(
-      recipientId,
-    );
+    return this.releaseService.verifyAuthorization(recipientId);
   }
 
   // -----------------------------

@@ -2,6 +2,8 @@ import { api } from './client';
 
 export interface ReleasePolicy {
   id: string;
+  version: number;
+  verificationRequired: boolean;
   trigger: 'MANUAL' | 'CHECK_IN_ESCALATION';
   verificationLevel: 'BASIC' | 'STANDARD' | 'HIGH';
   escalationConfig: Record<string, unknown>;

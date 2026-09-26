@@ -10,16 +10,13 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import {
-  markLegacyCategoryComplete,
-  parseLegacyCategories,
-} from '@/src/utils/legacy-flow';
+import { parseLegacyCategories } from '@/src/utils/legacy-flow';
 
 type AssetType =
   | 'INVESTMENT'
@@ -65,6 +62,7 @@ const assetTypes = [
 ];
 
 export default function LegacyInvestmentsScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     category?: string;
     categories?: string;
@@ -115,10 +113,6 @@ const addAsset = (type: AssetType) => {
 
     const category = parseLegacyCategories(params.category)[0];
 
-    if (category) {
-      markLegacyCategoryComplete(category);
-    }
-
     router.replace({
       pathname: '/(auth)/legacy-category',
       params: {
@@ -151,22 +145,6 @@ const addAsset = (type: AssetType) => {
           </Text>
         </View>
 
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  styles.progressItemActive,
-                ]}
-              />
-            ),
-          )}
-        </View>
-
         {/* Heading */}
 
         <View style={styles.heading}>
@@ -187,7 +165,6 @@ const addAsset = (type: AssetType) => {
         {/* Add Asset */}
 
         <Pressable
-          disabled={assets.length === 0}
           onPress={() => setShowAssetModal(true)}
           style={({ pressed }) => [
             styles.addCard,
@@ -289,9 +266,10 @@ const addAsset = (type: AssetType) => {
             </Text>
           </View>
         </View>
+      </ScrollView>
 
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {/* Continue */}
-
         <Pressable
           onPress={handleContinue}
           style={({ pressed }) => [
@@ -318,7 +296,7 @@ const addAsset = (type: AssetType) => {
                   : 'assets'
               } added`}
         </Text>
-      </ScrollView>
+      </View>
 
       {/* Asset Type Modal */}
 
@@ -469,8 +447,8 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    marginTop: 35,
-    marginBottom: 24,
+    marginTop: 18,
+    marginBottom: 16,
   },
 
   eyebrow: {
@@ -661,9 +639,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 23,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -693,9 +678,9 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 14,
+    marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 11,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

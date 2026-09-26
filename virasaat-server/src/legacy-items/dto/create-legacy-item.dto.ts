@@ -1,3 +1,4 @@
+import { MaxLength } from 'class-validator';
 import {
   IsEnum,
   IsNotEmpty,
@@ -24,4 +25,8 @@ export class CreateLegacyItemDto {
   @IsString()
   @IsOptional()
   description?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  requestKey?: string;
 }

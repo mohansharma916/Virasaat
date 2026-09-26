@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -6,16 +6,16 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { getCompletedLegacyCategories,
+import { LEGACY_CATEGORY_KEYS,
   parseLegacyCategories,
-  subscribeLegacyFlow,
   type LegacyCategory, } from '@/src/utils/legacy-flow';
-import { listLegacyItems } from '@/src/api/vault.api';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { refreshVaultData } from '@/src/store/vault.slice';
 type CategoryConfig = {
   id: LegacyCategory;
   title: string;
@@ -53,9 +53,9 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
     id: 'VIDEOS',
     title: 'Video Messages',
     description:
-      'Personal video messages recorded for your loved ones.',
+      'Original video files for your loved ones.',
     icon: '▶',
-    route: '/(auth)/legacy-video-message',
+    route: '/(auth)/legacy-documents',
   },
   {
     id: 'OTHER',
@@ -68,58 +68,45 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
 ];
 
 export default function LegacyCategoryScreen() {
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
+  const savedItems = useAppSelector((state) => state.vault.items);
   const params = useLocalSearchParams<{
     categories?: string | string[];
   }>();
 
   const selectedCategories = useMemo(
-    () => parseLegacyCategories(params.categories),
+    () => {
+      const parsedCategories = parseLegacyCategories(params.categories);
+      return parsedCategories.length > 0
+        ? parsedCategories
+        : LEGACY_CATEGORY_KEYS;
+    },
     [params.categories],
   );
 
-  const [completedCategories, setCompletedCategories] =
-    useState<LegacyCategory[]>(() =>
-      getCompletedLegacyCategories(selectedCategories),
-    );
+  const savedCategories = useMemo(
+    () => new Set(savedItems.map((item) => item.category.toUpperCase())),
+    [savedItems],
+  );
+
+  const completedCategories = useMemo(
+    () =>
+      selectedCategories.filter(
+        (category) =>
+          savedCategories.has(category),
+      ),
+    [savedCategories, selectedCategories],
+  );
 
   /*
    * Refresh completion state every time this hub becomes active.
    * Each category screen marks itself complete after a successful save.
    */
   useFocusEffect(
-    useMemo(
-      () => () => {
-        const refresh = async () => {
-          const locallyCompleted = getCompletedLegacyCategories(
-            selectedCategories,
-          );
-
-          try {
-            const savedItems = await listLegacyItems();
-            const savedCategories = new Set(
-              savedItems.map((item) => item.category.toUpperCase()),
-            );
-
-            setCompletedCategories(
-              selectedCategories.filter(
-                (category) =>
-                  locallyCompleted.includes(category) ||
-                  savedCategories.has(category),
-              ),
-            );
-          } catch {
-            // The local state still lets an in-progress onboarding flow
-            // continue if a refresh is temporarily unavailable.
-            setCompletedCategories(locallyCompleted);
-          }
-        };
-
-        void refresh();
-
-        return subscribeLegacyFlow(refresh);
-      },
-      [selectedCategories.join(',')],
-    ),
+    useCallback(() => {
+      void dispatch(refreshVaultData());
+    }, [dispatch]),
   );
 
   const openCategory = (category: CategoryConfig) => {
@@ -171,18 +158,6 @@ export default function LegacyCategoryScreen() {
           </Pressable>
 
           <Text style={styles.brand}>VIRASAT</Text>
-        </View>
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.progressItem,
-                styles.progressItemActive,
-              ]}
-            />
-          ))}
         </View>
 
         <View style={styles.heading}>
@@ -313,7 +288,10 @@ export default function LegacyCategoryScreen() {
             </Text>
           </View>
         </View>
+      </ScrollView>
 
+      {/* Sticky Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           disabled={!allComplete}
           onPress={handleReview}
@@ -331,7 +309,7 @@ export default function LegacyCategoryScreen() {
 
           <Text style={styles.buttonArrow}>→</Text>
         </Pressable>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -551,9 +529,15 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.neutral.textSecondary,
   },
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
   button: {
-    height: 56,
-    marginTop: 23,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',

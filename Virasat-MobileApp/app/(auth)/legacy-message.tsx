@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -11,18 +11,16 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import {
-  markLegacyCategoryComplete,
-  parseLegacyCategories,
-} from '@/src/utils/legacy-flow';
-import { createLegacyItem } from '@/src/api/vault.api';
+import { createLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { addLegacyItem } from '@/src/store/vault.slice';
 
 type Recipient = 'FAMILY' | 'SPOUSE' | 'CHILDREN' | 'OTHER';
 
@@ -46,17 +44,18 @@ const recipients = [
 ];
 
 export default function LegacyMessageScreen() {
-  const params = useLocalSearchParams<{
-    category?: string;
-    categories?: string;
-  }>();
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [recipient, setRecipient] =
     useState<Recipient | null>(null);
   const [saving, setSaving] = useState(false);
+  const requestKey = useRef(createItemRequestKey());
+  const busy = useRef(false);
 
   const handleSave = async () => {
+    if (busy.current) return;
     if (!title.trim()) {
       Alert.alert(
         'Add a title',
@@ -73,38 +72,25 @@ export default function LegacyMessageScreen() {
       return;
     }
 
-    if (!recipient) {
-      Alert.alert(
-        'Choose a recipient',
-        'Please select who this message is intended for.',
-      );
-      return;
-    }
 
     try {
+      busy.current = true;
       setSaving(true);
-      await createLegacyItem({
+      const item = await createLegacyItem({
+        requestKey: requestKey.current,
         type: 'TEXT',
         category: 'MESSAGES',
         title: 'Personal message',
-        description: `Title: ${title.trim()}\nRecipient: ${recipient}\n\n${message.trim()}`,
+        description: `Title: ${title.trim()}\nRecipient preference: ${recipient ?? 'Not assigned'}\n\n${message.trim()}`,
       });
+      dispatch(addLegacyItem(item));
 
-      const category = parseLegacyCategories(params.category)[0];
 
-      if (category) {
-        markLegacyCategoryComplete(category);
-      }
-
-      router.replace({
-        pathname: '/(auth)/legacy-category',
-        params: {
-          categories: params.categories ?? category ?? 'MESSAGES',
-        },
-      });
+      router.replace('/(auth)/home');
     } catch (error) {
       Alert.alert('Unable to save message', getApiErrorMessage(error));
     } finally {
+      busy.current = false;
       setSaving(false);
     }
   };
@@ -140,22 +126,6 @@ export default function LegacyMessageScreen() {
             <Text style={styles.brand}>
               VIRASAT
             </Text>
-          </View>
-
-          {/* Progress */}
-
-          <View style={styles.progressContainer}>
-            {Array.from({ length: 10 }).map(
-              (_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.progressItem,
-                    styles.progressItemActive,
-                  ]}
-                />
-              ),
-            )}
           </View>
 
           {/* Heading */}
@@ -215,7 +185,7 @@ export default function LegacyMessageScreen() {
 
           {/* Recipient */}
 
-          <FieldLabel label="Who is this message for?" />
+          <FieldLabel label="Who is this message for? (optional)" />
 
           <View style={styles.recipientContainer}>
             {recipients.map((item) => {
@@ -283,9 +253,10 @@ export default function LegacyMessageScreen() {
               </Text>
             </View>
           </View>
+        </ScrollView>
 
-          {/* Save */}
-
+        {/* Sticky Bottom Bar */}
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Pressable
             disabled={saving}
             onPress={handleSave}
@@ -302,7 +273,7 @@ export default function LegacyMessageScreen() {
           <Text style={styles.footer}>
             You can edit or remove this message later.
           </Text>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -553,9 +524,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 23,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     alignItems: 'center',
@@ -569,14 +547,14 @@ const styles = StyleSheet.create({
 
   buttonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.white,
   },
 
   footer: {
-    marginTop: 13,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
+    fontSize: 10.5,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

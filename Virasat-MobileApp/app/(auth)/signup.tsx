@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -22,8 +23,11 @@ import { Input } from '@/src/components/Input';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
+import { useAppDispatch } from '@/src/store/hooks';
+import { setSessionUser } from '@/src/store/session.slice';
 
 export default function SignupScreen() {
+  const dispatch = useAppDispatch();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
@@ -99,8 +103,9 @@ export default function SignupScreen() {
       const result = await googleLogin(idToken);
 
       await saveAccessToken(result.accessToken);
+      dispatch(setSessionUser(result.user));
 
-      router.replace('/(auth)/home' as never);
+      router.replace('/(auth)/home');
     } catch (error) {
       setSubmitError(getApiErrorMessage(error, 'Google sign-up failed. Please try again.'));
     } finally {
@@ -434,7 +439,6 @@ function Requirement({
   );
 }
 
-import { TextInput } from 'react-native';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -534,22 +538,22 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    marginTop: 30,
-    marginBottom: 30,
+    marginTop: 14,
+    marginBottom: 16,
   },
 
   title: {
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 26,
+    lineHeight: 33,
     color: colors.primary.deepForest,
   },
 
   subtitle: {
-    marginTop: 10,
+    marginTop: 5,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 19,
     color: colors.neutral.textSecondary,
   },
 
@@ -558,7 +562,7 @@ const styles = StyleSheet.create({
   },
 
   passwordContainer: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
 
   passwordLabel: {

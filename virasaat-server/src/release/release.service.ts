@@ -1,5 +1,7 @@
+import { AuditResult } from '../audit/entities/audit-event.entity';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -86,9 +88,11 @@ export class ReleaseService {
         escalationConfig:
           data.escalationConfig ?? {},
         enabled: data.enabled ?? true,
+        verificationRequired: data.verificationRequired ?? true,
       });
     } else {
       Object.assign(policy, data);
+      policy.version = (policy.version ?? 1) + 1;
     }
 
     return this.policyRepository.save(policy);
@@ -159,45 +163,7 @@ export class ReleaseService {
     caseId: string,
     dto: ReviewReleaseCaseDto,
   ) {
-    const releaseCase =
-      await this.caseRepository.findOne({
-        where: {
-          id: caseId,
-        },
-      });
-
-    if (!releaseCase) {
-      throw new NotFoundException(
-        'Release case not found',
-      );
-    }
-
-    if (
-      releaseCase.status ===
-        ReleaseCaseStatus.CLOSED ||
-      releaseCase.status ===
-        ReleaseCaseStatus.REJECTED
-    ) {
-      throw new BadRequestException(
-        'Release case is already closed',
-      );
-    }
-
-    releaseCase.status = dto.status;
-    releaseCase.reviewerId = reviewerId;
-    releaseCase.reviewerNotes =
-      dto.notes ?? null;
-    releaseCase.reviewedAt = new Date();
-
-    if (
-      dto.status === ReleaseCaseStatus.REJECTED
-    ) {
-      releaseCase.closedAt = new Date();
-    }
-
-    return this.caseRepository.save(
-      releaseCase,
-    );
+    return this.denyRelease(reviewerId, caseId, 'release_review_denied', { requestedStatus: dto.status });
   }
 
   // -----------------------------
@@ -209,81 +175,7 @@ export class ReleaseService {
     caseId: string,
     dto: AuthorizeReleaseDto,
   ) {
-    const releaseCase =
-      await this.caseRepository.findOne({
-        where: {
-          id: caseId,
-        },
-      });
-
-    if (!releaseCase) {
-      throw new NotFoundException(
-        'Release case not found',
-      );
-    }
-
-    if (
-      releaseCase.status !==
-      ReleaseCaseStatus.APPROVED
-    ) {
-      throw new BadRequestException(
-        'Release case must be approved before authorization',
-      );
-    }
-
-    // Validate recipient belongs to vault owner.
-    const recipient =
-      await this.recipientRepository.findOne({
-        where: {
-          id: dto.recipientId,
-          userId: releaseCase.userId,
-        },
-      });
-
-    if (!recipient) {
-      throw new NotFoundException(
-        'Recipient not found',
-      );
-    }
-
-    if (
-      recipient.status !==
-      RecipientStatus.ACTIVE
-    ) {
-      throw new BadRequestException(
-        'Recipient is not active',
-      );
-    }
-
-    const expiresAt = new Date();
-
-    expiresAt.setDate(
-      expiresAt.getDate() +
-        dto.expiresInDays,
-    );
-
-    const authorization =
-      this.authorizationRepository.create({
-        caseId,
-        recipientId: recipient.id,
-        approvedBy: approverId,
-        scope: {
-          type: 'FULL_VAULT',
-        },
-        status: AuthorizationStatus.ACTIVE,
-        expiresAt,
-      });
-
-    releaseCase.status =
-      ReleaseCaseStatus.APPROVED;
-
-    await this.caseRepository.save(
-      releaseCase,
-    );
-
-    return this.authorizationRepository.save(
-      authorization,
-    );
+    return this.denyRelease(approverId, caseId, 'release_authorization_denied', { recipientId: dto.recipientId });
   }
 
   // -----------------------------
@@ -293,38 +185,12 @@ export class ReleaseService {
   async verifyAuthorization(
     recipientId: string,
   ) {
-    const authorization =
-      await this.authorizationRepository
-        .createQueryBuilder('authorization')
-        .where(
-          'authorization.recipientId = :recipientId',
-          { recipientId },
-        )
-        .andWhere(
-          'authorization.status = :status',
-          {
-            status: AuthorizationStatus.ACTIVE,
-          },
-        )
-        .andWhere(
-          'authorization.expiresAt > :now',
-          {
-            now: new Date(),
-          },
-        )
-        .orderBy(
-          'authorization.createdAt',
-          'DESC',
-        )
-        .getOne();
+    return this.denyRelease(null, recipientId, 'release_access_denied');
+  }
 
-    if (!authorization) {
-      throw new BadRequestException(
-        'No active release authorization',
-      );
-    }
-
-    return authorization;
+  private async denyRelease(actorId: string | null, targetId: string, action: string, metadata: Record<string, unknown> = {}) {
+    await this.auditService.log({ actorId, action, targetType: 'release', targetId, result: AuditResult.DENIED, metadata });
+    throw new ForbiddenException('Release is unavailable until reviewer permissions, policy evaluation and item-scoped access are configured.');
   }
 
   // -----------------------------

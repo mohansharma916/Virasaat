@@ -18,6 +18,17 @@ export class UsersController {
     private readonly usersService: UsersService,
   ) {}
 
+  @Get('me/deletion')
+  deletionEligibility() {
+    // BACKEND GAP: retention, active-case resolution, step-up and deletion worker
+    // have no approved contract. Never accept a request we cannot execute.
+    return {
+      status: 'UNAVAILABLE',
+      message: 'Account deletion is not available yet. Your account has not been changed. Please try again later.',
+      blockers: ['DELETION_LIFECYCLE_NOT_CONFIGURED'],
+    };
+  }
+
   @Get('me')
   async getProfile(@Req() req: any) {
     return this.usersService.getProfile(req.user.id);

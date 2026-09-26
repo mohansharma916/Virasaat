@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { Button } from '@/src/components/Button';
 import { Input } from '@/src/components/Input';
@@ -18,8 +20,13 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getProfile, updateProfile } from '@/src/api/users.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { setSessionUser } from '@/src/store/session.slice';
 
 export default function ProfileScreen() {
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('');
@@ -83,13 +90,18 @@ export default function ProfileScreen() {
     try {
       setLoading(true);
       setSubmitError('');
-      await updateProfile({
+      const profile = await updateProfile({
         name: name.trim(),
         country,
         preferredLanguage: language,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
       });
-      router.replace('/(auth)/trusted-person-intro');
+      dispatch(setSessionUser(profile));
+      router.replace(
+        mode === 'edit'
+          ? '/(auth)/home'
+          : '/(auth)/trusted-person-intro',
+      );
     } catch (error) {
       setSubmitError(getApiErrorMessage(error, 'We could not save your profile. Please try again.'));
     } finally {
@@ -162,7 +174,7 @@ export default function ProfileScreen() {
 
   const selectLanguage = () => {
     Alert.alert(
-      'Preferred language',
+      'Select language',
       '',
       [
         {
@@ -215,140 +227,161 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <Text style={styles.backArrow}>‹</Text>
-          </Pressable>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={styles.backButton}
+            >
+              <Text style={styles.backArrow}>‹</Text>
+            </Pressable>
 
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
-        </View>
-
-        {/* Progress */}
-        <View style={styles.progressContainer}>
-          <ProgressDot active />
-          <ProgressLine active />
-          <ProgressDot active />
-          <ProgressLine active />
-          <ProgressDot active />
-          <ProgressLine active />
-          <ProgressDot active />
-          <ProgressLine />
-          <ProgressDot />
-          <ProgressLine />
-          <ProgressDot />
-        </View>
-
-        {/* Heading */}
-        <View style={styles.heading}>
-          <Text style={styles.title}>
-            Complete your profile
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Tell us a little about yourself.
-          </Text>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          <Input
-            label="Full name"
-            placeholder="Your full name"
-            value={name}
-            onChangeText={(value) => {
-              setName(value);
-
-              if (errors.name) {
-                setErrors((previous) => ({
-                  ...previous,
-                  name: undefined,
-                }));
-              }
-            }}
-            error={errors.name}
-            autoCapitalize="words"
-            autoComplete="name"
-            returnKeyType="done"
-          />
-
-          <SelectInput
-            label="Country"
-            placeholder="Select your country"
-            value={country}
-            onPress={selectCountry}
-          />
-
-          {errors.country && (
-            <Text style={styles.error}>
-              {errors.country}
-            </Text>
-          )}
-
-          <SelectInput
-            label="Preferred language"
-            placeholder="Select your language"
-            value={language}
-            onPress={selectLanguage}
-          />
-
-          {errors.language && (
-            <Text style={styles.error}>
-              {errors.language}
-            </Text>
-          )}
-        </View>
-
-        {/* Privacy information */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoIcon}>
-            <Text style={styles.infoIconText}>
-              i
+            <Text style={styles.brand}>
+              VIRASAT
             </Text>
           </View>
 
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>
-              Why we ask this
+          {/* Progress (only in onboarding) */}
+          {mode !== 'edit' && (
+            <View style={styles.progressContainer}>
+              <ProgressDot active />
+              <ProgressLine active />
+              <ProgressDot active />
+              <ProgressLine active />
+              <ProgressDot active />
+              <ProgressLine active />
+              <ProgressDot active />
+              <ProgressLine />
+              <ProgressDot />
+              <ProgressLine />
+              <ProgressDot />
+            </View>
+          )}
+
+          {/* Heading */}
+          <View style={styles.heading}>
+            <Text style={styles.title}>
+              {mode === 'edit' ? 'Profile Details' : 'Complete your profile'}
             </Text>
 
-            <Text style={styles.infoText}>
-              This information helps us keep your
-              account accurate and provide the
-              right experience for you.
+            <Text style={styles.subtitle}>
+              {mode === 'edit' ? 'Update your personal preferences.' : 'Tell us a little about yourself.'}
             </Text>
           </View>
-        </View>
 
-        {/* CTA */}
-        <View style={styles.buttonContainer}>
+          {/* Form */}
+          <View style={styles.form}>
+            <Input
+              label="Full name"
+              placeholder="Your full name"
+              value={name}
+              onChangeText={(value) => {
+                setName(value);
+
+                if (errors.name) {
+                  setErrors((previous) => ({
+                    ...previous,
+                    name: undefined,
+                  }));
+                }
+              }}
+              error={errors.name}
+              autoCapitalize="words"
+              autoComplete="name"
+              returnKeyType="done"
+            />
+
+            <SelectInput
+              label="Country"
+              placeholder="Select your country"
+              value={country}
+              onPress={selectCountry}
+            />
+
+            {errors.country && (
+              <Text style={styles.error}>
+                {errors.country}
+              </Text>
+            )}
+
+            <SelectInput
+              label="Preferred language"
+              placeholder="Select your language"
+              value={language}
+              onPress={selectLanguage}
+            />
+
+            {errors.language && (
+              <Text style={styles.error}>
+                {errors.language}
+              </Text>
+            )}
+          </View>
+
+          {/* Privacy information */}
+          <View style={styles.infoCard}>
+            <View style={styles.infoIcon}>
+              <Text style={styles.infoIconText}>
+                i
+              </Text>
+            </View>
+
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>
+                Why we ask this
+              </Text>
+
+              <Text style={styles.infoText}>
+                This information helps us keep your
+                account accurate and provide the
+                right experience for you.
+              </Text>
+            </View>
+          </View>
+
+          {/* Danger Zone in Edit Mode */}
+          {mode === 'edit' && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/(auth)/delete-account' as never)}
+              style={styles.dangerZone}
+            >
+              <Text style={styles.dangerIcon}>⚠</Text>
+              <View style={styles.dangerContent}>
+                <Text style={styles.dangerTitle}>Delete Account</Text>
+                <Text style={styles.dangerSubtitle}>Permanently remove vault data and assignments</Text>
+              </View>
+              <Text style={styles.dangerChevron}>›</Text>
+            </Pressable>
+          )}
+
+          <Text style={styles.footerText}>
+            You can edit this information later from Settings.
+          </Text>
+        </ScrollView>
+
+        {/* Sticky Bottom Bar */}
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          {submitError ? (
+            <Text style={styles.error}>{submitError}</Text>
+          ) : null}
           <Button
-            title="Continue"
+            title={mode === 'edit' ? 'Save Changes' : 'Continue'}
             onPress={handleContinue}
             loading={loading}
           />
         </View>
-
-        {submitError ? (
-          <Text style={styles.error}>{submitError}</Text>
-        ) : null}
-
-        <Text style={styles.footerText}>
-          You can edit this information later
-          from Settings.
-        </Text>
-      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -389,11 +422,57 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.ivory,
   },
 
+  keyboard: {
+    flex: 1,
+  },
+
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 10,
-    paddingBottom: 35,
+    paddingBottom: 24,
+  },
+
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
+  dangerZone: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dangerIcon: {
+    fontSize: 20,
+    color: '#DC2626',
+    marginRight: 12,
+  },
+  dangerContent: {
+    flex: 1,
+  },
+  dangerTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
+    color: '#991B1B',
+  },
+  dangerSubtitle: {
+    marginTop: 2,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: '#B91C1C',
+  },
+  dangerChevron: {
+    fontSize: 20,
+    color: '#DC2626',
   },
 
   header: {

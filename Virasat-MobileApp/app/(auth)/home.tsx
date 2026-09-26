@@ -1,46 +1,42 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { getCurrentUser, type AuthenticatedUser } from '@/src/api/auth.api';
-import { listLegacyItems, type LegacyItem } from '@/src/api/vault.api';
-import { listRecipients, type Recipient } from '@/src/api/recipients.api';
-import { confirmCheckIn, getCheckInStatus, type CheckInStatus } from '@/src/api/check-in.api';
+import { confirmCheckIn } from '@/src/api/check-in.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { hydrateSession } from '@/src/store/session.slice';
+import { refreshVaultData } from '@/src/store/vault.slice';
+import { LEGACY_CATEGORY_KEYS } from '@/src/utils/legacy-flow';
 
 const emptySummary = { documents: 0, investments: 0, messages: 0, videos: 0 };
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [items, setItems] = useState<LegacyItem[]>([]);
-  const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [checkInStatus, setCheckInStatus] = useState<CheckInStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.session.user);
+  const items = useAppSelector((state) => state.vault.items);
+  const recipients = useAppSelector((state) => state.vault.recipients);
+  const checkInStatus = useAppSelector((state) => state.vault.checkIn);
+  const issues = useAppSelector((state) => state.vault.issues);
+  const failed = useAppSelector((state) => state.vault.status === 'error');
+  const loading = useAppSelector((state) => state.vault.status === 'loading');
   const [confirmingCheckIn, setConfirmingCheckIn] = useState(false);
+  const checkInBusy = useRef(false);
 
   const loadOverview = useCallback(async () => {
     try {
-      const [currentUser, vaultItems, trustedPeople, checkIn] = await Promise.all([
-        getCurrentUser(),
-        listLegacyItems(),
-        listRecipients(),
-        getCheckInStatus().catch(() => null),
+      await Promise.all([
+        dispatch(hydrateSession()).unwrap(),
+        dispatch(refreshVaultData()).unwrap(),
       ]);
-
-      setUser(currentUser);
-      setItems(vaultItems);
-      setRecipients(trustedPeople.filter((person) => person.status !== 'REVOKED'));
-      setCheckInStatus(checkIn);
     } catch (error) {
       Alert.alert('Unable to refresh your vault', getApiErrorMessage(error));
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [dispatch]);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,7 +58,7 @@ export default function HomeScreen() {
     return summary;
   }, { ...emptySummary }), [items]);
 
-  const trustedPerson = recipients[0] ?? null;
+  const trustedPerson = recipients.find((person) => person.status !== 'REVOKED') ?? null;
   const pendingCheckIn = checkInStatus?.currentEvent?.status === 'PENDING';
   const checkInDate = checkInStatus?.currentEvent?.dueAt
     ?? checkInStatus?.policy.nextCheckInAt
@@ -77,18 +73,22 @@ export default function HomeScreen() {
   const openLegacy = (category?: string) => {
     router.push({
       pathname: '/(auth)/legacy-category',
-      params: category ? { categories: category } : undefined,
+      params: { categories: category ?? LEGACY_CATEGORY_KEYS.join(',') },
     } as never);
   };
 
   const handleConfirmCheckIn = async () => {
+    const eventId = checkInStatus?.currentEvent?.id;
+    if (!eventId || checkInBusy.current) return;
+    checkInBusy.current = true;
     try {
       setConfirmingCheckIn(true);
-      await confirmCheckIn();
+      await confirmCheckIn(eventId);
       await loadOverview();
     } catch (error) {
       Alert.alert('Unable to confirm check-in', getApiErrorMessage(error));
     } finally {
+      checkInBusy.current = false;
       setConfirmingCheckIn(false);
     }
   };
@@ -99,35 +99,160 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.brand}>VIRASAT</Text>
           <View style={styles.headerActions}>
-            <Pressable style={styles.headerButton} hitSlop={10} onPress={() => {}}>
+            <Pressable style={styles.headerButton} hitSlop={10} onPress={() => router.push('/(auth)/dev-screen' as never)}>
               <Text style={styles.headerIcon}>♢</Text>
             </Pressable>
-            <Pressable style={styles.headerButton} hitSlop={10} onPress={() => {}}>
+            <Pressable style={styles.headerButton} hitSlop={10} onPress={() => router.push({ pathname: '/(auth)/profile', params: { mode: 'edit' } } as never)}>
               <Text style={styles.menuIcon}>☰</Text>
             </Pressable>
           </View>
         </View>
 
+        {(failed || issues.length > 0) && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText} accessibilityRole="alert">
+              {failed ? 'Your vault could not be refreshed.' : issues.join(' ')}
+            </Text>
+            <Pressable accessibilityRole="button" onPress={() => void loadOverview()} style={styles.retryButton}>
+              <Text style={styles.retryText}>Retry refresh</Text>
+            </Pressable>
+          </View>
+        )}
+
         <View style={styles.greeting}>
           <Text style={styles.greetingTitle}>
             {user?.name ? `Hello, ${user.name.split(' ')[0]}` : 'Welcome to Virasat'}
           </Text>
-          <Text style={styles.greetingSubtitle}>Your legacy is protected.</Text>
+          <Text style={styles.greetingSubtitle}>Your information, under your control.</Text>
         </View>
 
+        {/* Check-In Box appears on Top once configured */}
+        {!!checkInStatus && (
+          <View style={styles.topCheckInContainer}>
+            <View style={styles.sectionHeaderCompact}>
+              <Text style={styles.sectionTitle}>NEXT CHECK-IN</Text>
+              <Pressable onPress={() => router.push('/(auth)/check-in-preferences' as never)}>
+                <Text style={styles.seeAll}>Preferences →</Text>
+              </Pressable>
+            </View>
+            <View style={styles.checkInCard}>
+              <View style={styles.checkInIcon}><Text style={styles.shieldIcon}>◇</Text></View>
+              <Text style={styles.checkInTitle}>
+                {pendingCheckIn ? 'Your check-in is ready' : "You're all set"}
+              </Text>
+              <Text style={styles.checkInDate}>
+                {checkInDate ? formatCheckInDate(checkInDate) : 'Schedule configured'}
+              </Text>
+              <Text style={styles.checkInDescription}>
+                {pendingCheckIn
+                  ? "A quick confirmation helps us know you're active."
+                  : 'Your activity has been confirmed.'}
+              </Text>
+              {pendingCheckIn && (
+                <Pressable disabled={confirmingCheckIn} onPress={handleConfirmCheckIn} style={({ pressed }) => [styles.checkInButton, confirmingCheckIn && styles.buttonDisabled, pressed && !confirmingCheckIn && styles.buttonPressed]}>
+                  {confirmingCheckIn ? <ActivityIndicator color={colors.neutral.white} /> : <Text style={styles.checkInButtonText}>Confirm I'm Active</Text>}
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Continuity Readiness Card (Disappears once setup checklist is completed) */}
+        {!([totalItems > 0, !!trustedPerson, items.some((item) => !!item.assignment), !!checkInStatus].every(Boolean)) && (
+          <View style={styles.readinessCard}>
+            <View style={styles.readinessHeader}>
+              <View>
+                <Text style={styles.readinessEyebrow}>CONTINUITY READINESS</Text>
+                <Text style={styles.readinessTitle}>Setup Checklist</Text>
+              </View>
+              <View style={styles.readinessBadge}>
+                <Text style={styles.readinessBadgeText}>
+                  {[totalItems > 0, !!trustedPerson, items.some((item) => !!item.assignment), !!checkInStatus].filter(Boolean).length} of 4
+                </Text>
+              </View>
+            </View>
+
+            {/* Progress bar */}
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${([totalItems > 0, !!trustedPerson, items.some((item) => !!item.assignment), !!checkInStatus].filter(Boolean).length / 4) * 100}%`,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.readinessList}>
+              {[
+                {
+                  done: totalItems > 0,
+                  title: 'Protect your first item',
+                  subtitle: totalItems > 0 ? `${totalItems} item(s) preserved` : 'Add documents, investments or messages',
+                  route: '/(auth)/legacy-setup',
+                },
+                {
+                  done: !!trustedPerson,
+                  title: 'Add a trusted person',
+                  subtitle: trustedPerson ? trustedPerson.name : 'Informing them now is optional',
+                  route: '/(auth)/people',
+                },
+                {
+                  done: items.some((item) => !!item.assignment),
+                  title: 'Assign policy to an item',
+                  subtitle: items.some((item) => !!item.assignment) ? 'Assigned' : 'Review release conditions',
+                  route: '/(auth)/item-settings',
+                },
+                {
+                  done: !!checkInStatus,
+                  title: 'Configure check-ins',
+                  subtitle: checkInStatus ? 'Schedule active' : 'Set your preferred cadence',
+                  route: '/(auth)/check-in-preferences',
+                },
+              ].map((action, idx) => (
+                <Pressable
+                  key={action.title}
+                  accessibilityRole="button"
+                  onPress={() => router.push(action.route as never)}
+                  style={({ pressed }) => [
+                    styles.readinessItem,
+                    idx < 3 && styles.readinessItemBorder,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={[styles.readinessCircle, action.done && styles.readinessCircleDone]}>
+                    <Text style={[styles.readinessCheck, action.done && styles.readinessCheckDone]}>
+                      {action.done ? '✓' : `${idx + 1}`}
+                    </Text>
+                  </View>
+                  <View style={styles.readinessContent}>
+                    <Text style={[styles.readinessItemTitle, action.done && styles.readinessItemTitleDone]}>
+                      {action.title}
+                    </Text>
+                    <Text style={styles.readinessItemSubtitle}>{action.subtitle}</Text>
+                  </View>
+                  <Text style={styles.readinessChevron}>›</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Vault Overview Card (Separated with gap) */}
         <View style={styles.protectionCard}>
           <View style={styles.protectionTop}>
             <View style={styles.lockCircle}><Text style={styles.lockIcon}>⌑</Text></View>
             <View style={styles.protectionStatus}>
               <View style={styles.statusDot} />
-              <Text style={styles.statusText}>PROTECTED</Text>
+              <Text style={styles.statusText}>VAULT OVERVIEW</Text>
             </View>
           </View>
           <Text style={styles.protectionTitle}>
-            {loading ? 'Loading your vault…' : 'Your legacy is safe.'}
+            {loading ? 'Loading your vault…' : totalItems ? 'Your saved information' : 'Protect your first item'}
           </Text>
           <Text style={styles.protectionDescription}>
-            Everything you've added is securely stored and remains under your control.
+            Saved items remain private. Recipient access requires an assigned policy and explicit authorization.
           </Text>
           <View style={styles.protectionDivider} />
           <View style={styles.protectionMeta}>
@@ -155,13 +280,13 @@ export default function HomeScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.push('/(auth)/trusted-person' as never)}
+          onPress={() => router.push({ pathname: '/(auth)/trusted-person', params: trustedPerson ? { recipientId: trustedPerson.id } : undefined } as never)}
           style={({ pressed }) => [styles.trustedCard, pressed && styles.pressed]}
         >
           <View style={styles.checkCircle}><Text style={styles.checkMark}>✓</Text></View>
           <View style={styles.trustedContent}>
             <Text style={styles.trustedStatus}>
-              {trustedPerson ? trustedPerson.status === 'ACTIVE' ? 'TRUSTED PERSON ACTIVE' : 'INVITATION PENDING' : 'ACTION REQUIRED'}
+              {trustedPerson ? trustedPerson.status === 'ACTIVE' ? 'TRUSTED PERSON ACTIVE' : trustedPerson.status === 'PRIVATE' ? 'PRIVATE / NOT INFORMED' : 'INVITATION PENDING' : 'ACTION REQUIRED'}
             </Text>
             <Text style={styles.trustedName}>{trustedPerson?.name ?? 'Add a trusted person'}</Text>
             <Text style={styles.manageText}>Manage →</Text>
@@ -169,36 +294,25 @@ export default function HomeScreen() {
           <Text style={styles.cardChevron}>›</Text>
         </Pressable>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>NEXT CHECK-IN</Text>
-        </View>
+        {!checkInStatus && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>NEXT CHECK-IN</Text>
+            </View>
 
-        <View style={styles.checkInCard}>
-          <View style={styles.checkInIcon}><Text style={styles.shieldIcon}>◇</Text></View>
-          <Text style={styles.checkInTitle}>
-            {checkInStatus ? pendingCheckIn ? 'Your check-in is ready' : "You're all set" : 'Set up your monthly check-in'}
-          </Text>
-          <Text style={styles.checkInDate}>
-            {checkInDate ? formatCheckInDate(checkInDate) : 'Not configured'}
-          </Text>
-          <Text style={styles.checkInDescription}>
-            {checkInStatus
-              ? pendingCheckIn
-                ? "A quick confirmation helps us know you're active."
-                : 'Your activity has been confirmed.'
-              : 'Choose your preferred schedule to activate check-ins.'}
-          </Text>
-          {pendingCheckIn && (
-            <Pressable disabled={confirmingCheckIn} onPress={handleConfirmCheckIn} style={({ pressed }) => [styles.checkInButton, confirmingCheckIn && styles.buttonDisabled, pressed && !confirmingCheckIn && styles.buttonPressed]}>
-              {confirmingCheckIn ? <ActivityIndicator color={colors.neutral.white} /> : <Text style={styles.checkInButtonText}>Confirm I'm Active</Text>}
-            </Pressable>
-          )}
-          {!checkInStatus && (
-            <Pressable onPress={() => router.push('/(auth)/check-in-preferences' as never)} style={({ pressed }) => [styles.checkInButton, pressed && styles.buttonPressed]}>
-              <Text style={styles.checkInButtonText}>Set up check-ins</Text>
-            </Pressable>
-          )}
-        </View>
+            <View style={styles.checkInCard}>
+              <View style={styles.checkInIcon}><Text style={styles.shieldIcon}>◇</Text></View>
+              <Text style={styles.checkInTitle}>Set up your check-in schedule</Text>
+              <Text style={styles.checkInDate}>Not configured</Text>
+              <Text style={styles.checkInDescription}>
+                Choose your preferred schedule to activate automated check-ins.
+              </Text>
+              <Pressable onPress={() => router.push('/(auth)/check-in-preferences' as never)} style={({ pressed }) => [styles.checkInButton, pressed && styles.buttonPressed]}>
+                <Text style={styles.checkInButtonText}>Set up check-ins</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
 
         <View style={styles.securityNote}>
           <Text style={styles.securityIcon}>🔒</Text>
@@ -218,9 +332,9 @@ export default function HomeScreen() {
   ]}
 >
         <BottomNavItem icon="⌂" label="Home" active onPress={() => {}} />
-        <BottomNavItem icon="◈" label="Legacy" onPress={() => openLegacy()} />
-        <BottomNavItem icon="♡" label="Trusted" onPress={() => router.push('/(auth)/trusted-person' as never)} />
-        <BottomNavItem icon="⚙" label="Settings" onPress={() => router.push('/(auth)/profile' as never)} />
+        <BottomNavItem icon="◈" label="Vault" onPress={() => openLegacy()} />
+        <BottomNavItem icon="♡" label="People" onPress={() => router.push('/(auth)/people' as never)} />
+        <BottomNavItem icon="⚙" label="Profile" onPress={() => router.push({ pathname: '/(auth)/profile', params: { mode: 'edit' } } as never)} />
       </View>
     </SafeAreaView>
   );
@@ -269,11 +383,49 @@ const styles = StyleSheet.create({
   headerIcon: { fontSize: 25, color: colors.primary.deepForest },
   menuIcon: { fontSize: 21, color: colors.primary.deepForest },
 
-  greeting: { marginTop: 24, marginBottom: 20 },
+  errorBanner: { padding: 14, borderRadius: 14, backgroundColor: '#FDE8E8', borderWidth: 1, borderColor: '#F8B4B4', marginBottom: 16 },
+  errorBannerText: { fontFamily: typography.fonts.inter.medium, fontSize: 13, color: '#9B1C1C' },
+  retryButton: { marginTop: 8, paddingVertical: 6, alignSelf: 'flex-start' },
+  retryText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 12, color: '#9B1C1C', textDecorationLine: 'underline' },
+
+  greeting: { marginTop: 24, marginBottom: 18 },
   greetingTitle: { fontFamily: typography.fonts.playfair.semiBold, fontSize: 28, lineHeight: 35, color: colors.primary.deepForest },
   greetingSubtitle: { marginTop: 4, fontFamily: typography.fonts.inter.regular, fontSize: 13, color: colors.neutral.textSecondary },
 
-  protectionCard: { padding: 20, borderRadius: 20, backgroundColor: colors.primary.deepForest },
+  readinessCard: {
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: colors.neutral.white,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  readinessHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  readinessEyebrow: { fontFamily: typography.fonts.inter.semiBold, fontSize: 9.5, letterSpacing: 1.2, color: colors.primary.forest },
+  readinessTitle: { marginTop: 2, fontFamily: typography.fonts.playfair.semiBold, fontSize: 20, color: colors.primary.deepForest },
+  readinessBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.brand.mint },
+  readinessBadgeText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 11, color: colors.primary.forest },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.brand.sage, marginTop: 12, marginBottom: 14, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.primary.forest },
+  readinessList: { marginTop: 2 },
+  readinessItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
+  readinessItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.brand.mint },
+  readinessCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.brand.ivory, borderWidth: 1, borderColor: colors.neutral.border, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  readinessCircleDone: { backgroundColor: colors.brand.mint, borderColor: colors.brand.sage },
+  readinessCheck: { fontFamily: typography.fonts.inter.semiBold, fontSize: 11, color: colors.neutral.textMuted },
+  readinessCheckDone: { color: colors.primary.forest, fontSize: 12 },
+  readinessContent: { flex: 1 },
+  readinessItemTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: 13, color: colors.neutral.textPrimary },
+  readinessItemTitleDone: { color: colors.primary.deepForest },
+  readinessItemSubtitle: { marginTop: 2, fontFamily: typography.fonts.inter.regular, fontSize: 11, color: colors.neutral.textMuted },
+  readinessChevron: { fontSize: 18, color: colors.neutral.textMuted, marginLeft: 8 },
+
+  protectionCard: { padding: 20, borderRadius: 20, backgroundColor: colors.primary.deepForest, marginBottom: 16 },
   protectionTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   lockCircle: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.brand.sage, alignItems: 'center', justifyContent: 'center' },
   lockIcon: { fontSize: 21, color: colors.primary.deepForest },
@@ -287,6 +439,16 @@ const styles = StyleSheet.create({
   metaLabel: { fontFamily: typography.fonts.inter.semiBold, fontSize: 8.5, letterSpacing: 1.1, color: colors.brand.mint },
   metaValue: { fontFamily: typography.fonts.inter.semiBold, fontSize: 13, color: colors.neutral.white },
 
+  topCheckInContainer: {
+    marginBottom: 4,
+  },
+  sectionHeaderCompact: {
+    marginTop: 4,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionHeader: { marginTop: 27, marginBottom: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: 9.5, letterSpacing: 1.3, color: colors.neutral.textSecondary },
   seeAll: { fontFamily: typography.fonts.inter.semiBold, fontSize: 10.5, color: colors.primary.forest },

@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,19 +8,22 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
-
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { Input } from '@/src/components/Input';
-import { SelectInput } from '@/src/components/SelectInput';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
+import { useAppSelector } from '@/src/store/hooks';
 
 export default function TrustedPersonScreen() {
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ recipientId?: string }>();
+  const existingRecipient = useAppSelector((state) =>
+    state.vault.recipients.find((recipient) => recipient.id === params.recipientId),
+  );
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState('');
   const [email, setEmail] = useState('');
@@ -34,16 +36,22 @@ export default function TrustedPersonScreen() {
     phone?: string;
   }>({});
 
+  useEffect(() => {
+    if (!existingRecipient) {
+      return;
+    }
+
+    setName(existingRecipient.name);
+    setRelationship(existingRecipient.relationship ?? '');
+    setEmail(existingRecipient.email);
+    setPhone(existingRecipient.phone ?? '');
+  }, [existingRecipient]);
+
   const validate = () => {
     const newErrors: typeof errors = {};
 
     if (!name.trim()) {
       newErrors.name = 'Please enter their full name.';
-    }
-
-    if (!relationship) {
-      newErrors.relationship =
-        'Please select your relationship.';
     }
 
     if (!email.trim()) {
@@ -66,68 +74,6 @@ export default function TrustedPersonScreen() {
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
-  };
-
-  const selectRelationship = () => {
-    Alert.alert(
-      'Relationship',
-      'Choose your relationship with this person.',
-      [
-        {
-          text: 'Spouse / Partner',
-          onPress: () => {
-            setRelationship('Spouse / Partner');
-            clearError('relationship');
-          },
-        },
-        {
-          text: 'Parent',
-          onPress: () => {
-            setRelationship('Parent');
-            clearError('relationship');
-          },
-        },
-        {
-          text: 'Child',
-          onPress: () => {
-            setRelationship('Child');
-            clearError('relationship');
-          },
-        },
-        {
-          text: 'Sibling',
-          onPress: () => {
-            setRelationship('Sibling');
-            clearError('relationship');
-          },
-        },
-        {
-          text: 'Other Family',
-          onPress: () => {
-            setRelationship('Other Family');
-            clearError('relationship');
-          },
-        },
-        {
-          text: 'Friend',
-          onPress: () => {
-            setRelationship('Friend');
-            clearError('relationship');
-          },
-        },
-        {
-          text: 'Other',
-          onPress: () => {
-            setRelationship('Other');
-            clearError('relationship');
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
   };
 
   const clearError = (
@@ -154,10 +100,12 @@ export default function TrustedPersonScreen() {
     router.push({
       pathname: '/(auth)/trusted-person-review',
       params: {
+        recipientId: existingRecipient?.id ?? '',
         name: name.trim(),
         relationship,
         email: email.trim(),
         phone: phone.trim(),
+        verificationRequired: String(existingRecipient?.verificationRequired ?? true),
       },
     });
   };
@@ -195,23 +143,6 @@ export default function TrustedPersonScreen() {
             </Text>
           </View>
 
-          {/* Progress */}
-
-          <View style={styles.progressContainer}>
-            {Array.from({ length: 10 }).map(
-              (_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.progressDot,
-                    index <= 6 &&
-                      styles.progressDotActive,
-                  ]}
-                />
-              )
-            )}
-          </View>
-
           {/* Heading */}
 
           <View style={styles.heading}>
@@ -241,18 +172,14 @@ export default function TrustedPersonScreen() {
               autoComplete="name"
             />
 
-            <SelectInput
+            <Input
               label="Relationship"
-              placeholder="Select relationship"
+              placeholder="e.g. Spouse, Child, Friend (optional)"
               value={relationship}
-              onPress={selectRelationship}
+              onChangeText={setRelationship}
+              required={false}
+              autoCapitalize="words"
             />
-
-            {errors.relationship && (
-              <Text style={styles.error}>
-                {errors.relationship}
-              </Text>
-            )}
 
             <Input
               label="Email address"
@@ -265,6 +192,7 @@ export default function TrustedPersonScreen() {
               error={errors.email}
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={!existingRecipient}
               autoComplete="email"
             />
 
@@ -303,9 +231,10 @@ export default function TrustedPersonScreen() {
               </Text>
             </View>
           </View>
+        </ScrollView>
 
-          {/* CTA */}
-
+        {/* Sticky Bottom CTA */}
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Pressable
             onPress={handleContinue}
             style={({ pressed }) => [
@@ -321,13 +250,7 @@ export default function TrustedPersonScreen() {
               →
             </Text>
           </Pressable>
-
-          {/* Footer */}
-
-          <Text style={styles.footer}>
-            Step 7 of 10
-          </Text>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -400,23 +323,23 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    marginTop: 38,
-    marginBottom: 30,
+    marginTop: 18,
+    marginBottom: 16,
   },
 
   title: {
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 30,
-    lineHeight: 39,
+    fontSize: 27,
+    lineHeight: 34,
     color: colors.primary.deepForest,
   },
 
   subtitle: {
-    marginTop: 9,
+    marginTop: 6,
     maxWidth: 350,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 19,
     color: colors.neutral.textSecondary,
   },
 
@@ -474,9 +397,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 27,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -502,7 +432,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 18,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
     fontSize: 11,
     color: colors.neutral.textMuted,

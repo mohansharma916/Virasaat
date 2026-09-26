@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -18,15 +18,20 @@ type NotificationMode =
   | 'INFORM_ON_ACTIVATION';
 
 export default function TrustedPersonReviewScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
+    recipientId?: string;
     name?: string;
     relationship?: string;
     email?: string;
     phone?: string;
+    verificationRequired?: string;
   }>();
 
   const [notificationMode, setNotificationMode] =
-    useState<NotificationMode | null>(null);
+    useState<NotificationMode | null>('INFORM_ON_ACTIVATION');
+
+  const [verificationRequired, setVerificationRequired] = useState(params.verificationRequired !== 'false');
 
   const handleContinue = () => {
     if (!notificationMode) {
@@ -36,11 +41,13 @@ export default function TrustedPersonReviewScreen() {
     router.push({
       pathname: '/(auth)/trusted-person-confirmation',
       params: {
+        recipientId: params.recipientId ?? '',
         name: params.name ?? '',
         relationship: params.relationship ?? '',
         email: params.email ?? '',
         phone: params.phone ?? '',
         notificationMode,
+        verificationRequired: String(verificationRequired),
       },
     });
   };
@@ -65,23 +72,6 @@ export default function TrustedPersonReviewScreen() {
           <Text style={styles.brand}>
             VIRASAT
           </Text>
-        </View>
-
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  index <= 7 &&
-                    styles.progressItemActive,
-                ]}
-              />
-            )
-          )}
         </View>
 
         {/* Heading */}
@@ -130,8 +120,8 @@ export default function TrustedPersonReviewScreen() {
               </Text>
 
               <Text style={styles.relationship}>
-                {params.relationship ||
-                  'Relationship not selected'}
+                {params.relationship?.trim() ||
+                  'Relationship not specified'}
               </Text>
             </View>
           </View>
@@ -183,8 +173,8 @@ export default function TrustedPersonReviewScreen() {
             notificationMode ===
             'INFORM_ON_ACTIVATION'
           }
-          title="Inform later"
-          description="Don't contact them now. We'll contact them only if your legacy process is activated."
+          title="Keep private"
+          description="Save without sending any invitation. You can choose to inform them later."
           onPress={() =>
             setNotificationMode(
               'INFORM_ON_ACTIVATION'
@@ -192,6 +182,9 @@ export default function TrustedPersonReviewScreen() {
           }
         />
 
+        <Text style={styles.sectionTitle}>Identity verification preference</Text>
+        <NotificationOption selected={verificationRequired} title="Required" description="If the assigned policy requires verification, it must be completed before released content can be opened." onPress={() => setVerificationRequired(true)} />
+        <NotificationOption selected={!verificationRequired} title="Not required" description="Choose a compatible policy when assigning an item. Authentication and release authorization always apply." onPress={() => setVerificationRequired(false)} />
         {/* Security note */}
 
         <View style={styles.securityCard}>
@@ -206,9 +199,10 @@ export default function TrustedPersonReviewScreen() {
             just by being added as a trusted person.
           </Text>
         </View>
+      </ScrollView>
 
-        {/* CTA */}
-
+      {/* Sticky Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           disabled={!notificationMode}
           onPress={handleContinue}
@@ -229,13 +223,7 @@ export default function TrustedPersonReviewScreen() {
             →
           </Text>
         </Pressable>
-
-        {/* Footer */}
-
-        <Text style={styles.footer}>
-          Step 8 of 10
-        </Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -543,9 +531,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 27,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -574,7 +569,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 17,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
     fontSize: 11,
     color: colors.neutral.textMuted,

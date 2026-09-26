@@ -1,10 +1,15 @@
-import axios from 'axios';
+import { isAxiosError } from 'axios';
 
 export function getApiErrorMessage(
   error: unknown,
   fallback = 'Something went wrong. Please try again.',
 ) {
-  if (axios.isAxiosError(error)) {
+  if (isAxiosError(error)) {
+    // A rejected login/OTP has no app session to expire. Only authenticated
+    // requests should replace the server's error with the session-expiry message.
+    if (error.response?.status === 401 && error.config?.headers.Authorization) {
+      return 'Your session has expired. Sign in again to continue.';
+    }
     const message = error.response?.data?.message;
 
     if (Array.isArray(message)) {
@@ -20,9 +25,9 @@ export function getApiErrorMessage(
     }
 
     if (!error.response) {
-      return 'Unable to reach Virasat. Check the API URL and your connection.';
+      return 'Unable to reach Virasat. Check your connection and try again.';
     }
   }
 
-  return fallback;
+  return error instanceof Error && error.message ? error.message : fallback;
 }

@@ -1,5 +1,6 @@
 import {
   Column,
+  Index,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -11,6 +12,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 
 export enum RecipientStatus {
+  PRIVATE = 'PRIVATE',
   INVITED = 'INVITED',
   ACTIVE = 'ACTIVE',
   REVOKED = 'REVOKED',
@@ -20,6 +22,7 @@ export enum RecipientAccessLevel {
   FULL_VAULT = 'FULL_VAULT',
 }
 
+@Index(['userId', 'requestKey'], { unique: true })
 @Entity('recipients')
 export class Recipient {
   @PrimaryGeneratedColumn('uuid')
@@ -43,7 +46,7 @@ export class Recipient {
   @Column({
     type: 'enum',
     enum: RecipientStatus,
-    default: RecipientStatus.INVITED,
+    default: RecipientStatus.PRIVATE,
   })
   status!: RecipientStatus;
 
@@ -54,7 +57,7 @@ export class Recipient {
   })
   accessLevel!: RecipientAccessLevel;
 
-  @Column({  type: 'text',nullable: true })
+  @Column({  type: 'text',nullable: true, select: false })
   invitationTokenHash!: string | null;
 
   @Column({  type: Date,nullable: true })
@@ -65,6 +68,12 @@ export class Recipient {
 
   @Column({ type: Date,nullable: true })
   revokedAt!: Date | null;
+
+  @Column({ default: true })
+  verificationRequired!: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  requestKey!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

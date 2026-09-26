@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -6,43 +6,27 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useFocusEffect } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { listRecipients, type Recipient } from '@/src/api/recipients.api';
-import { listLegacyItems, type LegacyItem } from '@/src/api/vault.api';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { refreshVaultData } from '@/src/store/vault.slice';
 
 export default function LegacyReviewScreen() {
-  const [items, setItems] = useState<LegacyItem[]>([]);
-  const [trustedPerson, setTrustedPerson] = useState<Recipient | null>(null);
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((state) => state.vault.items);
+  const trustedPerson = useAppSelector((state) =>
+    state.vault.recipients.find((recipient) => recipient.status !== 'REVOKED') ?? null,
+  );
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-
-      void Promise.all([listLegacyItems(), listRecipients()])
-        .then(([vaultItems, recipients]) => {
-          if (!active) {
-            return;
-          }
-
-          setItems(vaultItems);
-          setTrustedPerson(
-            recipients.find((recipient) => recipient.status !== 'REVOKED') ?? null,
-          );
-        })
-        .catch(() => {
-          // The previously saved onboarding state remains visible if a refresh
-          // is interrupted; the dashboard will retry after activation.
-        });
-
-      return () => {
-        active = false;
-      };
-    }, []),
+      void dispatch(refreshVaultData());
+    }, [dispatch]),
   );
 
   const documentsCount = items.filter((item) =>
@@ -80,22 +64,6 @@ export default function LegacyReviewScreen() {
           <Text style={styles.brand}>
             VIRASAT
           </Text>
-        </View>
-
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  styles.progressItemActive,
-                ]}
-              />
-            ),
-          )}
         </View>
 
         {/* Heading */}
@@ -256,9 +224,10 @@ export default function LegacyReviewScreen() {
 
           <SecurityRow text="You can change this anytime" />
         </View>
+      </ScrollView>
 
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {/* Continue */}
-
         <Pressable
           onPress={handleContinue}
           style={({ pressed }) => [
@@ -276,7 +245,6 @@ export default function LegacyReviewScreen() {
         </Pressable>
 
         {/* Save */}
-
         <Pressable
           onPress={handleSaveExit}
           style={styles.saveExit}
@@ -288,7 +256,7 @@ export default function LegacyReviewScreen() {
             </Text>
           </Text>
         </Pressable>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -410,8 +378,8 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    marginTop: 35,
-    marginBottom: 24,
+    marginTop: 18,
+    marginBottom: 16,
   },
 
   eyebrow: {
@@ -629,9 +597,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 20,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -657,13 +632,14 @@ const styles = StyleSheet.create({
   },
 
   saveExit: {
-    marginTop: 17,
+    marginTop: 10,
+    paddingVertical: 4,
     alignItems: 'center',
   },
 
   saveExitText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 11,
     color: colors.neutral.textMuted,
   },
 

@@ -10,19 +10,23 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
 import {
   authenticateWithBiometric,
   isBiometricAvailable,
 } from '@/src/services/biometric';
-import { saveBiometricUnlockEnabled } from '@/src/storage/auth.storage';
+import {
+  getBiometricUnlockEnabled,
+  saveBiometricUnlockEnabled,
+} from '@/src/storage/auth.storage';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
 export default function SecurityScreen() {
+  const insets = useSafeAreaInsets();
   const [biometricAvailable, setBiometricAvailable] =
     useState(false);
 
@@ -38,21 +42,35 @@ export default function SecurityScreen() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    checkBiometricSupport();
+    let active = true;
+
+    void (async () => {
+      try {
+        const [available, enabled] = await Promise.all([
+          isBiometricAvailable(),
+          getBiometricUnlockEnabled(),
+        ]);
+
+        if (active) {
+          setBiometricAvailable(available);
+          setBiometricEnabled(available && enabled);
+        }
+      } catch {
+        if (active) {
+          setBiometricAvailable(false);
+          setBiometricEnabled(false);
+        }
+      } finally {
+        if (active) {
+          setCheckingBiometric(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
   }, []);
-
-  const checkBiometricSupport = async () => {
-    try {
-      const available =
-        await isBiometricAvailable();
-
-      setBiometricAvailable(available);
-    } catch {
-      setBiometricAvailable(false);
-    } finally {
-      setCheckingBiometric(false);
-    }
-  };
 
   const handleBiometricToggle = async (
     value: boolean
@@ -99,7 +117,7 @@ export default function SecurityScreen() {
 
   const handleContinue = async () => {
     await saveBiometricUnlockEnabled(biometricEnabled);
-    router.replace('/(auth)/profile');
+    router.replace('/(auth)/home');
   };
 
   const biometricName =
@@ -249,8 +267,10 @@ export default function SecurityScreen() {
           You can change these settings later from
           Security Settings.
         </Text>
+      </ScrollView>
 
-        {/* Continue */}
+      {/* Sticky Bottom CTA Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           style={({ pressed }) => [
             styles.continueButton,
@@ -279,7 +299,7 @@ export default function SecurityScreen() {
             Security comes first
           </Text>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -314,7 +334,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 10,
-    paddingBottom: 30,
+    paddingBottom: 20,
   },
 
   header: {
@@ -349,46 +369,46 @@ const styles = StyleSheet.create({
 
   hero: {
     alignItems: 'center',
-    marginTop: 42,
+    marginTop: 18,
   },
 
   securityIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.brand.sage,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 22,
+    marginBottom: 12,
   },
 
   securitySymbol: {
-    fontSize: 27,
+    fontSize: 24,
     color: colors.primary.forest,
   },
 
   title: {
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 31,
-    lineHeight: 39,
+    fontSize: 27,
+    lineHeight: 34,
     color: colors.primary.deepForest,
     textAlign: 'center',
   },
 
   description: {
     maxWidth: 350,
-    marginTop: 12,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 20,
     color: colors.neutral.textSecondary,
     textAlign: 'center',
   },
 
   securityCard: {
     flexDirection: 'row',
-    marginTop: 34,
-    padding: 18,
+    marginTop: 20,
+    padding: 16,
     borderRadius: 16,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
@@ -527,9 +547,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   continueButton: {
-    height: 56,
-    marginTop: 26,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',

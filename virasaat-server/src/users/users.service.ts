@@ -71,7 +71,7 @@ export class UsersService {
 
   async update(
     id: string,
-    data: Partial<User>,
+    data: Partial<Omit<User, 'vault' | 'recipients'>>,
   ) {
     await this.userRepository.update(
       id,

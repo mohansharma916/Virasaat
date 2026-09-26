@@ -1,5 +1,7 @@
+import { AuditEvent, AuditResult } from '../audit/entities/audit-event.entity';
 import {
   Injectable,
+  BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -128,48 +130,25 @@ export class CheckInService {
   /**
    * Confirm the user's check-in.
    */
-  async confirmCheckIn(userId: string) {
-    const policy = await this.getPolicy(userId);
-
-    const event = await this.eventRepository.findOne({
-      where: {
-        policyId: policy.id,
-        status: CheckInEventStatus.PENDING,
-      },
-      order: {
-        dueAt: 'ASC',
-      },
+  async confirmCheckIn(userId: string, eventId: string) {
+    return this.policyRepository.manager.transaction(async (manager) => {
+      const policies = manager.getRepository(CheckInPolicy);
+      const events = manager.getRepository(CheckInEvent);
+      const policy = await policies.findOne({ where: { userId }, lock: { mode: 'pessimistic_write' } });
+      if (!policy) throw new NotFoundException('Check-in policy not configured');
+      const event = await events.findOne({ where: { id: eventId, policyId: policy.id } });
+      if (!event) throw new NotFoundException('Check-in not found');
+      if (event.status === CheckInEventStatus.COMPLETED) return { success: true, nextCheckInAt: policy.nextCheckInAt, respondedAt: event.respondedAt };
+      if (event.status !== CheckInEventStatus.PENDING) throw new BadRequestException('This check-in needs a secure activity review. No release has been authorized by this request.');
+      event.status = CheckInEventStatus.COMPLETED;
+      event.respondedAt = new Date();
+      await events.save(event);
+      policy.nextCheckInAt = this.calculateNextCheckIn(policy);
+      await policies.save(policy);
+      await events.save(events.create({ policyId: policy.id, dueAt: policy.nextCheckInAt, status: CheckInEventStatus.PENDING }));
+      await manager.getRepository(AuditEvent).save({ actorId: userId, action: 'checkin_completed', targetType: 'check_in_event', targetId: event.id, result: AuditResult.SUCCESS });
+      return { success: true, nextCheckInAt: policy.nextCheckInAt, respondedAt: event.respondedAt };
     });
-
-    if (!event) {
-      throw new NotFoundException(
-        'No pending check-in found',
-      );
-    }
-
-    event.status = CheckInEventStatus.COMPLETED;
-    event.respondedAt = new Date();
-
-    await this.eventRepository.save(event);
-
-    const nextCheckInAt =
-      this.calculateNextCheckIn(policy);
-
-    policy.nextCheckInAt = nextCheckInAt;
-
-    await this.policyRepository.save(policy);
-
-    await this.createEvent(
-      policy,
-      nextCheckInAt,
-    );
-
-    return {
-      success: true,
-      message: 'Check-in completed successfully',
-      respondedAt: event.respondedAt,
-      nextCheckInAt,
-    };
   }
 
   /**

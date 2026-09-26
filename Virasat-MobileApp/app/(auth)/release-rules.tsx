@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -15,10 +15,15 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { updateReleasePolicy } from '@/src/api/release.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { refreshVaultData } from '@/src/store/vault.slice';
 
 export default function ReleaseRulesScreen() {
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [verificationRequired, setVerificationRequired] = useState(true);
 
   const handleContinue = async () => {
     try {
@@ -26,6 +31,7 @@ export default function ReleaseRulesScreen() {
       setError('');
       await updateReleasePolicy({
         trigger: 'CHECK_IN_ESCALATION',
+        verificationRequired,
         verificationLevel: 'STANDARD',
         escalationConfig: {
           missedCheckInsBeforeReview: 3,
@@ -33,6 +39,7 @@ export default function ReleaseRulesScreen() {
         },
         enabled: true,
       });
+      await dispatch(refreshVaultData()).unwrap();
       router.replace('/(auth)/home');
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'We could not save your release plan. Please try again.'));
@@ -65,20 +72,12 @@ export default function ReleaseRulesScreen() {
           </Text>
         </View>
 
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  styles.progressItemActive,
-                ]}
-              />
-            ),
-          )}
+        <View style={{ paddingVertical: 16 }}>
+          <Text style={{ fontSize: 18 }}>Recipient identity verification</Text>
+          <Text>Authentication always applies. This preference affects new assignments; existing assigned policies stay unchanged.</Text>
+          <Pressable accessibilityRole="switch" accessibilityState={{ checked: verificationRequired }} onPress={() => setVerificationRequired(!verificationRequired)} style={{ paddingVertical: 16 }}>
+            <Text>{verificationRequired ? '✓ Required' : '○ Not required'} — tap to change</Text>
+          </Pressable>
         </View>
 
         {/* Heading */}
@@ -228,8 +227,11 @@ export default function ReleaseRulesScreen() {
             </Text>
           </View>
         </View>
+      </ScrollView>
 
-        {/* Continue */}
+      {/* Sticky Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable
           disabled={saving}
@@ -254,9 +256,7 @@ export default function ReleaseRulesScreen() {
             </>
           )}
         </Pressable>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -634,9 +634,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 23,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -654,7 +661,7 @@ const styles = StyleSheet.create({
   },
 
   error: {
-    marginTop: 12,
+    marginBottom: 10,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.regular,
     fontSize: 11,

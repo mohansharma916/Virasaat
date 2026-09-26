@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -66,6 +66,7 @@ const categories: Category[] = [
 ];
 
 export default function LegacySetupScreen() {
+  const insets = useSafeAreaInsets();
   const [selectedCategories, setSelectedCategories] =
     useState<LegacyCategory[]>([]);
 
@@ -119,22 +120,6 @@ export default function LegacySetupScreen() {
           <Text style={styles.brand}>
             VIRASAT
           </Text>
-        </View>
-
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  styles.progressItemActive,
-                ]}
-              />
-            ),
-          )}
         </View>
 
         {/* Heading */}
@@ -251,9 +236,10 @@ export default function LegacySetupScreen() {
             </Text>
           </View>
         </View>
+      </ScrollView>
 
-        {/* Continue */}
-
+      {/* Sticky Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           disabled={
             selectedCategories.length === 0
@@ -286,7 +272,7 @@ export default function LegacySetupScreen() {
               } selected`
             : 'Select at least one category'}
         </Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -505,9 +491,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 23,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -537,9 +530,9 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 14,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 11,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

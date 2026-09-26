@@ -1,5 +1,6 @@
 import {
   IsOptional,
+  IsBoolean,
   IsString,
 } from 'class-validator';
 
@@ -15,4 +16,7 @@ export class UpdateRecipientDto {
   @IsString()
   @IsOptional()
   relationship?: string;
+  @IsOptional()
+  @IsBoolean()
+  verificationRequired?: boolean;
 }

@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   CameraView,
@@ -16,16 +16,17 @@ import {
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import {
-  markLegacyCategoryComplete,
-  parseLegacyCategories,
-} from '@/src/utils/legacy-flow';
-import { uploadLegacyItem } from '@/src/api/vault.api';
+import { parseLegacyCategories } from '@/src/utils/legacy-flow';
+import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { addLegacyItem } from '@/src/store/vault.slice';
 
 const MAX_DURATION_SECONDS = 5 * 60;
 
 export default function LegacyVideoMessageScreen() {
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const params = useLocalSearchParams<{
     category?: string;
     categories?: string;
@@ -37,6 +38,9 @@ export default function LegacyVideoMessageScreen() {
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState(0);
+  const requestKey = useRef(createItemRequestKey());
+  const busy = useRef(false);
 
   const startRecording = async () => {
     if (!cameraRef.current || recording) {
@@ -67,14 +71,16 @@ export default function LegacyVideoMessageScreen() {
   };
 
   const handleSave = async () => {
-    if (!recordedUri) {
+    if (!recordedUri || busy.current) {
       return;
     }
 
+    busy.current = true;
     setSaving(true);
 
     try {
-      await uploadLegacyItem({
+      const item = await uploadLegacyItem({
+        requestKey: requestKey.current,
         type: 'VIDEO',
         category: 'VIDEOS',
         title: 'Video message',
@@ -84,12 +90,9 @@ export default function LegacyVideoMessageScreen() {
           name: `virasat-video-${Date.now()}.mp4`,
           mimeType: 'video/mp4',
         },
-      });
+      }, { onProgress: setProgress });
+      dispatch(addLegacyItem(item));
       const category = parseLegacyCategories(params.category)[0];
-
-      if (category) {
-        markLegacyCategoryComplete(category);
-      }
 
       router.replace({
         pathname: '/(auth)/legacy-category',
@@ -100,11 +103,14 @@ export default function LegacyVideoMessageScreen() {
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'We could not save your video message. Please try again.'));
     } finally {
+      busy.current = false;
       setSaving(false);
     }
   };
 
   const handleRetake = () => {
+    if (busy.current) return;
+    requestKey.current = createItemRequestKey();
     setError('');
     setRecordedUri(null);
   };
@@ -126,7 +132,8 @@ export default function LegacyVideoMessageScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
-          <View style={styles.header}>
+          {saving && <Text accessibilityLiveRegion="polite">{progress}% transferred — confirming storage</Text>}
+        <View style={styles.header}>
             <Pressable
               onPress={() => router.back()}
               hitSlop={12}
@@ -185,6 +192,7 @@ export default function LegacyVideoMessageScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {saving && <Text accessibilityLiveRegion="polite">{progress}% transferred — confirming storage</Text>}
         <View style={styles.header}>
           <Pressable
             onPress={() => {
@@ -201,18 +209,6 @@ export default function LegacyVideoMessageScreen() {
           </Pressable>
 
           <Text style={styles.brand}>VIRASAT</Text>
-        </View>
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.progressItem,
-                index <= 8 && styles.progressItemActive,
-              ]}
-            />
-          ))}
         </View>
 
         <View style={styles.heading}>
@@ -325,10 +321,6 @@ export default function LegacyVideoMessageScreen() {
           </View>
         )}
 
-        {error ? (
-          <Text style={styles.error}>{error}</Text>
-        ) : null}
-
         <View style={styles.securityCard}>
           <View style={styles.securityIcon}>
             <Text style={styles.lock}>🔒</Text>
@@ -346,6 +338,12 @@ export default function LegacyVideoMessageScreen() {
             </Text>
           </View>
         </View>
+      </ScrollView>
+
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {error ? (
+          <Text style={styles.error}>{error}</Text>
+        ) : null}
 
         <Pressable
           disabled={!recordedUri || saving}
@@ -367,8 +365,7 @@ export default function LegacyVideoMessageScreen() {
             </>
           )}
         </Pressable>
-
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -435,8 +432,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.forest,
   },
   heading: {
-    marginTop: 35,
-    marginBottom: 20,
+    marginTop: 18,
+    marginBottom: 14,
   },
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
@@ -674,8 +671,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
   primaryButton: {
-    marginTop: 18,
     minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.forest,

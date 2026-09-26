@@ -1,8 +1,11 @@
+import { AssignItemDto } from './dto/assign-item.dto';
+import { LegacyItem } from './entities/legacy-item.entity';
 import {
   Body,
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UploadedFile,
@@ -31,10 +34,10 @@ export class LegacyItemsController {
     @Req() req: any,
     @Body() dto: CreateLegacyItemDto,
   ) {
-    return this.legacyItemsService.create(
+    return this.safeItem(await this.legacyItemsService.create(
       req.user.id,
       dto,
-    );
+    ));
   }
 
   @Post('upload')
@@ -57,18 +60,26 @@ export class LegacyItemsController {
       | undefined,
     @Body() dto: CreateLegacyItemDto,
   ) {
-    return this.legacyItemsService.createEncryptedUpload(
+    return this.safeItem(await this.legacyItemsService.createEncryptedUpload(
       req.user.id,
       dto,
       file,
-    );
+    ));
+  }
+
+  private safeItem(item: LegacyItem) {
+    const { id, vaultId, type, category, title, description, status, createdAt, updatedAt, assignment } = item;
+    return { id, vaultId, type, category, title, description, status, createdAt, updatedAt, assignment };
+  }
+
+  @Patch(':id/assignment')
+  async assign(@Req() req: { user: { id: string } }, @Param('id') id: string, @Body() dto: AssignItemDto) {
+    return this.safeItem(await this.legacyItemsService.assign(req.user.id, id, dto));
   }
 
   @Get()
   async findAll(@Req() req: any) {
-    return this.legacyItemsService.findAll(
-      req.user.id,
-    );
+    return (await this.legacyItemsService.findAll(req.user.id)).map((item) => this.safeItem(item));
   }
 
   @Get(':id')
@@ -76,9 +87,9 @@ export class LegacyItemsController {
     @Req() req: any,
     @Param('id') id: string,
   ) {
-    return this.legacyItemsService.findOne(
+    return this.safeItem(await this.legacyItemsService.findOne(
       req.user.id,
       id,
-    );
+    ));
   }
 }

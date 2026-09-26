@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -10,24 +10,20 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import {
-  markLegacyCategoryComplete,
-  parseLegacyCategories,
-} from '@/src/utils/legacy-flow';
-import { createLegacyItem } from '@/src/api/vault.api';
+import { createLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { addLegacyItem } from '@/src/store/vault.slice';
 
 export default function LegacyInvestmentDetailsScreen() {
-  const params = useLocalSearchParams<{
-    category?: string;
-    categories?: string;
-  }>();
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const [provider, setProvider] = useState('');
   const [folioNumber, setFolioNumber] = useState('');
   const [contact, setContact] = useState('');
@@ -35,8 +31,11 @@ export default function LegacyInvestmentDetailsScreen() {
   const [instructions, setInstructions] =
     useState('');
   const [saving, setSaving] = useState(false);
+  const requestKey = useRef(createItemRequestKey());
+  const busy = useRef(false);
 
   const handleSave = async () => {
+    if (busy.current) return;
     if (!provider.trim()) {
       Alert.alert(
         'Provider required',
@@ -54,8 +53,10 @@ export default function LegacyInvestmentDetailsScreen() {
     }
 
     try {
+      busy.current = true;
       setSaving(true);
-      await createLegacyItem({
+      const item = await createLegacyItem({
+        requestKey: requestKey.current,
         type: 'FINANCIAL',
         category: 'INVESTMENTS',
         title: 'Financial record',
@@ -67,22 +68,14 @@ export default function LegacyInvestmentDetailsScreen() {
           instructions.trim() ? `Instructions: ${instructions.trim()}` : '',
         ].filter(Boolean).join('\n'),
       });
+      dispatch(addLegacyItem(item));
 
-      const category = parseLegacyCategories(params.category)[0];
 
-      if (category) {
-        markLegacyCategoryComplete(category);
-      }
-
-      router.replace({
-        pathname: '/(auth)/legacy-category',
-        params: {
-          categories: params.categories ?? category ?? 'INVESTMENTS',
-        },
-      });
+      router.replace('/(auth)/home');
     } catch (error) {
       Alert.alert('Unable to save investment', getApiErrorMessage(error));
     } finally {
+      busy.current = false;
       setSaving(false);
     }
   };
@@ -118,22 +111,6 @@ export default function LegacyInvestmentDetailsScreen() {
             <Text style={styles.brand}>
               VIRASAT
             </Text>
-          </View>
-
-          {/* Progress */}
-
-          <View style={styles.progressContainer}>
-            {Array.from({ length: 10 }).map(
-              (_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.progressItem,
-                    styles.progressItemActive,
-                  ]}
-                />
-              ),
-            )}
           </View>
 
           {/* Heading */}
@@ -297,9 +274,10 @@ export default function LegacyInvestmentDetailsScreen() {
               </Text>
             </View>
           </View>
+        </ScrollView>
 
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           {/* Save */}
-
           <Pressable
             disabled={saving}
             onPress={handleSave}
@@ -316,7 +294,7 @@ export default function LegacyInvestmentDetailsScreen() {
           <Text style={styles.footer}>
             You can edit this information later.
           </Text>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -406,8 +384,8 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    marginTop: 35,
-    marginBottom: 22,
+    marginTop: 18,
+    marginBottom: 16,
   },
 
   eyebrow: {
@@ -590,9 +568,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 23,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     alignItems: 'center',
@@ -611,9 +596,9 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 13,
+    marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
+    fontSize: 10.5,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

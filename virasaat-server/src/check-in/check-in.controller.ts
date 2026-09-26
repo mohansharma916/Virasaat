@@ -1,3 +1,4 @@
+import { ConfirmCheckInDto } from './dto/confirm-check-in.dto';
 import {
   Body,
   Controller,
@@ -38,9 +39,9 @@ export class CheckInController {
   }
 
   @Post('confirm')
-  async confirm(@Req() req: any) {
+  async confirm(@Req() req: { user: { id: string } }, @Body() dto: ConfirmCheckInDto) {
     return this.checkInService.confirmCheckIn(
-      req.user.id,
+      req.user.id, dto.eventId,
     );
   }
 

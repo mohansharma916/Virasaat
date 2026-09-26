@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -35,14 +36,14 @@ export class RecipientsService {
       });
 
     if (existing) {
-      throw new ConflictException(
-        'Recipient already exists',
-      );
+      if (dto.requestKey && existing.requestKey === dto.requestKey && existing.name === dto.name && existing.phone === (dto.phone ?? null) && existing.relationship === (dto.relationship ?? null) && existing.verificationRequired === (dto.verificationRequired ?? true)) return existing;
+      throw new ConflictException('Recipient already exists. Review the saved person before making changes.');
     }
 
     const recipient =
       this.recipientRepository.create({
         userId,
+        requestKey: dto.requestKey ?? null,
 
         name: dto.name,
         email: dto.email,
@@ -52,13 +53,27 @@ export class RecipientsService {
         relationship:
           dto.relationship ?? null,
 
+        verificationRequired: dto.verificationRequired ?? true,
         status:
-          RecipientStatus.INVITED,
+          RecipientStatus.PRIVATE,
       });
 
-    return this.recipientRepository.save(
-      recipient,
-    );
+    try { return await this.recipientRepository.save(recipient); }
+    catch (error) {
+      if (dto.requestKey && (error as { code?: string }).code === '23505') {
+        const saved = await this.recipientRepository.findOne({ where: { userId, requestKey: dto.requestKey } });
+        if (saved && saved.email === dto.email && saved.name === dto.name && saved.phone === (dto.phone ?? null) && saved.relationship === (dto.relationship ?? null) && saved.verificationRequired === (dto.verificationRequired ?? true)) return saved;
+        throw new ConflictException('This request already saved a different recipient. Review your people list.');
+      }
+      throw error;
+    }
+  }
+
+  async invite(userId: string, recipientId: string) {
+    await this.findOne(userId, recipientId);
+    // BACKEND GAP: no real notification transport or invitation acceptance flow.
+    // Never mark an invitation sent or disclose a private relationship via a stub.
+    throw new ServiceUnavailableException('Invitation delivery is not available yet. The person remains saved; no invitation was sent.');
   }
 
   async findAll(userId: string) {

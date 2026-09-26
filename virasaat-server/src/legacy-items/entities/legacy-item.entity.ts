@@ -1,5 +1,6 @@
 import {
   Column,
+  Index,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -26,6 +27,7 @@ export enum LegacyItemStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
+@Index(['vaultId', 'requestKey'], { unique: true })
 @Entity('legacy_items')
 export class LegacyItem {
   @PrimaryGeneratedColumn('uuid')
@@ -55,18 +57,21 @@ export class LegacyItem {
   @Column({
      type: 'text',
     nullable: true,
+    select: false,
   })
   ciphertextRef!: string | null;
 
   @Column({
      type: 'text',
     nullable: true,
+    select: false,
   })
   encryptionKeyRef!: string | null;
 
   @Column({
      type: 'text',
     nullable: true,
+    select: false,
   })
   encryptionKeyVersion!: string | null;
 
@@ -76,6 +81,24 @@ export class LegacyItem {
     default: LegacyItemStatus.DRAFT,
   })
   status!: LegacyItemStatus;
+
+  @Column({ type: 'jsonb', nullable: true })
+  assignment!: {
+    recipientId: string;
+    policyId: string;
+    policyVersion: number;
+    verificationRequired: boolean;
+    trigger: string;
+    verificationLevel: string;
+    escalationConfig: Record<string, unknown>;
+    assignedAt: string;
+  } | null;
+
+  @Column({ type: 'text', nullable: true, select: false })
+  requestKey!: string | null;
+
+  @Column({ type: 'text', nullable: true, select: false })
+  requestHash!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

@@ -5,12 +5,14 @@ import { router } from 'expo-router';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { saveAccessToken } from '@/src/storage/auth.storage';
-import { login } from '@/src/api/auth.api';
+import { googleLogin, login } from '@/src/api/auth.api';
 import { signInWithGoogle } from '@/src/utils/google-auth';
-import { googleLogin } from '@/src/api/auth.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { setSessionUser } from '@/src/store/session.slice';
 
 export default function LoginScreen() {
+  const dispatch = useAppDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
@@ -19,6 +21,13 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
 
   const canContinue = email.trim().length > 0 && password.length > 0;
+
+  const finishAuthentication = async (result: Awaited<ReturnType<typeof login>>) => {
+    await saveAccessToken(result.accessToken);
+    dispatch(setSessionUser(result.user));
+
+    router.replace('/(auth)/home');
+  };
 
 
   const handleGoogleLogin = async () => {
@@ -36,9 +45,7 @@ export default function LoginScreen() {
 
       const result = await googleLogin(idToken);
 
-      await saveAccessToken(result.accessToken);
-
-      router.replace('/(auth)/home' as never);
+      await finishAuthentication(result);
     } catch (error) {
       setError(getApiErrorMessage(error, 'Google sign-in failed. Please try again.'));
     } finally {
@@ -57,8 +64,7 @@ export default function LoginScreen() {
         password,
       });
 
-      await saveAccessToken(result.accessToken);
-      router.replace('/(auth)/home' as never);
+      await finishAuthentication(result);
     } catch (error) {
       setError(getApiErrorMessage(error, 'Unable to sign in. Please try again.'));
     }
@@ -197,16 +203,16 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 10, paddingBottom: 28 },
   header: { height: 48, alignItems: 'center', justifyContent: 'center' },
   brand: { fontFamily: typography.fonts.playfair.bold, fontSize: 18, letterSpacing: 3, color: colors.primary.deepForest },
-  hero: { alignItems: 'center', marginTop: 38 },
-  iconCircle: { width: 58, height: 58, borderRadius: 29, backgroundColor: colors.brand.mint, alignItems: 'center', justifyContent: 'center' },
-  lockIcon: { fontSize: 25, color: colors.primary.forest },
-  eyebrow: { marginTop: 22, fontFamily: typography.fonts.inter.semiBold, fontSize: 9, letterSpacing: 1.6, color: colors.primary.forest },
-  title: { marginTop: 8, textAlign: 'center', fontFamily: typography.fonts.playfair.semiBold, fontSize: 29, lineHeight: 37, color: colors.primary.deepForest },
-  subtitle: { maxWidth: 330, marginTop: 9, textAlign: 'center', fontFamily: typography.fonts.inter.regular, fontSize: 12.5, lineHeight: 20, color: colors.neutral.textSecondary },
-  form: { marginTop: 34 },
+  hero: { alignItems: 'center', marginTop: 14 },
+  iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.brand.mint, alignItems: 'center', justifyContent: 'center' },
+  lockIcon: { fontSize: 21, color: colors.primary.forest },
+  eyebrow: { marginTop: 10, fontFamily: typography.fonts.inter.semiBold, fontSize: 9, letterSpacing: 1.6, color: colors.primary.forest },
+  title: { marginTop: 6, textAlign: 'center', fontFamily: typography.fonts.playfair.semiBold, fontSize: 25, lineHeight: 32, color: colors.primary.deepForest },
+  subtitle: { maxWidth: 330, marginTop: 4, textAlign: 'center', fontFamily: typography.fonts.inter.regular, fontSize: 12, lineHeight: 18, color: colors.neutral.textSecondary },
+  form: { marginTop: 18 },
   googleButton: {
-    height: 52,
-    marginTop: 14,
+    height: 50,
+    marginTop: 10,
     borderRadius: 14,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
@@ -228,29 +234,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.neutral.textPrimary,
   },
-  field: { marginBottom: 18 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
-  label: { marginBottom: 7, fontFamily: typography.fonts.inter.semiBold, fontSize: 9, letterSpacing: 1.2, color: colors.neutral.textSecondary },
+  field: { marginBottom: 12 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
+  label: { marginBottom: 5, fontFamily: typography.fonts.inter.semiBold, fontSize: 9, letterSpacing: 1.2, color: colors.neutral.textSecondary },
   forgot: { fontFamily: typography.fonts.inter.semiBold, fontSize: 9.5, color: colors.primary.forest },
-  input: { height: 54, paddingHorizontal: 15, borderRadius: 13, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.neutral.border, fontFamily: typography.fonts.inter.regular, fontSize: 13, color: colors.neutral.textPrimary },
-  passwordContainer: { height: 54, flexDirection: 'row', alignItems: 'center', borderRadius: 13, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.neutral.border },
+  input: { height: 50, paddingHorizontal: 15, borderRadius: 13, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.neutral.border, fontFamily: typography.fonts.inter.regular, fontSize: 13, color: colors.neutral.textPrimary },
+  passwordContainer: { height: 50, flexDirection: 'row', alignItems: 'center', borderRadius: 13, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.neutral.border },
   passwordInput: { flex: 1, height: '100%', paddingHorizontal: 15, fontFamily: typography.fonts.inter.regular, fontSize: 13, color: colors.neutral.textPrimary },
-  error: { marginTop: 10, fontFamily: typography.fonts.inter.regular, fontSize: 11, color: '#B42318' },
+  error: { marginTop: 8, fontFamily: typography.fonts.inter.regular, fontSize: 11, color: '#B42318' },
   visibilityButton: { paddingHorizontal: 14 },
   visibilityText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 10, color: colors.primary.forest },
-  loginButton: { height: 55, marginTop: 3, borderRadius: 14, backgroundColor: colors.primary.deepForest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  loginButton: { height: 52, marginTop: 4, borderRadius: 14, backgroundColor: colors.primary.deepForest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   loginButtonDisabled: { opacity: 0.4 },
   loginButtonText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 14, color: colors.neutral.white },
   loginArrow: { marginLeft: 11, fontSize: 18, color: colors.neutral.white },
-  dividerRow: { marginTop: 26, flexDirection: 'row', alignItems: 'center' },
+  dividerRow: { marginTop: 16, flexDirection: 'row', alignItems: 'center' },
   divider: { flex: 1, height: 1, backgroundColor: colors.neutral.border },
   dividerText: { marginHorizontal: 12, fontFamily: typography.fonts.inter.semiBold, fontSize: 8.5, letterSpacing: 1, color: colors.neutral.textMuted },
-  signupButton: { height: 52, marginTop: 17, borderRadius: 14, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.primary.forest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  signupButton: { height: 50, marginTop: 10, borderRadius: 14, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.primary.forest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   signupText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 13, color: colors.primary.forest },
   signupArrow: { marginLeft: 10, fontSize: 17, color: colors.primary.forest },
-  securityNote: { marginTop: 24, paddingHorizontal: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  securityNote: { marginTop: 14, paddingHorizontal: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   securityIcon: { marginRight: 7, fontSize: 11 },
   securityText: { fontFamily: typography.fonts.inter.regular, fontSize: 9.5, color: colors.neutral.textMuted },
-  footer: { marginTop: 16, textAlign: 'center', fontFamily: typography.fonts.inter.regular, fontSize: 8.5, lineHeight: 14, color: colors.neutral.textMuted },
+  footer: { marginTop: 10, textAlign: 'center', fontFamily: typography.fonts.inter.regular, fontSize: 8.5, lineHeight: 14, color: colors.neutral.textMuted },
   buttonPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
 });

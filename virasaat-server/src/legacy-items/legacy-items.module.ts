@@ -1,3 +1,5 @@
+import { Recipient } from '../recipients/entities/recipient.entity';
+import { ReleasePolicy } from '../release/entities/release-policy.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -12,7 +14,7 @@ import { EncryptionModule } from '../encryption/encryption.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      LegacyItem,
+      LegacyItem, Recipient, ReleasePolicy,
     ]),
 
     VaultModule,

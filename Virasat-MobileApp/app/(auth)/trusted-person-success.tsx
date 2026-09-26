@@ -32,7 +32,7 @@ export default function TrustedPersonSuccessScreen() {
      * the next part of Virasat setup.
      */
 
-    router.replace('/(auth)/legacy-setup');
+    router.replace('/(auth)/home');
   };
 
   return (
@@ -43,19 +43,6 @@ export default function TrustedPersonSuccessScreen() {
         <Text style={styles.brand}>
           VIRASAT
         </Text>
-
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={styles.progressItem}
-              />
-            )
-          )}
-        </View>
 
         {/* Main */}
 
@@ -101,7 +88,7 @@ export default function TrustedPersonSuccessScreen() {
                 <Text style={styles.statusText}>
                   {isInformNow
                     ? `An invitation is ready for ${personName}. Delivery will begin when notifications are enabled.`
-                    : `No invitation has been sent to ${personName}. We'll contact them only if your legacy process is activated.`}
+                    : `No invitation has been sent to ${personName}. You can choose to inform them later.`}
                 </Text>
               </View>
             </View>

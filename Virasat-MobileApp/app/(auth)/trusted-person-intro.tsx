@@ -6,7 +6,7 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -14,6 +14,7 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
 export default function TrustedPersonIntroScreen() {
+  const insets = useSafeAreaInsets();
   const handleContinue = () => {
     router.replace('/(auth)/trusted-person');
   };
@@ -46,37 +47,6 @@ export default function TrustedPersonIntroScreen() {
         </View>
 
         {/* Progress */}
-        <View style={styles.progressContainer}>
-          <ProgressDot active />
-          <ProgressLine active />
-
-          <ProgressDot active />
-          <ProgressLine active />
-
-          <ProgressDot active />
-          <ProgressLine active />
-
-          <ProgressDot active />
-          <ProgressLine active />
-
-          <ProgressDot active />
-          <ProgressLine active />
-
-          <ProgressDot active />
-          <ProgressLine active />
-
-          <ProgressDot active />
-          <ProgressLine />
-
-          <ProgressDot />
-          <ProgressLine />
-
-          <ProgressDot />
-          <ProgressLine />
-
-          <ProgressDot />
-        </View>
-
         {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
@@ -157,8 +127,10 @@ export default function TrustedPersonIntroScreen() {
             You remain in control of your information.
           </Text>
         </View>
+      </ScrollView>
 
-        {/* CTA */}
+      {/* Sticky Bottom Actions */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           onPress={handleContinue}
           style={({ pressed }) => [
@@ -185,7 +157,6 @@ export default function TrustedPersonIntroScreen() {
           </Text>
         </Pressable>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <View style={styles.footerIcon}>
             <Text style={styles.footerCheck}>
@@ -197,38 +168,8 @@ export default function TrustedPersonIntroScreen() {
             You stay in control
           </Text>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
-  );
-}
-
-function ProgressDot({
-  active = false,
-}: {
-  active?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.progressDot,
-        active && styles.progressDotActive,
-      ]}
-    />
-  );
-}
-
-function ProgressLine({
-  active = false,
-}: {
-  active?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.progressLine,
-        active && styles.progressLineActive,
-      ]}
-    />
   );
 }
 
@@ -341,21 +282,21 @@ const styles = StyleSheet.create({
 
   hero: {
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 18,
   },
 
   heroIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.brand.sage,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 22,
+    marginBottom: 12,
   },
 
   heroSymbol: {
-    fontSize: 30,
+    fontSize: 26,
     color: colors.primary.forest,
   },
 
@@ -483,9 +424,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 28,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -511,7 +459,7 @@ const styles = StyleSheet.create({
   },
 
   skipButton: {
-    minHeight: 44,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
@@ -527,7 +475,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 22,
+    marginTop: 8,
   },
 
   footerIcon: {

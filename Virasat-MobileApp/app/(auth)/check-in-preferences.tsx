@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
 
@@ -16,10 +17,25 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { updateCheckInSettings } from '@/src/api/check-in.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { refreshVaultData } from '@/src/store/vault.slice';
 
 export default function CheckInPreferencesScreen() {
+  const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
+  const email = useAppSelector((state) => state.session.user?.email);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [preferredTime, setPreferredTime] = useState('10:00');
+
+  const selectPreferredTime = () => {
+    Alert.alert('Preferred time', 'Choose when to receive your check-in reminder.', [
+      { text: '8:00 AM', onPress: () => setPreferredTime('08:00') },
+      { text: '10:00 AM', onPress: () => setPreferredTime('10:00') },
+      { text: '6:00 PM', onPress: () => setPreferredTime('18:00') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const handleContinue = async () => {
     try {
@@ -27,7 +43,7 @@ export default function CheckInPreferencesScreen() {
       setError('');
       await updateCheckInSettings({
         cadence: 'MONTHLY',
-        preferredTime: '10:00',
+        preferredTime,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
         reminderConfig: {
           channels: ['EMAIL'],
@@ -35,6 +51,7 @@ export default function CheckInPreferencesScreen() {
         },
         escalationEnabled: true,
       });
+      await dispatch(refreshVaultData()).unwrap();
       router.push('/(auth)/release-rules');
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'We could not save your check-in settings. Please try again.'));
@@ -65,22 +82,6 @@ export default function CheckInPreferencesScreen() {
           <Text style={styles.brand}>
             VIRASAT
           </Text>
-        </View>
-
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  styles.progressItemActive,
-                ]}
-              />
-            ),
-          )}
         </View>
 
         {/* Heading */}
@@ -124,23 +125,19 @@ export default function CheckInPreferencesScreen() {
           </View>
         </View>
 
-        {/* Date */}
+        {/* Schedule */}
 
         <Text style={styles.sectionLabel}>
-          CHECK-IN DATE
+          SCHEDULE
         </Text>
 
-        <Pressable style={styles.selectCard}>
+        <View style={styles.selectCard}>
           <View>
             <Text style={styles.selectValue}>
-              15th of every month
+              Monthly check-in
             </Text>
           </View>
-
-          <Text style={styles.chevron}>
-            ›
-          </Text>
-        </Pressable>
+        </View>
 
         {/* Time */}
 
@@ -148,9 +145,12 @@ export default function CheckInPreferencesScreen() {
           PREFERRED TIME
         </Text>
 
-        <Pressable style={styles.selectCard}>
+        <Pressable onPress={selectPreferredTime} style={styles.selectCard}>
           <Text style={styles.selectValue}>
-            10:00 AM
+            {new Date(`2000-01-01T${preferredTime}`).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+            })}
           </Text>
 
           <Text style={styles.chevron}>
@@ -168,19 +168,7 @@ export default function CheckInPreferencesScreen() {
           <ContactOption
             selected
             title="Email"
-            subtitle="your@email.com"
-          />
-
-          <View style={styles.divider} />
-
-          <ContactOption
-            title="Push notification"
-          />
-
-          <View style={styles.divider} />
-
-          <ContactOption
-            title="SMS"
+            subtitle={email ?? 'Your account email'}
           />
         </View>
 
@@ -190,15 +178,11 @@ export default function CheckInPreferencesScreen() {
           REMINDER WINDOW
         </Text>
 
-        <Pressable style={styles.selectCard}>
+        <View style={styles.selectCard}>
           <Text style={styles.selectValue}>
-            7 days to respond
+            Email reminders 7, 3 and 1 days before
           </Text>
-
-          <Text style={styles.chevron}>
-            ›
-          </Text>
-        </Pressable>
+        </View>
 
         {/* Information */}
 
@@ -216,8 +200,11 @@ export default function CheckInPreferencesScreen() {
             process.
           </Text>
         </View>
+      </ScrollView>
 
-        {/* Continue */}
+      {/* Sticky Bottom Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable
           disabled={saving}
@@ -242,9 +229,7 @@ export default function CheckInPreferencesScreen() {
             </>
           )}
         </Pressable>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -539,9 +524,16 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
   button: {
-    height: 56,
-    marginTop: 22,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -559,7 +551,7 @@ const styles = StyleSheet.create({
   },
 
   error: {
-    marginTop: 12,
+    marginBottom: 10,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.regular,
     fontSize: 11,

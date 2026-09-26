@@ -41,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(
         payload.sub,
       );
 
-    if (!user) {
+    if (!user || user.status !== 'ACTIVE') {
       return null;
     }
 

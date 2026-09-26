@@ -23,11 +23,14 @@ import {
 } from '@/src/api/auth.api';
 import { saveAccessToken } from '@/src/storage/auth.storage';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { setSessionUser } from '@/src/store/session.slice';
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
 export default function VerifyScreen() {
+  const dispatch = useAppDispatch();
   const { email, developmentOtp } = useLocalSearchParams<{
     email?: string;
     developmentOtp?: string;
@@ -42,8 +45,11 @@ export default function VerifyScreen() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [currentDevelopmentOtp, setCurrentDevelopmentOtp] = useState(
+    developmentOtp ?? '',
+  );
 
-  const inputs = useRef<Array<TextInput | null>>([]);
+  const inputs = useRef<(TextInput | null)[]>([]);
 
   /*
    * Countdown
@@ -170,7 +176,8 @@ export default function VerifyScreen() {
 
     try {
       setLoading(true);
-      await resendVerification(email);
+      const result = await resendVerification(email);
+      setCurrentDevelopmentOtp(result.developmentOtp ?? '');
     } catch (error) {
       setError(getApiErrorMessage(error, 'We could not resend the code. Please try again.'));
       return;
@@ -205,6 +212,7 @@ export default function VerifyScreen() {
 
       const result = await verifyEmail(email, code);
       await saveAccessToken(result.accessToken);
+      dispatch(setSessionUser(result.user));
       router.replace('/(auth)/security');
     } catch (error) {
       setError(getApiErrorMessage(error, 'The verification code is incorrect. Please try again.'));
@@ -268,9 +276,9 @@ export default function VerifyScreen() {
               {email || 'your email address'}
             </Text>
 
-            {__DEV__ && developmentOtp ? (
+            {__DEV__ && currentDevelopmentOtp ? (
               <Text style={styles.devCode}>
-                Development code: {developmentOtp}
+                Development code: {currentDevelopmentOtp}
               </Text>
             ) : null}
 
@@ -459,50 +467,50 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 48,
+    paddingTop: 16,
   },
 
   icon: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.brand.sage,
     textAlign: 'center',
     textAlignVertical: 'center',
-    fontSize: 25,
+    fontSize: 21,
     color: colors.primary.forest,
-    marginBottom: 24,
+    marginBottom: 12,
     overflow: 'hidden',
   },
 
   title: {
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 26,
+    lineHeight: 32,
     color: colors.primary.deepForest,
     textAlign: 'center',
   },
 
   description: {
-    marginTop: 14,
+    marginTop: 6,
     maxWidth: 330,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 19,
     color: colors.neutral.textSecondary,
     textAlign: 'center',
   },
 
   email: {
-    marginTop: 8,
+    marginTop: 4,
     maxWidth: 280,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.primary.forest,
   },
 
   devCode: {
-    marginTop: 10,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.medium,
     fontSize: 11,
     color: colors.primary.forest,
@@ -511,7 +519,7 @@ const styles = StyleSheet.create({
 
   otpSection: {
     width: '100%',
-    marginTop: 42,
+    marginTop: 20,
   },
 
   otpLabel: {
@@ -561,7 +569,7 @@ const styles = StyleSheet.create({
 
   timerContainer: {
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 16,
   },
 
   timerLabel: {
@@ -571,7 +579,7 @@ const styles = StyleSheet.create({
   },
 
   timer: {
-    marginTop: 4,
+    marginTop: 2,
     fontFamily: typography.fonts.inter.semiBold,
     fontSize: 14,
     color: colors.primary.forest,
@@ -587,7 +595,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
+    marginTop: 12,
   },
 
   resendText: {
@@ -609,8 +617,8 @@ const styles = StyleSheet.create({
 
   verifyButton: {
     width: '100%',
-    height: 56,
-    marginTop: 30,
+    height: 52,
+    marginTop: 18,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     alignItems: 'center',
@@ -636,7 +644,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 30,
+    marginTop: 18,
   },
 
   securityIcon: {

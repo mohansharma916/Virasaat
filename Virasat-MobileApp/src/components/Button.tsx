@@ -25,6 +25,9 @@ export function Button({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       onPress={onPress}
       disabled={isDisabled}
       style={({ pressed }) => [
@@ -49,7 +52,9 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     alignItems: 'center',

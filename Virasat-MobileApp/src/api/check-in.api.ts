@@ -50,11 +50,11 @@ export async function updateCheckInSettings(
   return response.data;
 }
 
-export async function confirmCheckIn(): Promise<{
+export async function confirmCheckIn(eventId: string): Promise<{
   success: boolean;
   nextCheckInAt: string;
 }> {
-  const response = await api.post('/check-in/confirm');
+  const response = await api.post('/check-in/confirm', { eventId });
   return response.data;
 }
 

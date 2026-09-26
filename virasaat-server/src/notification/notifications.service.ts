@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -117,9 +117,7 @@ export class NotificationsService {
     // TODO:
     // Integrate SES / SendGrid / Resend.
 
-    this.logger.log(
-      `Email notification queued: ${notification.id}`,
-    );
+    throw new ServiceUnavailableException('Notification delivery is not configured.');
   }
 
   private async sendPush(
@@ -128,9 +126,7 @@ export class NotificationsService {
     // TODO:
     // Integrate FCM / APNs.
 
-    this.logger.log(
-      `Push notification queued: ${notification.id}`,
-    );
+    throw new ServiceUnavailableException('Notification delivery is not configured.');
   }
 
   private async sendSms(
@@ -139,8 +135,6 @@ export class NotificationsService {
     // TODO:
     // Integrate Twilio / AWS SNS.
 
-    this.logger.log(
-      `SMS notification queued: ${notification.id}`,
-    );
+    throw new ServiceUnavailableException('Notification delivery is not configured.');
   }
 }

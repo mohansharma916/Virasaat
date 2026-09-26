@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Alert,
   Pressable,
@@ -8,19 +8,18 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import {
-  markLegacyCategoryComplete,
-  parseLegacyCategories,
-} from '@/src/utils/legacy-flow';
-import { uploadLegacyItem } from '@/src/api/vault.api';
+import { parseLegacyCategories } from '@/src/utils/legacy-flow';
+import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useAppDispatch } from '@/src/store/hooks';
+import { addLegacyItem } from '@/src/store/vault.slice';
 
 type DocumentItem = {
   id: string;
@@ -31,20 +30,28 @@ type DocumentItem = {
 };
 
 export default function LegacyDocumentsScreen() {
+  const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     category?: string;
     categories?: string;
   }>();
+  const isVideo = params.category === 'VIDEOS';
   const [documents, setDocuments] = useState<
     DocumentItem[]
   >([]);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
+  const transfer = useRef<AbortController | null>(null);
+  useEffect(() => () => transfer.current?.abort(), []);
 
   const pickDocument = async () => {
+    if (transfer.current) return;
     try {
       const result =
         await DocumentPicker.getDocumentAsync({
-          type: [
+          type: isVideo ? ['video/mp4', 'video/quicktime'] : [
             'application/pdf',
             'image/*',
             'application/msword',
@@ -77,7 +84,7 @@ export default function LegacyDocumentsScreen() {
       }
 
       const newDocument: DocumentItem = {
-        id: `${Date.now()}`,
+        id: createItemRequestKey(),
         name: file.name,
         size: file.size ?? 0,
         uri: file.uri,
@@ -88,7 +95,7 @@ export default function LegacyDocumentsScreen() {
         ...current,
         newDocument,
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert(
         'Unable to add document',
         'Something went wrong while selecting the document.',
@@ -97,6 +104,7 @@ export default function LegacyDocumentsScreen() {
   };
 
   const removeDocument = (id: string) => {
+    if (transfer.current) return;
     setDocuments((current) =>
       current.filter(
         (document) => document.id !== id,
@@ -105,6 +113,7 @@ export default function LegacyDocumentsScreen() {
   };
 
   const handleContinue = async () => {
+    if (transfer.current) return;
     if (documents.length === 0) {
       Alert.alert(
         'Add a document',
@@ -117,33 +126,27 @@ export default function LegacyDocumentsScreen() {
     try {
       setSaving(true);
       const category = parseLegacyCategories(params.category)[0] ?? 'DOCUMENTS';
-      await Promise.all(
-        documents.map((document) =>
-          uploadLegacyItem({
-            type: category === 'OTHER' ? 'OTHER' : 'DOCUMENT',
-            category,
-            title: 'Protected document',
-            description: `File size: ${document.size} bytes`,
-            file: {
-              uri: document.uri,
-              name: document.name,
-              mimeType: document.mimeType,
-            },
-          }),
-        ),
-      );
+      transfer.current = new AbortController();
+      for (const [index, document] of documents.entries()) {
+        if (transfer.current.signal.aborted) break;
+        setProgress(0); setUploadStatus(`Uploading file ${index + 1} of ${documents.length}`);
+        const item = await uploadLegacyItem({
+          requestKey: document.id,
+          type: category === 'VIDEOS' ? 'VIDEO' : category === 'OTHER' ? 'OTHER' : document.mimeType?.startsWith('image/') ? 'IMAGE' : 'DOCUMENT',
+          category, title: isVideo ? 'Video message' : 'Protected document', description: `File size: ${document.size} bytes`,
+          file: { uri: document.uri, name: document.name, mimeType: document.mimeType },
+        }, { signal: transfer.current.signal, onProgress: setProgress });
+        dispatch(addLegacyItem(item));
+        setDocuments((current) => current.filter((entry) => entry.id !== document.id));
+      }
+      if (transfer.current.signal.aborted) { setUploadStatus('Upload stopped. Check your vault before retrying.'); return; }
+      setUploadStatus('Files protected.');
 
-      markLegacyCategoryComplete(category);
-
-      router.replace({
-        pathname: '/(auth)/legacy-category',
-        params: {
-          categories: params.categories ?? category ?? 'DOCUMENTS',
-        },
-      });
+      router.replace('/(auth)/home');
     } catch (error) {
-      Alert.alert('Unable to save documents', getApiErrorMessage(error));
+      setUploadStatus(transfer.current?.signal.aborted ? 'Transfer stopped. Confirmed files remain saved. Retry remaining files safely.' : getApiErrorMessage(error));
     } finally {
+      transfer.current = null;
       setSaving(false);
     }
   };
@@ -172,27 +175,11 @@ export default function LegacyDocumentsScreen() {
           </Text>
         </View>
 
-        {/* Progress */}
-
-        <View style={styles.progressContainer}>
-          {Array.from({ length: 10 }).map(
-            (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.progressItem,
-                  styles.progressItemActive,
-                ]}
-              />
-            ),
-          )}
-        </View>
-
         {/* Heading */}
 
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>
-            IMPORTANT DOCUMENTS
+            {isVideo ? 'VIDEO MESSAGE' : 'IMPORTANT DOCUMENTS'}
           </Text>
 
           <Text style={styles.title}>
@@ -209,6 +196,8 @@ export default function LegacyDocumentsScreen() {
         {/* Add Document */}
 
         <Pressable
+          disabled={saving}
+          accessibilityRole="button"
           onPress={pickDocument}
           style={({ pressed }) => [
             styles.uploadCard,
@@ -222,11 +211,11 @@ export default function LegacyDocumentsScreen() {
           </View>
 
           <Text style={styles.uploadTitle}>
-            Add a document
+            {isVideo ? 'Add a video' : 'Add a document'}
           </Text>
 
           <Text style={styles.uploadSubtitle}>
-            PDF, image or document
+            {isVideo ? 'MP4 or QuickTime video' : 'PDF, image or document'}
           </Text>
 
           <Text style={styles.uploadLimit}>
@@ -304,8 +293,30 @@ export default function LegacyDocumentsScreen() {
           </View>
         </View>
 
-        {/* Continue */}
+        <Text style={styles.helperNotice}>
+          Stored as uploaded · Max 25 MB per file · Encrypted before storage
+        </Text>
+      </ScrollView>
 
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {!!uploadStatus && (
+          <View style={styles.transferRow}>
+            <Text style={styles.transferText} accessibilityLiveRegion="polite">
+              {uploadStatus}{saving ? ` · ${progress}%${progress === 100 ? ' — confirming' : ''}` : ''}
+            </Text>
+            {saving && (
+              <Pressable
+                accessibilityRole="button"
+                style={styles.stopButton}
+                onPress={() => transfer.current?.abort()}
+              >
+                <Text style={styles.stopText}>Stop</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* Continue */}
         <Pressable
           disabled={documents.length === 0 || saving}
           onPress={handleContinue}
@@ -342,7 +353,7 @@ export default function LegacyDocumentsScreen() {
                   : 'documents'
               } added`}
         </Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -420,8 +431,8 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    marginTop: 35,
-    marginBottom: 24,
+    marginTop: 18,
+    marginBottom: 16,
   },
 
   eyebrow: {
@@ -604,9 +615,60 @@ const styles = StyleSheet.create({
     color: colors.neutral.textSecondary,
   },
 
+  helperNotice: {
+    marginTop: 16,
+    marginBottom: 8,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: colors.neutral.textMuted,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.brand.ivory,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.border,
+  },
+
+  transferRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.neutral.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+  },
+
+  transferText: {
+    flex: 1,
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: 12,
+    color: colors.primary.deepForest,
+  },
+
+  stopButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#FDE8E8',
+    marginLeft: 8,
+  },
+
+  stopText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 12,
+    color: '#9B1C1C',
+  },
+
   button: {
-    height: 56,
-    marginTop: 23,
+    height: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -636,9 +698,9 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 14,
+    marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 11,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

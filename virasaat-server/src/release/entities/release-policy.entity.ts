@@ -52,6 +52,12 @@ export class ReleasePolicy {
   @Column({ default: true })
   enabled!: boolean;
 
+  @Column({ default: 1 })
+  version!: number;
+
+  @Column({ default: true })
+  verificationRequired!: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 

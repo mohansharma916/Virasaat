@@ -35,6 +35,11 @@ export class RecipientsController {
     );
   }
 
+  @Post(':id/invite')
+  async invite(@Req() req: { user: { id: string } }, @Param('id') id: string) {
+    return this.recipientsService.invite(req.user.id, id);
+  }
+
   @Get()
   async findAll(@Req() req: any) {
     return this.recipientsService.findAll(

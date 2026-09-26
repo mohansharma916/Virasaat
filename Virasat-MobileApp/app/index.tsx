@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -6,6 +6,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { isAxiosError } from 'axios';
+import { Button } from '@/src/components/Button';
 import { router } from 'expo-router';
 
 import {
@@ -13,13 +15,17 @@ import {
   getBiometricUnlockEnabled,
   removeAccessToken,
 } from '@/src/storage/auth.storage';
-import { getCurrentUser } from '@/src/api/auth.api';
 import { authenticateWithBiometric } from '@/src/services/biometric';
+import { useAppDispatch } from '@/src/store/hooks';
+import { hydrateSession } from '@/src/store/session.slice';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
 export default function SplashScreen() {
+  const dispatch = useAppDispatch();
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.94)).current;
 
@@ -68,9 +74,13 @@ export default function SplashScreen() {
       }
 
       try {
-        await getCurrentUser();
+        await dispatch(hydrateSession()).unwrap();
         return '/(auth)/home';
-      } catch {
+      } catch (reason) {
+        if (!isAxiosError(reason) || reason.response?.status !== 401) {
+          if (active) setError('Unable to confirm your session. Check your connection and retry.');
+          return null;
+        }
         await removeAccessToken();
         return '/(auth)/welcome';
       }
@@ -79,7 +89,7 @@ export default function SplashScreen() {
     const timer = setTimeout(async () => {
       const destination = await initializeSession();
 
-      if (active) {
+      if (active && destination) {
         router.replace(destination as never);
       }
     }, 1200);
@@ -88,7 +98,7 @@ export default function SplashScreen() {
       active = false;
       clearTimeout(timer);
     };
-  }, [logoOpacity, logoScale, subtitleOpacity]);
+  }, [dispatch, logoOpacity, logoScale, subtitleOpacity, retry]);
 
   return (
     <View style={styles.container}>
@@ -125,6 +135,7 @@ export default function SplashScreen() {
         </Text>
       </Animated.View>
 
+      {!!error && <View style={{ padding: 24, gap: 16 }}><Text accessibilityRole="alert">{error}</Text><Button title="Retry" onPress={() => { setError(''); setRetry((value) => value + 1); }} /></View>}
       <View style={styles.bottomContainer}>
         <Text style={styles.loadingText}>
           Preparing your vault
