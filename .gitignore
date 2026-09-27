@@ -28,6 +28,7 @@
 **/*.tsbuildinfo
 **/.metro-health-check*
 **/storage/
+!**/src/storage/
 
 # Logs and temporary files
 *.log

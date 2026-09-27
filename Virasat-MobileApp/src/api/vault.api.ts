@@ -114,3 +114,63 @@ export async function assignLegacyItem(id: string, data: { recipientId: string; 
   const response = await api.patch<LegacyItem>(`/vault/items/${id}/assignment`, data);
   return response.data;
 }
+
+export interface SyncToS3Response {
+  success: boolean;
+  vaultId: string;
+  totalItems: number;
+  syncedItemsCount: number;
+  s3Configured: boolean;
+  items: {
+    itemId: string;
+    title: string;
+    type: string;
+    action: 'MIGRATED_TO_S3' | 'ALREADY_ON_S3' | 'BACKED_UP_TO_S3';
+    s3Key: string;
+    s3Uri?: string;
+    checksumSha256?: string;
+  }[];
+}
+
+export async function syncAllVaultItemsToS3(): Promise<SyncToS3Response> {
+  const response = await api.post<SyncToS3Response>('/vault/items/sync-s3');
+  return response.data;
+}
+
+export async function getVaultItemS3Status(id: string): Promise<{
+  itemId: string;
+  title: string;
+  type: string;
+  storageType: 'S3' | 'LOCAL' | 'INLINE_DB';
+  s3Configured: boolean;
+  s3Key: string | null;
+  s3Uri: string | null;
+  checksumSha256: string | null;
+  encryptionAlgorithm: string;
+  encryptionKeyVersion: string;
+}> {
+  const response = await api.get(`/vault/items/${id}/s3-status`);
+  return response.data;
+}
+
+export interface VaultS3Overview {
+  vaultId: string;
+  totalItems: number;
+  s3Configured: boolean;
+  s3Bucket: string | null;
+  region: string | null;
+  encryption: string;
+  storageBreakdown: {
+    s3Stored: number;
+    localDisk: number;
+    inlineEncrypted: number;
+  };
+  allSyncedToS3: boolean;
+}
+
+export async function getVaultS3Overview(): Promise<VaultS3Overview> {
+  const response = await api.get<VaultS3Overview>('/vault/items/s3-overview');
+  return response.data;
+}
+
+

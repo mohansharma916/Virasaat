@@ -5,18 +5,10 @@ import { AuditService } from './audit.service';
 import { AuditEvent } from './entities/audit-event.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      AuditEvent,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([AuditEvent])],
 
-  providers: [
-    AuditService,
-  ],
+  providers: [AuditService],
 
-  exports: [
-    AuditService,
-  ],
+  exports: [AuditService],
 })
 export class AuditModule {}

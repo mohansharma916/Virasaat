@@ -14,6 +14,7 @@ import { ReleaseModule } from './release/release.module';
 import { NotificationsModule } from './notification/notification.module';
 import { AuditModule } from './audit/audit.module';
 import { EncryptionModule } from './encryption/encryption.module';
+import { StorageModule } from './storage/storage.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -39,9 +40,10 @@ import { AppService } from './app.service';
     NotificationsModule,
     AuditModule,
     EncryptionModule,
+    StorageModule,
   ],
 
-   controllers: [AppController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}

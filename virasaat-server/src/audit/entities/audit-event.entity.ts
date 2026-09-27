@@ -16,7 +16,7 @@ export class AuditEvent {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   actorId!: string | null;
 
   @Column()
@@ -25,7 +25,7 @@ export class AuditEvent {
   @Column()
   targetType!: string;
 
-  @Column({type:"text", nullable: true })
+  @Column({ type: 'text', nullable: true })
   targetId!: string | null;
 
   @Column({
@@ -34,10 +34,10 @@ export class AuditEvent {
   })
   result!: AuditResult;
 
-  @Column({ type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   ipAddress!: string | null;
 
-  @Column({ type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   userAgent!: string | null;
 
   /**

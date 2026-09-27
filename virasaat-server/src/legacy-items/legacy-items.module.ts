@@ -10,27 +10,21 @@ import { LegacyItemsController } from './legacy-items.controller';
 
 import { VaultModule } from '../vault/vault.module';
 import { EncryptionModule } from '../encryption/encryption.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      LegacyItem, Recipient, ReleasePolicy,
-    ]),
+    TypeOrmModule.forFeature([LegacyItem, Recipient, ReleasePolicy]),
 
     VaultModule,
     EncryptionModule,
+    StorageModule,
   ],
 
-  providers: [
-    LegacyItemsService,
-  ],
+  providers: [LegacyItemsService],
 
-  controllers: [
-    LegacyItemsController,
-  ],
+  controllers: [LegacyItemsController],
 
-  exports: [
-    LegacyItemsService,
-  ],
+  exports: [LegacyItemsService],
 })
 export class LegacyItemsModule {}

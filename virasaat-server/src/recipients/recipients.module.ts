@@ -7,22 +7,12 @@ import { RecipientsController } from './recipients.controller';
 import { RecipientsService } from './recipients.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      Recipient,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([Recipient])],
 
-  controllers: [
-    RecipientsController,
-  ],
+  controllers: [RecipientsController],
 
-  providers: [
-    RecipientsService,
-  ],
+  providers: [RecipientsService],
 
-  exports: [
-    RecipientsService,
-  ],
+  exports: [RecipientsService],
 })
 export class RecipientsModule {}

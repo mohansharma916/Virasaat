@@ -1,9 +1,4 @@
-import {
-  IsInt,
-  IsNotEmpty,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsInt, IsNotEmpty, IsUUID, Min } from 'class-validator';
 
 export class AuthorizeReleaseDto {
   @IsUUID()

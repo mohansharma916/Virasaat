@@ -37,10 +37,10 @@ export class Recipient {
   @Column()
   email!: string;
 
-  @Column({  type: 'text',nullable: true })
+  @Column({ type: 'text', nullable: true })
   phone!: string | null;
 
-  @Column({  type: 'text',nullable: true })
+  @Column({ type: 'text', nullable: true })
   relationship!: string | null;
 
   @Column({
@@ -57,16 +57,16 @@ export class Recipient {
   })
   accessLevel!: RecipientAccessLevel;
 
-  @Column({  type: 'text',nullable: true, select: false })
+  @Column({ type: 'text', nullable: true, select: false })
   invitationTokenHash!: string | null;
 
-  @Column({  type: Date,nullable: true })
+  @Column({ type: Date, nullable: true })
   invitationExpiresAt!: Date | null;
 
-  @Column({ type: Date,nullable: true })
+  @Column({ type: Date, nullable: true })
   acceptedAt!: Date | null;
 
-  @Column({ type: Date,nullable: true })
+  @Column({ type: Date, nullable: true })
   revokedAt!: Date | null;
 
   @Column({ default: true })
@@ -81,12 +81,9 @@ export class Recipient {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @ManyToOne(
-    () => User,
-    {
-      onDelete: 'CASCADE',
-    },
-  )
+  @ManyToOne(() => User, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'userId' })
   user!: User;
 }

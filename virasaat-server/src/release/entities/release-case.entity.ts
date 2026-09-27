@@ -44,22 +44,22 @@ export class ReleaseCase {
   })
   status!: ReleaseCaseStatus;
 
-  @Column({ type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   evidence!: string | null;
 
-  @Column({ type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   reviewerId!: string | null;
 
-  @Column({ type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   reviewerNotes!: string | null;
 
-  @Column({ type:"date",nullable: true })
+  @Column({ type: 'date', nullable: true })
   reviewedAt!: Date | null;
 
-  @Column({ type:"date",nullable: true })
+  @Column({ type: 'date', nullable: true })
   openedAt!: Date | null;
 
-  @Column({ type:"date",nullable: true })
+  @Column({ type: 'date', nullable: true })
   closedAt!: Date | null;
 
   @CreateDateColumn()

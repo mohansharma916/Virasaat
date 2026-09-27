@@ -56,16 +56,13 @@ export class ReleaseAuthorization {
   @Column()
   expiresAt!: Date;
 
-  @Column({type:"date", nullable: true })
+  @Column({ type: 'date', nullable: true })
   revokedAt!: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;
 
-  @ManyToOne(
-    () => ReleaseCase,
-    { onDelete: 'CASCADE' },
-  )
+  @ManyToOne(() => ReleaseCase, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'caseId' })
   releaseCase!: ReleaseCase;
 }

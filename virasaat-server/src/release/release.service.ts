@@ -39,23 +39,18 @@ import { AuditService } from '../audit/audit.service';
 export class ReleaseService {
   constructor(
     @InjectRepository(ReleasePolicy)
-    private readonly policyRepository:
-      Repository<ReleasePolicy>,
+    private readonly policyRepository: Repository<ReleasePolicy>,
 
     @InjectRepository(ReleaseCase)
-    private readonly caseRepository:
-      Repository<ReleaseCase>,
+    private readonly caseRepository: Repository<ReleaseCase>,
 
     @InjectRepository(ReleaseAuthorization)
-    private readonly authorizationRepository:
-      Repository<ReleaseAuthorization>,
+    private readonly authorizationRepository: Repository<ReleaseAuthorization>,
 
     @InjectRepository(Recipient)
-    private readonly recipientRepository:
-      Repository<Recipient>,
+    private readonly recipientRepository: Repository<Recipient>,
 
-
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
   ) {}
 
   // -----------------------------
@@ -68,25 +63,17 @@ export class ReleaseService {
     });
   }
 
-  async updatePolicy(
-    userId: string,
-    data: Partial<ReleasePolicy>,
-  ) {
-    let policy =
-      await this.policyRepository.findOne({
-        where: { userId },
-      });
+  async updatePolicy(userId: string, data: Partial<ReleasePolicy>) {
+    let policy = await this.policyRepository.findOne({
+      where: { userId },
+    });
 
     if (!policy) {
       policy = this.policyRepository.create({
         userId,
-        trigger:
-          data.trigger ??
-          ReleaseTrigger.CHECK_IN_ESCALATION,
-        verificationLevel:
-          data.verificationLevel ?? undefined,
-        escalationConfig:
-          data.escalationConfig ?? {},
+        trigger: data.trigger ?? ReleaseTrigger.CHECK_IN_ESCALATION,
+        verificationLevel: data.verificationLevel ?? undefined,
+        escalationConfig: data.escalationConfig ?? {},
         enabled: data.enabled ?? true,
         verificationRequired: data.verificationRequired ?? true,
       });
@@ -102,20 +89,14 @@ export class ReleaseService {
   // CREATE CASE
   // -----------------------------
 
-  async createCase(
-    userId: string,
-    dto: CreateReleaseCaseDto,
-  ) {
-    const releaseCase =
-      this.caseRepository.create({
-        userId,
-        reason: dto.reason,
-        evidence: dto.evidence ?? null,
-        status: ReleaseCaseStatus.OPEN,
-        openedAt: new Date(),
-      });
-
-      
+  async createCase(userId: string, dto: CreateReleaseCaseDto) {
+    const releaseCase = this.caseRepository.create({
+      userId,
+      reason: dto.reason,
+      evidence: dto.evidence ?? null,
+      status: ReleaseCaseStatus.OPEN,
+      openedAt: new Date(),
+    });
 
     return this.caseRepository.save(releaseCase);
   }
@@ -133,22 +114,16 @@ export class ReleaseService {
     });
   }
 
-  async getCase(
-    userId: string,
-    caseId: string,
-  ) {
-    const releaseCase =
-      await this.caseRepository.findOne({
-        where: {
-          id: caseId,
-          userId,
-        },
-      });
+  async getCase(userId: string, caseId: string) {
+    const releaseCase = await this.caseRepository.findOne({
+      where: {
+        id: caseId,
+        userId,
+      },
+    });
 
     if (!releaseCase) {
-      throw new NotFoundException(
-        'Release case not found',
-      );
+      throw new NotFoundException('Release case not found');
     }
 
     return releaseCase;
@@ -163,7 +138,9 @@ export class ReleaseService {
     caseId: string,
     dto: ReviewReleaseCaseDto,
   ) {
-    return this.denyRelease(reviewerId, caseId, 'release_review_denied', { requestedStatus: dto.status });
+    return this.denyRelease(reviewerId, caseId, 'release_review_denied', {
+      requestedStatus: dto.status,
+    });
   }
 
   // -----------------------------
@@ -175,46 +152,52 @@ export class ReleaseService {
     caseId: string,
     dto: AuthorizeReleaseDto,
   ) {
-    return this.denyRelease(approverId, caseId, 'release_authorization_denied', { recipientId: dto.recipientId });
+    return this.denyRelease(
+      approverId,
+      caseId,
+      'release_authorization_denied',
+      { recipientId: dto.recipientId },
+    );
   }
 
   // -----------------------------
   // VERIFY AUTHORIZATION
   // -----------------------------
 
-  async verifyAuthorization(
-    recipientId: string,
-  ) {
+  async verifyAuthorization(recipientId: string) {
     return this.denyRelease(null, recipientId, 'release_access_denied');
   }
 
-  private async denyRelease(actorId: string | null, targetId: string, action: string, metadata: Record<string, unknown> = {}) {
-    await this.auditService.log({ actorId, action, targetType: 'release', targetId, result: AuditResult.DENIED, metadata });
-    throw new ForbiddenException('Release is unavailable until reviewer permissions, policy evaluation and item-scoped access are configured.');
+  private async denyRelease(
+    actorId: string | null,
+    targetId: string,
+    action: string,
+    metadata: Record<string, unknown> = {},
+  ) {
+    await this.auditService.log({
+      actorId,
+      action,
+      targetType: 'release',
+      targetId,
+      result: AuditResult.DENIED,
+      metadata,
+    });
+    throw new ForbiddenException(
+      'Release is unavailable until reviewer permissions, policy evaluation and item-scoped access are configured.',
+    );
   }
 
   // -----------------------------
   // CLOSE CASE
   // -----------------------------
 
-  async closeCase(
-    userId: string,
-    caseId: string,
-  ) {
-    const releaseCase =
-      await this.getCase(
-        userId,
-        caseId,
-      );
+  async closeCase(userId: string, caseId: string) {
+    const releaseCase = await this.getCase(userId, caseId);
 
-    releaseCase.status =
-      ReleaseCaseStatus.CLOSED;
+    releaseCase.status = ReleaseCaseStatus.CLOSED;
 
-    releaseCase.closedAt =
-      new Date();
+    releaseCase.closedAt = new Date();
 
-    return this.caseRepository.save(
-      releaseCase,
-    );
+    return this.caseRepository.save(releaseCase);
   }
 }

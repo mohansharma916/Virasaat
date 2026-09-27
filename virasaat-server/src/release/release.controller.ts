@@ -22,9 +22,7 @@ import { AuthorizeReleaseDto } from './dto/authorize-release.dto';
 @Controller('release')
 @UseGuards(JwtAuthGuard)
 export class ReleaseController {
-  constructor(
-    private readonly releaseService: ReleaseService,
-  ) {}
+  constructor(private readonly releaseService: ReleaseService) {}
 
   // -----------------------------
   // POLICY
@@ -32,20 +30,12 @@ export class ReleaseController {
 
   @Get('policy')
   async getPolicy(@Req() req: any) {
-    return this.releaseService.getPolicy(
-      req.user.id,
-    );
+    return this.releaseService.getPolicy(req.user.id);
   }
 
   @Patch('policy')
-  async updatePolicy(
-    @Req() req: any,
-    @Body() body: UpdatePolicyDto,
-  ) {
-    return this.releaseService.updatePolicy(
-      req.user.id,
-      body,
-    );
+  async updatePolicy(@Req() req: any, @Body() body: UpdatePolicyDto) {
+    return this.releaseService.updatePolicy(req.user.id, body);
   }
 
   // -----------------------------
@@ -53,32 +43,18 @@ export class ReleaseController {
   // -----------------------------
 
   @Post('cases')
-  async createCase(
-    @Req() req: any,
-    @Body() dto: CreateReleaseCaseDto,
-  ) {
-    return this.releaseService.createCase(
-      req.user.id,
-      dto,
-    );
+  async createCase(@Req() req: any, @Body() dto: CreateReleaseCaseDto) {
+    return this.releaseService.createCase(req.user.id, dto);
   }
 
   @Get('cases')
   async getCases(@Req() req: any) {
-    return this.releaseService.getCases(
-      req.user.id,
-    );
+    return this.releaseService.getCases(req.user.id);
   }
 
   @Get('cases/:id')
-  async getCase(
-    @Req() req: any,
-    @Param('id') caseId: string,
-  ) {
-    return this.releaseService.getCase(
-      req.user.id,
-      caseId,
-    );
+  async getCase(@Req() req: any, @Param('id') caseId: string) {
+    return this.releaseService.getCase(req.user.id, caseId);
   }
 
   // -----------------------------
@@ -124,13 +100,7 @@ export class ReleaseController {
   // -----------------------------
 
   @Patch('cases/:id/close')
-  async closeCase(
-    @Req() req: any,
-    @Param('id') caseId: string,
-  ) {
-    return this.releaseService.closeCase(
-      req.user.id,
-      caseId,
-    );
+  async closeCase(@Req() req: any, @Param('id') caseId: string) {
+    return this.releaseService.closeCase(req.user.id, caseId);
   }
 }

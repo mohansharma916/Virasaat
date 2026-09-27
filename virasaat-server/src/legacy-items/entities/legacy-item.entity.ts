@@ -55,21 +55,21 @@ export class LegacyItem {
   description!: string | null;
 
   @Column({
-     type: 'text',
+    type: 'text',
     nullable: true,
     select: false,
   })
   ciphertextRef!: string | null;
 
   @Column({
-     type: 'text',
+    type: 'text',
     nullable: true,
     select: false,
   })
   encryptionKeyRef!: string | null;
 
   @Column({
-     type: 'text',
+    type: 'text',
     nullable: true,
     select: false,
   })
@@ -106,13 +106,9 @@ export class LegacyItem {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @ManyToOne(
-    () => Vault,
-    (vault) => vault.items,
-    {
-      onDelete: 'CASCADE',
-    },
-  )
+  @ManyToOne(() => Vault, (vault) => vault.items, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'vaultId' })
   vault!: Vault;
 }

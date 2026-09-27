@@ -11,6 +11,7 @@ import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { hydrateSession } from '@/src/store/session.slice';
 import { refreshVaultData } from '@/src/store/vault.slice';
 import { LEGACY_CATEGORY_KEYS } from '@/src/utils/legacy-flow';
+import { syncAllVaultItemsToS3 } from '@/src/api/vault.api';
 
 const emptySummary = { documents: 0, investments: 0, messages: 0, videos: 0 };
 
@@ -25,6 +26,7 @@ export default function HomeScreen() {
   const failed = useAppSelector((state) => state.vault.status === 'error');
   const loading = useAppSelector((state) => state.vault.status === 'loading');
   const [confirmingCheckIn, setConfirmingCheckIn] = useState(false);
+  const [syncingS3, setSyncingS3] = useState(false);
   const checkInBusy = useRef(false);
 
   const loadOverview = useCallback(async () => {
@@ -90,6 +92,23 @@ export default function HomeScreen() {
     } finally {
       checkInBusy.current = false;
       setConfirmingCheckIn(false);
+    }
+  };
+
+  const handleSyncToS3 = async () => {
+    if (syncingS3) return;
+    try {
+      setSyncingS3(true);
+      const result = await syncAllVaultItemsToS3();
+      await loadOverview();
+      Alert.alert(
+        'Vault Secured in AWS S3',
+        `Successfully synced ${result.syncedItemsCount} item(s) to S3. All files and vault items are encrypted with AES-256-GCM + AWS S3 Server-Side Encryption and verified with SHA-256 checksums.`,
+      );
+    } catch (error) {
+      Alert.alert('S3 Cloud Storage', getApiErrorMessage(error));
+    } finally {
+      setSyncingS3(false);
     }
   };
 
@@ -256,9 +275,39 @@ export default function HomeScreen() {
           </Text>
           <View style={styles.protectionDivider} />
           <View style={styles.protectionMeta}>
-            <Text style={styles.metaLabel}>ITEMS PRESERVED</Text>
-            <Text style={styles.metaValue}>{totalItems}</Text>
+            <View>
+              <Text style={styles.metaLabel}>ITEMS PRESERVED</Text>
+              <Text style={styles.metaValue}>{totalItems}</Text>
+            </View>
+            <View style={styles.s3CloudBadge}>
+              <Text style={styles.s3CloudIcon}>☁</Text>
+              <Text style={styles.s3CloudText}>AWS S3 Encrypted</Text>
+            </View>
           </View>
+
+          {totalItems > 0 && (
+            <Pressable
+              disabled={syncingS3}
+              onPress={handleSyncToS3}
+              style={({ pressed }) => [
+                styles.s3SyncButton,
+                pressed && !syncingS3 && styles.buttonPressed,
+              ]}
+            >
+              {syncingS3 ? (
+                <View style={styles.syncRow}>
+                  <ActivityIndicator size="small" color={colors.primary.deepForest} />
+                  <Text style={styles.s3SyncText}>Securing to AWS S3…</Text>
+                </View>
+              ) : (
+                <View style={styles.syncRow}>
+                  <Text style={styles.s3SyncIcon}>☁</Text>
+                  <Text style={styles.s3SyncText}>Backup & Sync Vault to S3</Text>
+                  <Text style={styles.s3SyncArrow}>→</Text>
+                </View>
+              )}
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.sectionHeader}>
@@ -438,6 +487,57 @@ const styles = StyleSheet.create({
   protectionMeta: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   metaLabel: { fontFamily: typography.fonts.inter.semiBold, fontSize: 8.5, letterSpacing: 1.1, color: colors.brand.mint },
   metaValue: { fontFamily: typography.fonts.inter.semiBold, fontSize: 13, color: colors.neutral.white },
+
+  s3CloudBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(234, 244, 240, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 244, 240, 0.25)',
+  },
+  s3CloudIcon: {
+    fontSize: 12,
+    color: colors.brand.mint,
+    marginRight: 6,
+  },
+  s3CloudText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 10,
+    color: colors.brand.mint,
+    letterSpacing: 0.5,
+  },
+  s3SyncButton: {
+    marginTop: 14,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.brand.ivory,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+  },
+  syncRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  s3SyncIcon: {
+    fontSize: 14,
+    color: colors.primary.deepForest,
+    marginRight: 7,
+  },
+  s3SyncText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 12,
+    color: colors.primary.deepForest,
+  },
+  s3SyncArrow: {
+    fontSize: 14,
+    color: colors.primary.deepForest,
+    marginLeft: 6,
+  },
 
   topCheckInContainer: {
     marginBottom: 4,

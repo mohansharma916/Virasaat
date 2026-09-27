@@ -1,18 +1,10 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
-import {
-  createCipheriv,
-  createDecipheriv,
-  randomBytes,
-} from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 @Injectable()
 export class EncryptionService {
-  private readonly algorithm =
-    'aes-256-gcm';
+  private readonly algorithm = 'aes-256-gcm';
 
   /**
    * MVP local master key.
@@ -22,8 +14,7 @@ export class EncryptionService {
    * Azure Key Vault / HSM.
    */
   private getMasterKey(): Buffer {
-    const key =
-      process.env.ENCRYPTION_MASTER_KEY;
+    const key = process.env.ENCRYPTION_MASTER_KEY;
 
     if (!key) {
       throw new InternalServerErrorException(
@@ -31,10 +22,7 @@ export class EncryptionService {
       );
     }
 
-    const buffer = Buffer.from(
-      key,
-      'base64',
-    );
+    const buffer = Buffer.from(key, 'base64');
 
     if (buffer.length !== 32) {
       throw new InternalServerErrorException(
@@ -49,25 +37,15 @@ export class EncryptionService {
    * Encrypt data using a random DEK.
    */
   encrypt(data: Buffer) {
-    const dataEncryptionKey =
-      randomBytes(32);
+    const dataEncryptionKey = randomBytes(32);
 
     const iv = randomBytes(12);
 
-    const cipher = createCipheriv(
-      this.algorithm,
-      dataEncryptionKey,
-      iv,
-    );
+    const cipher = createCipheriv(this.algorithm, dataEncryptionKey, iv);
 
-    const encrypted =
-      Buffer.concat([
-        cipher.update(data),
-        cipher.final(),
-      ]);
+    const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
 
-    const authTag =
-      cipher.getAuthTag();
+    const authTag = cipher.getAuthTag();
 
     /**
      * MVP envelope encryption:
@@ -77,46 +55,31 @@ export class EncryptionService {
      * In production this operation belongs
      * to KMS.
      */
-    const masterKey =
-      this.getMasterKey();
+    const masterKey = this.getMasterKey();
 
     const keyIv = randomBytes(12);
 
-    const keyCipher =
-      createCipheriv(
-        this.algorithm,
-        masterKey,
-        keyIv,
-      );
+    const keyCipher = createCipheriv(this.algorithm, masterKey, keyIv);
 
-    const encryptedKey =
-      Buffer.concat([
-        keyCipher.update(
-          dataEncryptionKey,
-        ),
-        keyCipher.final(),
-      ]);
+    const encryptedKey = Buffer.concat([
+      keyCipher.update(dataEncryptionKey),
+      keyCipher.final(),
+    ]);
 
-    const keyAuthTag =
-      keyCipher.getAuthTag();
+    const keyAuthTag = keyCipher.getAuthTag();
 
     return {
       ciphertext: encrypted,
 
-      encryptedDataKey:
-        encryptedKey.toString('base64'),
+      encryptedDataKey: encryptedKey.toString('base64'),
 
-      keyIv:
-        keyIv.toString('base64'),
+      keyIv: keyIv.toString('base64'),
 
-      keyAuthTag:
-        keyAuthTag.toString('base64'),
+      keyAuthTag: keyAuthTag.toString('base64'),
 
-      iv:
-        iv.toString('base64'),
+      iv: iv.toString('base64'),
 
-      authTag:
-        authTag.toString('base64'),
+      authTag: authTag.toString('base64'),
 
       algorithm: this.algorithm,
 
@@ -135,65 +98,35 @@ export class EncryptionService {
     iv: string;
     authTag: string;
   }) {
-    const masterKey =
-      this.getMasterKey();
+    const masterKey = this.getMasterKey();
 
     /**
      * Recover DEK.
      */
-    const keyDecipher =
-      createDecipheriv(
-        this.algorithm,
-        masterKey,
-        Buffer.from(
-          input.keyIv,
-          'base64',
-        ),
-      );
-
-    keyDecipher.setAuthTag(
-      Buffer.from(
-        input.keyAuthTag,
-        'base64',
-      ),
+    const keyDecipher = createDecipheriv(
+      this.algorithm,
+      masterKey,
+      Buffer.from(input.keyIv, 'base64'),
     );
 
-    const dataEncryptionKey =
-      Buffer.concat([
-        keyDecipher.update(
-          Buffer.from(
-            input.encryptedDataKey,
-            'base64',
-          ),
-        ),
-        keyDecipher.final(),
-      ]);
+    keyDecipher.setAuthTag(Buffer.from(input.keyAuthTag, 'base64'));
+
+    const dataEncryptionKey = Buffer.concat([
+      keyDecipher.update(Buffer.from(input.encryptedDataKey, 'base64')),
+      keyDecipher.final(),
+    ]);
 
     /**
      * Decrypt actual data.
      */
-    const decipher =
-      createDecipheriv(
-        this.algorithm,
-        dataEncryptionKey,
-        Buffer.from(
-          input.iv,
-          'base64',
-        ),
-      );
-
-    decipher.setAuthTag(
-      Buffer.from(
-        input.authTag,
-        'base64',
-      ),
+    const decipher = createDecipheriv(
+      this.algorithm,
+      dataEncryptionKey,
+      Buffer.from(input.iv, 'base64'),
     );
 
-    return Buffer.concat([
-      decipher.update(
-        input.ciphertext,
-      ),
-      decipher.final(),
-    ]);
+    decipher.setAuthTag(Buffer.from(input.authTag, 'base64'));
+
+    return Buffer.concat([decipher.update(input.ciphertext), decipher.final()]);
   }
 }

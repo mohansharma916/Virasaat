@@ -27,7 +27,7 @@ export class CheckInEvent {
   @Column()
   dueAt!: Date;
 
-  @Column({ type:"date",nullable: true })
+  @Column({ type: 'date', nullable: true })
   respondedAt!: Date | null;
 
   @Column({
@@ -40,7 +40,7 @@ export class CheckInEvent {
   @Column({ default: 0 })
   reminderCount!: number;
 
-  @Column({ type:"date",nullable: true })
+  @Column({ type: 'date', nullable: true })
   escalatedAt!: Date | null;
 
   @CreateDateColumn()

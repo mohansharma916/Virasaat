@@ -1,14 +1,7 @@
 import { MaxLength } from 'class-validator';
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-import {
-  LegacyItemType,
-} from '../entities/legacy-item.entity';
+import { LegacyItemType } from '../entities/legacy-item.entity';
 
 export class CreateLegacyItemDto {
   @IsEnum(LegacyItemType)

@@ -1,42 +1,22 @@
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-  TypeOrmModule,
-} from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
-import {
-  JwtModule,
-} from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 
-import {
-  ConfigService,
-} from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 
-import {
-  AuthController,
-} from './auth.controller';
+import { AuthController } from './auth.controller';
 
-import {
-  AuthService,
-} from './auth.service';
+import { AuthService } from './auth.service';
 
-import {
-  UsersModule,
-} from '../users/users.module';
+import { UsersModule } from '../users/users.module';
 
-import {
-  VaultModule,
-} from '../vault/vault.module';
+import { VaultModule } from '../vault/vault.module';
 
-import {
-  EmailSignup,
-} from './entities/email-signup.entity';
+import { EmailSignup } from './entities/email-signup.entity';
 
-import {
-  JwtStrategy,
-} from './strategies/jwt.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -44,45 +24,25 @@ import {
 
     VaultModule,
 
-    TypeOrmModule.forFeature([
-      EmailSignup,
-    ]),
+    TypeOrmModule.forFeature([EmailSignup]),
 
     JwtModule.registerAsync({
-      inject: [
-        ConfigService,
-      ],
+      inject: [ConfigService],
 
-      useFactory: (
-        config: ConfigService,
-      ) => ({
-        secret:
-          config.getOrThrow<string>(
-            'JWT_SECRET',
-          ),
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
 
         signOptions: {
-          expiresIn:
-            config.get<string>(
-              'JWT_EXPIRES_IN',
-              '7d',
-            ) as any,
+          expiresIn: config.get<string>('JWT_EXPIRES_IN', '7d') as any,
         },
       }),
     }),
   ],
 
-  controllers: [
-    AuthController,
-  ],
+  controllers: [AuthController],
 
-  providers: [
-    AuthService,
-    JwtStrategy,
-  ],
+  providers: [AuthService, JwtStrategy],
 
-  exports: [
-    AuthService,
-  ],
+  exports: [AuthService],
 })
 export class AuthModule {}

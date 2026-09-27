@@ -50,7 +50,7 @@ export class CheckInPolicy {
     reminderDaysBefore: number[];
   };
 
-  @Column({ type:"date",nullable: true })
+  @Column({ type: 'date', nullable: true })
   nextCheckInAt!: Date | null;
 
   @Column({ default: false })

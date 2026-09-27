@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -11,14 +15,11 @@ import {
 
 @Injectable()
 export class NotificationsService {
-  private readonly logger = new Logger(
-    NotificationsService.name,
-  );
+  private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
     @InjectRepository(Notification)
-    private readonly notificationRepository:
-      Repository<Notification>,
+    private readonly notificationRepository: Repository<Notification>,
   ) {}
 
   async create(data: {
@@ -28,44 +29,30 @@ export class NotificationsService {
     subject: string;
     message: string;
   }) {
-    const notification =
-      this.notificationRepository.create({
-        ...data,
-        status: NotificationStatus.PENDING,
-      });
+    const notification = this.notificationRepository.create({
+      ...data,
+      status: NotificationStatus.PENDING,
+    });
 
-    return this.notificationRepository.save(
-      notification,
-    );
+    return this.notificationRepository.save(notification);
   }
 
   async markSent(id: string) {
-    await this.notificationRepository.update(
-      id,
-      {
-        status: NotificationStatus.SENT,
-        sentAt: new Date(),
-      },
-    );
+    await this.notificationRepository.update(id, {
+      status: NotificationStatus.SENT,
+      sentAt: new Date(),
+    });
   }
 
-  async markFailed(
-    id: string,
-    reason: string,
-  ) {
-    await this.notificationRepository.update(
-      id,
-      {
-        status: NotificationStatus.FAILED,
-        failedAt: new Date(),
-        failureReason: reason,
-      },
-    );
+  async markFailed(id: string, reason: string) {
+    await this.notificationRepository.update(id, {
+      status: NotificationStatus.FAILED,
+      failedAt: new Date(),
+      failureReason: reason,
+    });
   }
 
-  async getUserNotifications(
-    userId: string,
-  ) {
+  async getUserNotifications(userId: string) {
     return this.notificationRepository.find({
       where: { userId },
       order: {
@@ -102,39 +89,37 @@ export class NotificationsService {
     } catch (error) {
       await this.markFailed(
         notification.id,
-        error instanceof Error
-          ? error.message
-          : 'Notification delivery failed',
+        error instanceof Error ? error.message : 'Notification delivery failed',
       );
 
       throw error;
     }
   }
 
-  private async sendEmail(
-    notification: Notification,
-  ) {
+  private async sendEmail(notification: Notification) {
     // TODO:
     // Integrate SES / SendGrid / Resend.
 
-    throw new ServiceUnavailableException('Notification delivery is not configured.');
+    throw new ServiceUnavailableException(
+      'Notification delivery is not configured.',
+    );
   }
 
-  private async sendPush(
-    notification: Notification,
-  ) {
+  private async sendPush(notification: Notification) {
     // TODO:
     // Integrate FCM / APNs.
 
-    throw new ServiceUnavailableException('Notification delivery is not configured.');
+    throw new ServiceUnavailableException(
+      'Notification delivery is not configured.',
+    );
   }
 
-  private async sendSms(
-    notification: Notification,
-  ) {
+  private async sendSms(notification: Notification) {
     // TODO:
     // Integrate Twilio / AWS SNS.
 
-    throw new ServiceUnavailableException('Notification delivery is not configured.');
+    throw new ServiceUnavailableException(
+      'Notification delivery is not configured.',
+    );
   }
 }

@@ -60,13 +60,13 @@ export class Notification {
   })
   status!: NotificationStatus;
 
-  @Column({ type:"date",nullable: true })
+  @Column({ type: 'date', nullable: true })
   sentAt!: Date | null;
 
-  @Column({ type:"date", nullable: true })
+  @Column({ type: 'date', nullable: true })
   failedAt!: Date | null;
 
-  @Column({  type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   failureReason!: string | null;
 
   @CreateDateColumn()

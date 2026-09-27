@@ -8,23 +8,12 @@ import { CheckInPolicy } from './entities/check-in-policy.entity';
 import { CheckInEvent } from './entities/check-in-event.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      CheckInPolicy,
-      CheckInEvent,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([CheckInPolicy, CheckInEvent])],
 
-  controllers: [
-    CheckInController,
-  ],
+  controllers: [CheckInController],
 
-  providers: [
-    CheckInService,
-  ],
+  providers: [CheckInService],
 
-  exports: [
-    CheckInService,
-  ],
+  exports: [CheckInService],
 })
 export class CheckInModule {}

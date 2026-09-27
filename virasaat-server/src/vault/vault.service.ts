@@ -1,15 +1,9 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import {
-  Vault,
-  VaultStatus,
-} from './entities/vault.entity';
+import { Vault, VaultStatus } from './entities/vault.entity';
 
 @Injectable()
 export class VaultService {
@@ -41,9 +35,7 @@ export class VaultService {
     const vault = await this.findByUserId(userId);
 
     if (!vault) {
-      throw new NotFoundException(
-        'Vault not found',
-      );
+      throw new NotFoundException('Vault not found');
     }
 
     return vault;

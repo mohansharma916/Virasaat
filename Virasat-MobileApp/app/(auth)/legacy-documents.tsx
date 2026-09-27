@@ -283,18 +283,18 @@ export default function LegacyDocumentsScreen() {
 
           <View style={styles.securityContent}>
             <Text style={styles.securityTitle}>
-              Private by design
+              AWS S3 Encrypted Vault
             </Text>
 
             <Text style={styles.securityText}>
-              Each selected file is encrypted before it
-              is stored in your vault.
+              Each file is protected with client-side AES-256-GCM envelope
+              encryption before storage in AWS S3 with hardware-level at-rest encryption.
             </Text>
           </View>
         </View>
 
         <Text style={styles.helperNotice}>
-          Stored as uploaded · Max 25 MB per file · Encrypted before storage
+          AES-256-GCM + S3 SSE · SHA-256 verified · Max 25 MB per file
         </Text>
       </ScrollView>
 

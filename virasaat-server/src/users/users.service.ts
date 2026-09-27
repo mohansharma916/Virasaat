@@ -1,26 +1,16 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
-import {
-  InjectRepository,
-} from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 
-import {
-  Repository,
-} from 'typeorm';
+import { Repository } from 'typeorm';
 
-import {
-  User,
-} from './entities/user.entity';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository:
-      Repository<User>,
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async findById(id: string) {
@@ -39,44 +29,28 @@ export class UsersService {
    * passwordHash has select:false,
    * so explicitly select it.
    */
-  async findByEmailWithPassword(
-    email: string,
-  ) {
+  async findByEmailWithPassword(email: string) {
     return this.userRepository
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
-      .where(
-        'user.email = :email',
-        { email },
-      )
+      .where('user.email = :email', { email })
       .getOne();
   }
 
-  async findByGoogleId(
-    googleId: string,
-  ) {
+  async findByGoogleId(googleId: string) {
     return this.userRepository.findOne({
       where: { googleId },
     });
   }
 
-  async create(
-    data: Partial<User>,
-  ) {
-    const user =
-      this.userRepository.create(data);
+  async create(data: Partial<User>) {
+    const user = this.userRepository.create(data);
 
     return this.userRepository.save(user);
   }
 
-  async update(
-    id: string,
-    data: Partial<Omit<User, 'vault' | 'recipients'>>,
-  ) {
-    await this.userRepository.update(
-      id,
-      data,
-    );
+  async update(id: string, data: Partial<Omit<User, 'vault' | 'recipients'>>) {
+    await this.userRepository.update(id, data);
 
     return this.findById(id);
   }

@@ -26,13 +26,13 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column({ type:"text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   phone!: string | null;
 
   @Column()
   name!: string;
 
-  @Column({ type: "text",nullable: true })
+  @Column({ type: 'text', nullable: true })
   avatar!: string | null;
 
   /**
@@ -40,7 +40,7 @@ export class User {
    *
    * NULL when the user has not linked Google.
    */
-  @Column({ unique: true,type:"text", nullable: true })
+  @Column({ unique: true, type: 'text', nullable: true })
   googleId!: string | null;
 
   /**
@@ -48,7 +48,7 @@ export class User {
    *
    * NULL for Google-only accounts.
    */
-  @Column({ nullable: true, type:"text",select: false })
+  @Column({ nullable: true, type: 'text', select: false })
   passwordHash!: string | null;
 
   /**
@@ -85,9 +85,6 @@ export class User {
   @OneToOne(() => Vault, (vault) => vault.user)
   vault!: Vault;
 
-  @OneToMany(
-    () => Recipient,
-    (recipient) => recipient.user,
-  )
+  @OneToMany(() => Recipient, (recipient) => recipient.user)
   recipients!: Recipient[];
 }

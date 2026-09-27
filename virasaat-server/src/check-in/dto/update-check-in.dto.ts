@@ -1,9 +1,4 @@
-import {
-  IsEnum,
-  IsOptional,
-  IsString,
-  Matches,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 
 import { CheckInCadence } from '../entities/check-in-policy.entity';
 

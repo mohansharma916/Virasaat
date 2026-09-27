@@ -47,9 +47,6 @@ export class Vault {
   @JoinColumn({ name: 'userId' })
   user!: User;
 
-  @OneToMany(
-    () => LegacyItem,
-    (item) => item.vault,
-  )
+  @OneToMany(() => LegacyItem, (item) => item.vault)
   items!: LegacyItem[];
 }

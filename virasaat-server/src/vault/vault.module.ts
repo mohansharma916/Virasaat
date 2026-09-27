@@ -6,9 +6,7 @@ import { VaultService } from './vault.service';
 import { VaultController } from './vault.controller';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Vault]),
-  ],
+  imports: [TypeOrmModule.forFeature([Vault])],
 
   providers: [VaultService],
 

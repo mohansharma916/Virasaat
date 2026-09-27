@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +14,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/src/components/Button';
 import { Input } from '@/src/components/Input';
 import { SelectInput } from '@/src/components/SelectInput';
+import {
+  SearchablePickerModal,
+  type PickerItem,
+} from '@/src/components/SearchablePickerModal';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -22,6 +25,14 @@ import { getProfile, updateProfile } from '@/src/api/users.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { setSessionUser } from '@/src/store/session.slice';
+import {
+  findCountry,
+  findLanguage,
+  getAllCountries,
+  getAllLanguages,
+  getPopularCountries,
+  getPopularLanguages,
+} from '@/src/utils/geo-data';
 
 export default function ProfileScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
@@ -32,6 +43,65 @@ export default function ProfileScreen() {
   const [language, setLanguage] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+
+  const countryPickerItems = useMemo<PickerItem[]>(() => {
+    return getAllCountries().map((c) => ({
+      id: c.code,
+      title: c.name,
+      subtitle: c.native !== c.name ? `${c.native} • ${c.code}` : c.code,
+      badge: c.code,
+      icon: c.flag,
+      searchTerms: c.searchTerms,
+    }));
+  }, []);
+
+  const popularCountryItems = useMemo<PickerItem[]>(() => {
+    return getPopularCountries().map((c) => ({
+      id: c.code,
+      title: c.name,
+      subtitle: c.native !== c.name ? `${c.native} • ${c.code}` : c.code,
+      badge: c.code,
+      icon: c.flag,
+      searchTerms: c.searchTerms,
+    }));
+  }, []);
+
+  const languagePickerItems = useMemo<PickerItem[]>(() => {
+    return getAllLanguages().map((l) => ({
+      id: l.code,
+      title: l.name,
+      subtitle: l.nativeName !== l.name ? `${l.nativeName} • ${l.code}` : l.code,
+      badge: l.code,
+      icon: '🗣️',
+      searchTerms: l.searchTerms,
+    }));
+  }, []);
+
+  const popularLanguageItems = useMemo<PickerItem[]>(() => {
+    return getPopularLanguages().map((l) => ({
+      id: l.code,
+      title: l.name,
+      subtitle: l.nativeName !== l.name ? `${l.nativeName} • ${l.code}` : l.code,
+      badge: l.code,
+      icon: '🗣️',
+      searchTerms: l.searchTerms,
+    }));
+  }, []);
+
+  const selectedCountryObj = useMemo(() => findCountry(country), [country]);
+  const displayCountry = selectedCountryObj
+    ? `${selectedCountryObj.flag}  ${selectedCountryObj.name}`
+    : country;
+
+  const selectedLanguageObj = useMemo(() => findLanguage(language), [language]);
+  const displayLanguage = selectedLanguageObj
+    ? selectedLanguageObj.name === selectedLanguageObj.nativeName
+      ? selectedLanguageObj.name
+      : `${selectedLanguageObj.name} (${selectedLanguageObj.nativeName})`
+    : language;
 
   const [errors, setErrors] = useState<{
     name?: string;
@@ -109,120 +179,20 @@ export default function ProfileScreen() {
     }
   };
 
-  const selectCountry = () => {
-    Alert.alert(
-      'Select country',
-      '',
-      [
-        {
-          text: 'India',
-          onPress: () => {
-            setCountry('India');
-            setErrors((previous) => ({
-              ...previous,
-              country: undefined,
-            }));
-          },
-        },
-        {
-          text: 'United States',
-          onPress: () => {
-            setCountry('United States');
-            setErrors((previous) => ({
-              ...previous,
-              country: undefined,
-            }));
-          },
-        },
-        {
-          text: 'United Kingdom',
-          onPress: () => {
-            setCountry('United Kingdom');
-            setErrors((previous) => ({
-              ...previous,
-              country: undefined,
-            }));
-          },
-        },
-        {
-          text: 'Canada',
-          onPress: () => {
-            setCountry('Canada');
-            setErrors((previous) => ({
-              ...previous,
-              country: undefined,
-            }));
-          },
-        },
-        {
-          text: 'Australia',
-          onPress: () => {
-            setCountry('Australia');
-            setErrors((previous) => ({
-              ...previous,
-              country: undefined,
-            }));
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
+  const handleSelectCountry = (item: PickerItem) => {
+    setCountry(item.title);
+    setErrors((previous) => ({
+      ...previous,
+      country: undefined,
+    }));
   };
 
-  const selectLanguage = () => {
-    Alert.alert(
-      'Select language',
-      '',
-      [
-        {
-          text: 'English',
-          onPress: () => {
-            setLanguage('English');
-            setErrors((previous) => ({
-              ...previous,
-              language: undefined,
-            }));
-          },
-        },
-        {
-          text: 'Hindi',
-          onPress: () => {
-            setLanguage('Hindi');
-            setErrors((previous) => ({
-              ...previous,
-              language: undefined,
-            }));
-          },
-        },
-        {
-          text: 'Tamil',
-          onPress: () => {
-            setLanguage('Tamil');
-            setErrors((previous) => ({
-              ...previous,
-              language: undefined,
-            }));
-          },
-        },
-        {
-          text: 'Telugu',
-          onPress: () => {
-            setLanguage('Telugu');
-            setErrors((previous) => ({
-              ...previous,
-              language: undefined,
-            }));
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
+  const handleSelectLanguage = (item: PickerItem) => {
+    setLanguage(item.title);
+    setErrors((previous) => ({
+      ...previous,
+      language: undefined,
+    }));
   };
 
   return (
@@ -304,8 +274,8 @@ export default function ProfileScreen() {
             <SelectInput
               label="Country"
               placeholder="Select your country"
-              value={country}
-              onPress={selectCountry}
+              value={displayCountry}
+              onPress={() => setCountryModalVisible(true)}
             />
 
             {errors.country && (
@@ -317,8 +287,8 @@ export default function ProfileScreen() {
             <SelectInput
               label="Preferred language"
               placeholder="Select your language"
-              value={language}
-              onPress={selectLanguage}
+              value={displayLanguage}
+              onPress={() => setLanguageModalVisible(true)}
             />
 
             {errors.language && (
@@ -382,6 +352,32 @@ export default function ProfileScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+
+      <SearchablePickerModal
+        visible={countryModalVisible}
+        onClose={() => setCountryModalVisible(false)}
+        title="Select Country"
+        subtitle="Choose your country of residence"
+        placeholder="Search country by name, code..."
+        items={countryPickerItems}
+        popularItems={popularCountryItems}
+        selectedId={selectedCountryObj?.code || country}
+        onSelect={handleSelectCountry}
+        emptyMessage="No matching countries found"
+      />
+
+      <SearchablePickerModal
+        visible={languageModalVisible}
+        onClose={() => setLanguageModalVisible(false)}
+        title="Select Language"
+        subtitle="Choose your preferred language for communications"
+        placeholder="Search language by name or native script..."
+        items={languagePickerItems}
+        popularItems={popularLanguageItems}
+        selectedId={selectedLanguageObj?.code || language}
+        onSelect={handleSelectLanguage}
+        emptyMessage="No matching languages found"
+      />
     </SafeAreaView>
   );
 }

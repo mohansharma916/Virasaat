@@ -25,6 +25,8 @@ export class CreateRecipientDto {
   @IsOptional()
   @IsBoolean()
   verificationRequired?: boolean;
-  @IsOptional() @IsString() @MaxLength(128)
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
   requestKey?: string;
 }

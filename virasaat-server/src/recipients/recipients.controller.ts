@@ -20,19 +20,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('recipients')
 @UseGuards(JwtAuthGuard)
 export class RecipientsController {
-  constructor(
-    private readonly recipientsService: RecipientsService,
-  ) {}
+  constructor(private readonly recipientsService: RecipientsService) {}
 
   @Post()
-  async create(
-    @Req() req: any,
-    @Body() dto: CreateRecipientDto,
-  ) {
-    return this.recipientsService.create(
-      req.user.id,
-      dto,
-    );
+  async create(@Req() req: any, @Body() dto: CreateRecipientDto) {
+    return this.recipientsService.create(req.user.id, dto);
   }
 
   @Post(':id/invite')
@@ -42,20 +34,12 @@ export class RecipientsController {
 
   @Get()
   async findAll(@Req() req: any) {
-    return this.recipientsService.findAll(
-      req.user.id,
-    );
+    return this.recipientsService.findAll(req.user.id);
   }
 
   @Get(':id')
-  async findOne(
-    @Req() req: any,
-    @Param('id') id: string,
-  ) {
-    return this.recipientsService.findOne(
-      req.user.id,
-      id,
-    );
+  async findOne(@Req() req: any, @Param('id') id: string) {
+    return this.recipientsService.findOne(req.user.id, id);
   }
 
   @Patch(':id')
@@ -64,21 +48,11 @@ export class RecipientsController {
     @Param('id') id: string,
     @Body() dto: UpdateRecipientDto,
   ) {
-    return this.recipientsService.update(
-      req.user.id,
-      id,
-      dto,
-    );
+    return this.recipientsService.update(req.user.id, id, dto);
   }
 
   @Delete(':id')
-  async revoke(
-    @Req() req: any,
-    @Param('id') id: string,
-  ) {
-    return this.recipientsService.revoke(
-      req.user.id,
-      id,
-    );
+  async revoke(@Req() req: any, @Param('id') id: string) {
+    return this.recipientsService.revoke(req.user.id, id);
   }
 }

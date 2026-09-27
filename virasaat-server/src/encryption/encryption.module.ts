@@ -5,18 +5,10 @@ import { EncryptionService } from './encryption.service';
 import { EncryptionMetadata } from './entities/encryption-metadata.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      EncryptionMetadata,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([EncryptionMetadata])],
 
-  providers: [
-    EncryptionService,
-  ],
+  providers: [EncryptionService],
 
-  exports: [
-    EncryptionService,
-  ],
+  exports: [EncryptionService],
 })
 export class EncryptionModule {}

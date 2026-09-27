@@ -19,19 +19,13 @@ import { AuditModule } from '../audit/audit.module';
       ReleaseAuthorization,
       Recipient,
     ]),
-     AuditModule,
+    AuditModule,
   ],
 
-  controllers: [
-    ReleaseController,
-  ],
+  controllers: [ReleaseController],
 
-  providers: [
-    ReleaseService,
-  ],
+  providers: [ReleaseService],
 
-  exports: [
-    ReleaseService,
-  ],
+  exports: [ReleaseService],
 })
 export class ReleaseModule {}
