@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci
+RUN npm ci || npm install
 
 COPY . .
 
@@ -19,7 +19,7 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev || npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
