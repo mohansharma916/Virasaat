@@ -14,13 +14,18 @@ import { listRecipients, type Recipient } from '@/src/api/recipients.api';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { useSubscription } from '@/src/store/subscription.slice';
+import { UpgradeModal } from '@/src/components/UpgradeModal';
+import { PlanLimit } from '@/src/types/subscription.types';
 
 export default function PeopleScreen() {
   const insets = useSafeAreaInsets();
+  const { currentPlan, getLimit } = useSubscription();
   const [people, setPeople] = useState<Recipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -54,6 +59,19 @@ export default function PeopleScreen() {
     }
   };
 
+  const activePeople = people.filter((person) => person.status !== 'REVOKED');
+  const trustedPersonLimit = getLimit(PlanLimit.TRUSTED_PERSONS) ?? 1;
+  const isOverLimit = activePeople.length > trustedPersonLimit;
+  const isAtAllowedLimit = activePeople.length >= trustedPersonLimit;
+
+  const handleAddPerson = () => {
+    if (isAtAllowedLimit) {
+      setUpgradeModalVisible(true);
+    } else {
+      router.push('/(auth)/trusted-person');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -79,6 +97,18 @@ export default function PeopleScreen() {
             Adding a person does not notify them unless you explicitly choose to.
           </Text>
         </View>
+
+        {isOverLimit && (
+          <View style={styles.overLimitBanner}>
+            <Text style={styles.overLimitIcon}>ℹ</Text>
+            <View style={styles.overLimitContent}>
+              <Text style={styles.overLimitTitle}>Preserved Configuration</Text>
+              <Text style={styles.overLimitText}>
+                Your current {currentPlan?.name ?? 'Starter'} plan supports {trustedPersonLimit} Trusted Person{trustedPersonLimit > 1 ? 's' : ''}. Your existing Trusted Persons remain preserved, but you cannot add new ones until you upgrade or reduce the number of active Trusted Persons.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -171,7 +201,7 @@ export default function PeopleScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
-          onPress={() => router.push('/(auth)/trusted-person')}
+          onPress={handleAddPerson}
           style={({ pressed }) => [
             styles.primaryButton,
             pressed && styles.buttonPressed,
@@ -181,6 +211,22 @@ export default function PeopleScreen() {
           <Text style={styles.buttonArrow}>→</Text>
         </Pressable>
       </View>
+
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        title="Protect More People"
+        message={`Your ${currentPlan?.name ?? 'Starter'} plan supports ${trustedPersonLimit} Trusted Person${trustedPersonLimit > 1 ? 's' : ''}.\n\nSecure supports up to 3.\nFamily supports up to 8.`}
+        benefits={[
+          'Appoint up to 3 Trusted Persons on Secure',
+          'Appoint up to 8 Trusted Persons on Family',
+          'Assign individual items to specific people',
+          'Preserve all records and contacts safely',
+        ]}
+        ctaText="View Plans"
+        onCtaPress={() => router.push('/(auth)/plans' as never)}
+        secondaryCtaText="Not now"
+      />
     </SafeAreaView>
   );
 }
@@ -243,6 +289,38 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 19,
     color: colors.neutral.textSecondary,
+  },
+  overLimitBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 14,
+    marginBottom: 8,
+    gap: 10,
+  },
+  overLimitIcon: {
+    fontSize: 18,
+    color: '#92400E',
+    marginTop: 1,
+  },
+  overLimitContent: {
+    flex: 1,
+  },
+  overLimitTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 13,
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  overLimitText: {
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#78350F',
   },
   loadingContainer: {
     paddingVertical: 32,

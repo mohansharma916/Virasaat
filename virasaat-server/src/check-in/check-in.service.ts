@@ -7,18 +7,20 @@ import {
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Optional } from '@nestjs/common';
 
 import {
   CheckInCadence,
   CheckInPolicy,
 } from './entities/check-in-policy.entity';
-
 import {
   CheckInEvent,
   CheckInEventStatus,
 } from './entities/check-in-event.entity';
 
 import { UpdateCheckInDto } from './dto/update-check-in.dto';
+import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
+import { Feature } from '../subscriptions/subscription.constants';
 
 @Injectable()
 export class CheckInService {
@@ -28,6 +30,9 @@ export class CheckInService {
 
     @InjectRepository(CheckInEvent)
     private readonly eventRepository: Repository<CheckInEvent>,
+
+    @Optional()
+    private readonly planEntitlementService?: PlanEntitlementService,
   ) {}
 
   /**
@@ -49,6 +54,15 @@ export class CheckInService {
    * Create or update check-in settings.
    */
   async updatePolicy(userId: string, dto: UpdateCheckInDto) {
+    if (this.planEntitlementService) {
+      if (dto.cadence && dto.cadence !== CheckInCadence.MONTHLY) {
+        await this.planEntitlementService.assertFeature(
+          userId,
+          Feature.CUSTOM_CHECK_IN,
+        );
+      }
+    }
+
     let policy = await this.policyRepository.findOne({
       where: { userId },
     });

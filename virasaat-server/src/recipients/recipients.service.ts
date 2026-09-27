@@ -2,22 +2,27 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 
 import { Recipient, RecipientStatus } from './entities/recipient.entity';
 
 import { CreateRecipientDto } from './dto/create-recipient.dto';
 import { UpdateRecipientDto } from './dto/update-recipient.dto';
+import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
+import { PlanLimit } from '../subscriptions/subscription.constants';
 
 @Injectable()
 export class RecipientsService {
   constructor(
     @InjectRepository(Recipient)
     private readonly recipientRepository: Repository<Recipient>,
+    @Optional()
+    private readonly planEntitlementService?: PlanEntitlementService,
   ) {}
 
   async create(userId: string, dto: CreateRecipientDto) {
@@ -40,6 +45,20 @@ export class RecipientsService {
         return existing;
       throw new ConflictException(
         'Recipient already exists. Review the saved person before making changes.',
+      );
+    }
+
+    if (this.planEntitlementService) {
+      const activeCount = await this.recipientRepository.count({
+        where: {
+          userId,
+          status: Not(RecipientStatus.REVOKED),
+        },
+      });
+      await this.planEntitlementService.assertWithinLimit(
+        userId,
+        PlanLimit.TRUSTED_PERSONS,
+        activeCount,
       );
     }
 

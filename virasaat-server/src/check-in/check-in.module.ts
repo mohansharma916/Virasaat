@@ -7,8 +7,13 @@ import { CheckInService } from './check-in.service';
 import { CheckInPolicy } from './entities/check-in-policy.entity';
 import { CheckInEvent } from './entities/check-in-event.entity';
 
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([CheckInPolicy, CheckInEvent])],
+  imports: [
+    TypeOrmModule.forFeature([CheckInPolicy, CheckInEvent]),
+    SubscriptionsModule,
+  ],
 
   controllers: [CheckInController],
 

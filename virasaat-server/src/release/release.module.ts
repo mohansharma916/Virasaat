@@ -10,6 +10,7 @@ import { ReleaseAuthorization } from './entities/release-authorization.entity';
 
 import { Recipient } from '../recipients/entities/recipient.entity';
 import { AuditModule } from '../audit/audit.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuditModule } from '../audit/audit.module';
       Recipient,
     ]),
     AuditModule,
+    SubscriptionsModule,
   ],
 
   controllers: [ReleaseController],

@@ -18,6 +18,7 @@ import {
 import {
   ReleasePolicy,
   ReleaseTrigger,
+  VerificationLevel,
 } from './entities/release-policy.entity';
 
 import {
@@ -35,6 +36,10 @@ import {
 } from '../recipients/entities/recipient.entity';
 import { AuditService } from '../audit/audit.service';
 
+import { Optional } from '@nestjs/common';
+import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
+import { Feature } from '../subscriptions/subscription.constants';
+
 @Injectable()
 export class ReleaseService {
   constructor(
@@ -51,6 +56,9 @@ export class ReleaseService {
     private readonly recipientRepository: Repository<Recipient>,
 
     private readonly auditService: AuditService,
+
+    @Optional()
+    private readonly planEntitlementService?: PlanEntitlementService,
   ) {}
 
   // -----------------------------
@@ -64,6 +72,20 @@ export class ReleaseService {
   }
 
   async updatePolicy(userId: string, data: Partial<ReleasePolicy>) {
+    if (this.planEntitlementService) {
+      if (
+        data.verificationLevel === VerificationLevel.HIGH ||
+        data.escalationConfig?.multipleVerifiers === true ||
+        (Array.isArray(data.escalationConfig?.requiredVerifiers) &&
+          data.escalationConfig.requiredVerifiers.length > 1)
+      ) {
+        await this.planEntitlementService.assertFeature(
+          userId,
+          Feature.ADVANCED_RELEASE_POLICY,
+        );
+      }
+    }
+
     let policy = await this.policyRepository.findOne({
       where: { userId },
     });
@@ -82,7 +104,14 @@ export class ReleaseService {
       policy.version = (policy.version ?? 1) + 1;
     }
 
-    return this.policyRepository.save(policy);
+    const saved = await this.policyRepository.save(policy);
+    if (this.planEntitlementService) {
+      await this.planEntitlementService.preserveReleasePolicySnapshot(
+        userId,
+        'POLICY_UPDATE',
+      );
+    }
+    return saved;
   }
 
   // -----------------------------

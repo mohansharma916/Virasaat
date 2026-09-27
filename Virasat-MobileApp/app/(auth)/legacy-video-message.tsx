@@ -20,14 +20,19 @@ import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
 import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
-import { useAppDispatch } from '@/src/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
+import { useSubscription } from '@/src/store/subscription.slice';
+import { PlanLimit } from '@/src/types/subscription.types';
+import { UpgradeModal } from '@/src/components/UpgradeModal';
 
 const MAX_DURATION_SECONDS = 5 * 60;
 
 export default function LegacyVideoMessageScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const items = useAppSelector((state) => state.vault.items);
+  const { isAtLimit, getLimit, currentPlan } = useSubscription();
   const params = useLocalSearchParams<{
     category?: string;
     categories?: string;
@@ -40,10 +45,19 @@ export default function LegacyVideoMessageScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const requestKey = useRef(createItemRequestKey());
   const busy = useRef(false);
 
+  const videoLimit = getLimit(PlanLimit.VIDEO_MESSAGES);
+  const currentVideoCount = items.filter((item) => item.type === 'VIDEO').length;
+  const reachedLimit = isAtLimit(PlanLimit.VIDEO_MESSAGES, currentVideoCount);
+
   const startRecording = async () => {
+    if (reachedLimit) {
+      setUpgradeModalVisible(true);
+      return;
+    }
     if (!cameraRef.current || recording) {
       return;
     }
@@ -73,6 +87,11 @@ export default function LegacyVideoMessageScreen() {
 
   const handleSave = async () => {
     if (!recordedUri || busy.current) {
+      return;
+    }
+
+    if (reachedLimit) {
+      setUpgradeModalVisible(true);
       return;
     }
 
@@ -369,6 +388,22 @@ export default function LegacyVideoMessageScreen() {
           )}
         </Pressable>
       </View>
+
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        title="Preserve More Video Memories"
+        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes ${videoLimit ?? 1} video message. Upgrade to Secure (10 videos) or Family (50 videos) to record additional video messages.`}
+        benefits={[
+          'Up to 10 video messages on Secure',
+          'Up to 50 video messages on Family',
+          'Encrypted cloud backup for precious memories',
+          'Controlled release to designated trusted persons',
+        ]}
+        ctaText="View Plans"
+        onCtaPress={() => router.push('/(auth)/plans' as never)}
+        secondaryCtaText="Not now"
+      />
     </SafeAreaView>
   );
 }

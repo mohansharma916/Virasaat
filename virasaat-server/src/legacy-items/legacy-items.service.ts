@@ -27,6 +27,8 @@ import { StorageService } from '../storage/storage.service';
 import { S3StorageService } from '../storage/s3-storage.service';
 import { Optional } from '@nestjs/common';
 import { randomUUID, createHash } from 'node:crypto';
+import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
+import { PlanLimit } from '../subscriptions/subscription.constants';
 
 @Injectable()
 export class LegacyItemsService {
@@ -45,6 +47,7 @@ export class LegacyItemsService {
     private readonly encryptionService: EncryptionService,
 
     @Optional() storageService?: StorageService,
+    @Optional() private readonly planEntitlementService?: PlanEntitlementService,
   ) {
     this.storageService =
       storageService ?? new StorageService(new S3StorageService());
@@ -62,6 +65,29 @@ export class LegacyItemsService {
   ) {
     // Get vault belonging to authenticated user
     const vault = await this.vaultService.getUserVault(userId);
+
+    // Limit check for personal messages
+    if (
+      this.planEntitlementService &&
+      (data.type === LegacyItemType.TEXT || data.category === 'PERSONAL_MESSAGES')
+    ) {
+      const isExistingRetry = data.requestKey
+        ? await this.itemRepository.findOne({
+            where: { vaultId: vault.id, requestKey: data.requestKey },
+          })
+        : null;
+
+      if (!isExistingRetry) {
+        const textCount = await this.itemRepository.count({
+          where: { vaultId: vault.id, type: LegacyItemType.TEXT, status: LegacyItemStatus.ACTIVE },
+        });
+        await this.planEntitlementService.assertWithinLimit(
+          userId,
+          PlanLimit.PERSONAL_MESSAGES,
+          textCount,
+        );
+      }
+    }
 
     const encryptedDescription = data.description
       ? this.encryptionService.encrypt(Buffer.from(data.description, 'utf8'))
@@ -128,6 +154,30 @@ export class LegacyItemsService {
 
     const mimeType = file?.mimetype || 'application/octet-stream';
     const vault = await this.vaultService.getUserVault(userId);
+
+    // Limit check for video messages
+    if (
+      this.planEntitlementService &&
+      (data.type === LegacyItemType.VIDEO || data.category === 'VIDEO_MESSAGES')
+    ) {
+      const isExistingRetry = data.requestKey
+        ? await this.itemRepository.findOne({
+            where: { vaultId: vault.id, requestKey: data.requestKey },
+          })
+        : null;
+
+      if (!isExistingRetry) {
+        const videoCount = await this.itemRepository.count({
+          where: { vaultId: vault.id, type: LegacyItemType.VIDEO, status: LegacyItemStatus.ACTIVE },
+        });
+        await this.planEntitlementService.assertWithinLimit(
+          userId,
+          PlanLimit.VIDEO_MESSAGES,
+          videoCount,
+        );
+      }
+    }
+
     const encryptedFile = this.encryptionService.encrypt(fileBuffer);
 
     const savedStorage = await this.storageService.saveVaultItemFile({

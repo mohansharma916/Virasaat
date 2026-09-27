@@ -123,6 +123,16 @@ const screens = [
     title: 'Dashboard',
     route: '/(auth)/home',
   },
+  {
+    number: '23',
+    title: 'Plan Comparison',
+    route: '/(auth)/plans',
+  },
+  {
+    number: '24',
+    title: 'My Plan & Subscription',
+    route: '/(auth)/my-plan',
+  },
 ];
 
 export default function DevScreen() {

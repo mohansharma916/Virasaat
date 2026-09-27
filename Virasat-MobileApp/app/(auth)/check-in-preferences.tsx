@@ -19,14 +19,21 @@ import { updateCheckInSettings } from '@/src/api/check-in.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
+import { useSubscription } from '@/src/store/subscription.slice';
+import { Feature } from '@/src/types/subscription.types';
+import { UpgradeModal } from '@/src/components/UpgradeModal';
 
 export default function CheckInPreferencesScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const email = useAppSelector((state) => state.session.user?.email);
+  const { canUseFeature } = useSubscription();
+  const hasCustomCheckIn = canUseFeature(Feature.CUSTOM_CHECK_IN);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [preferredTime, setPreferredTime] = useState('10:00');
+  const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<'MONTHLY' | 'WEEKLY'>('MONTHLY');
 
   const selectPreferredTime = () => {
     Alert.alert('Preferred time', 'Choose when to receive your check-in reminder.', [
@@ -42,7 +49,7 @@ export default function CheckInPreferencesScreen() {
       setSaving(true);
       setError('');
       await updateCheckInSettings({
-        cadence: 'MONTHLY',
+        cadence: hasCustomCheckIn && selectedSchedule === 'WEEKLY' ? 'WEEKLY' : 'MONTHLY',
         preferredTime,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
         reminderConfig: {
@@ -107,9 +114,12 @@ export default function CheckInPreferencesScreen() {
           CHECK-IN FREQUENCY
         </Text>
 
-        <View style={styles.selectedCard}>
-          <View style={styles.checkCircle}>
-            <Text style={styles.check}>
+        <Pressable
+          onPress={() => setSelectedSchedule('MONTHLY')}
+          style={[styles.frequencyCard, selectedSchedule === 'MONTHLY' && styles.frequencyCardSelected]}
+        >
+          <View style={[styles.checkCircle, selectedSchedule === 'MONTHLY' && styles.checkCircleSelected]}>
+            <Text style={[styles.check, selectedSchedule === 'MONTHLY' && styles.checkSelected]}>
               ✓
             </Text>
           </View>
@@ -120,10 +130,44 @@ export default function CheckInPreferencesScreen() {
             </Text>
 
             <Text style={styles.optionSubtitle}>
-              Recommended
+              Standard monthly schedule · Recommended
             </Text>
           </View>
-        </View>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            if (!hasCustomCheckIn) {
+              setCustomModalVisible(true);
+            } else {
+              setSelectedSchedule('WEEKLY');
+            }
+          }}
+          style={[styles.frequencyCard, selectedSchedule === 'WEEKLY' && styles.frequencyCardSelected]}
+        >
+          <View style={[styles.checkCircle, selectedSchedule === 'WEEKLY' && styles.checkCircleSelected]}>
+            <Text style={[styles.check, selectedSchedule === 'WEEKLY' && styles.checkSelected]}>
+              {hasCustomCheckIn && selectedSchedule === 'WEEKLY' ? '✓' : '🔒'}
+            </Text>
+          </View>
+
+          <View style={styles.optionContent}>
+            <View style={styles.customScheduleTitleRow}>
+              <Text style={styles.optionTitle}>
+                Custom Schedule
+              </Text>
+              {!hasCustomCheckIn && (
+                <View style={styles.lockBadge}>
+                  <Text style={styles.lockBadgeText}>SECURE</Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.optionSubtitle}>
+              {hasCustomCheckIn ? 'Weekly or customized check-in cadence' : 'Choose custom intervals and grace periods'}
+            </Text>
+          </View>
+        </Pressable>
 
         {/* Schedule */}
 
@@ -230,6 +274,22 @@ export default function CheckInPreferencesScreen() {
           )}
         </Pressable>
       </View>
+
+      <UpgradeModal
+        visible={customModalVisible}
+        onClose={() => setCustomModalVisible(false)}
+        title="Custom Check-in"
+        message="Available with Virasat Secure."
+        benefits={[
+          'Choose your own check-in schedule',
+          'Customize your grace period',
+          'Get advanced reminder controls',
+          'Ensure continuity at your own pace',
+        ]}
+        ctaText="Upgrade to Secure"
+        onCtaPress={() => router.push('/(auth)/plans' as never)}
+        secondaryCtaText="Not now"
+      />
     </SafeAreaView>
   );
 }
@@ -376,19 +436,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  frequencyCard: {
+    minHeight: 57,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: colors.brand.white,
+    borderWidth: 1,
+    borderColor: colors.brand.sage,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  frequencyCardSelected: {
+    backgroundColor: colors.brand.mint,
+    borderColor: colors.primary.forest,
+  },
+
   checkCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.primary.forest,
+    backgroundColor: '#E5EBE8',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
+  checkCircleSelected: {
+    backgroundColor: colors.primary.forest,
+  },
+
   check: {
-    color: colors.neutral.white,
-    fontSize: 12,
+    color: colors.neutral.textMuted,
+    fontSize: 11,
     fontWeight: '600',
+  },
+
+  checkSelected: {
+    color: colors.neutral.white,
+  },
+
+  customScheduleTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  lockBadge: {
+    backgroundColor: colors.primary.deepForest,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+
+  lockBadgeText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 9,
+    color: colors.neutral.white,
+    letterSpacing: 0.5,
   },
 
   optionContent: {

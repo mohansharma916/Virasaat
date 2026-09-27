@@ -6,8 +6,13 @@ import { Recipient } from './entities/recipient.entity';
 import { RecipientsController } from './recipients.controller';
 import { RecipientsService } from './recipients.service';
 
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Recipient])],
+  imports: [
+    TypeOrmModule.forFeature([Recipient]),
+    SubscriptionsModule,
+  ],
 
   controllers: [RecipientsController],
 

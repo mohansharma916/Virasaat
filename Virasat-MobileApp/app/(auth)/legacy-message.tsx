@@ -19,8 +19,11 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { createLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
-import { useAppDispatch } from '@/src/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
+import { useSubscription } from '@/src/store/subscription.slice';
+import { PlanLimit } from '@/src/types/subscription.types';
+import { UpgradeModal } from '@/src/components/UpgradeModal';
 
 type Recipient = 'FAMILY' | 'SPOUSE' | 'CHILDREN' | 'OTHER';
 
@@ -46,16 +49,27 @@ const recipients = [
 export default function LegacyMessageScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const items = useAppSelector((state) => state.vault.items);
+  const { isAtLimit, getLimit, currentPlan } = useSubscription();
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [recipient, setRecipient] =
     useState<Recipient | null>(null);
   const [saving, setSaving] = useState(false);
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const requestKey = useRef(createItemRequestKey());
   const busy = useRef(false);
 
+  const messageLimit = getLimit(PlanLimit.PERSONAL_MESSAGES);
+  const currentMessageCount = items.filter((item) => item.type === 'TEXT').length;
+  const reachedLimit = isAtLimit(PlanLimit.PERSONAL_MESSAGES, currentMessageCount);
+
   const handleSave = async () => {
     if (busy.current) return;
+    if (reachedLimit) {
+      setUpgradeModalVisible(true);
+      return;
+    }
     if (!title.trim()) {
       Alert.alert(
         'Add a title',
@@ -275,6 +289,22 @@ export default function LegacyMessageScreen() {
           </Text>
         </View>
       </KeyboardAvoidingView>
+
+      <UpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        title="Unlimited Personal Messages"
+        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes up to ${messageLimit ?? 3} personal written messages. Upgrade to Secure or Family to preserve unlimited letters, memories, and personal notes.`}
+        benefits={[
+          'Unlimited personal written messages',
+          'Assign messages to specific recipients',
+          'Keep your thoughts confidential until release',
+          'Preserve lifelong guidance for loved ones',
+        ]}
+        ctaText="View Plans"
+        onCtaPress={() => router.push('/(auth)/plans' as never)}
+        secondaryCtaText="Not now"
+      />
     </SafeAreaView>
   );
 }

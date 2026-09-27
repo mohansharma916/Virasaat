@@ -11,6 +11,7 @@ import { LegacyItemsController } from './legacy-items.controller';
 import { VaultModule } from '../vault/vault.module';
 import { EncryptionModule } from '../encryption/encryption.module';
 import { StorageModule } from '../storage/storage.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { StorageModule } from '../storage/storage.module';
     VaultModule,
     EncryptionModule,
     StorageModule,
+    SubscriptionsModule,
   ],
 
   providers: [LegacyItemsService],

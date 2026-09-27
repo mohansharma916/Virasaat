@@ -25,6 +25,7 @@ import { getProfile, updateProfile } from '@/src/api/users.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { setSessionUser } from '@/src/store/session.slice';
+import { useSubscription } from '@/src/store/subscription.slice';
 import {
   findCountry,
   findLanguage,
@@ -38,6 +39,7 @@ export default function ProfileScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const { currentPlan } = useSubscription();
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('');
@@ -319,6 +321,26 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {/* Subscription & Plan in Edit Mode */}
+          {mode === 'edit' && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/(auth)/my-plan' as never)}
+              style={styles.planCardAction}
+            >
+              <View style={styles.planActionIconCircle}>
+                <Text style={styles.planActionIcon}>✦</Text>
+              </View>
+              <View style={styles.planActionContent}>
+                <Text style={styles.planActionTitle}>Plan & Subscription</Text>
+                <Text style={styles.planActionSubtitle}>
+                  {currentPlan ? `Virasat ${currentPlan.name} · ${currentPlan.price === 0 ? 'Free' : `₹${currentPlan.price}/yr`}` : 'Manage your membership'}
+                </Text>
+              </View>
+              <Text style={styles.planActionChevron}>›</Text>
+            </Pressable>
+          )}
+
           {/* Danger Zone in Edit Mode */}
           {mode === 'edit' && (
             <Pressable
@@ -437,8 +459,50 @@ const styles = StyleSheet.create({
     borderTopColor: colors.neutral.border,
   },
 
+  planCardAction: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: colors.brand.white,
+    borderWidth: 1,
+    borderColor: colors.brand.sage,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  planActionIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.brand.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  planActionIcon: {
+    fontSize: 16,
+    color: colors.primary.deepForest,
+  },
+  planActionContent: {
+    flex: 1,
+  },
+  planActionTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
+    color: colors.neutral.textPrimary,
+  },
+  planActionSubtitle: {
+    marginTop: 2,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 12,
+    color: colors.neutral.textSecondary,
+  },
+  planActionChevron: {
+    fontSize: 20,
+    color: colors.neutral.textMuted,
+  },
+
   dangerZone: {
-    marginTop: 24,
+    marginTop: 14,
     padding: 16,
     borderRadius: 14,
     backgroundColor: '#FEF2F2',

@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "db:migrate:prd21": "node scripts/migrate-prd21.cjs",
+    "db:migrate:subscriptions": "node scripts/migrate-subscriptions.cjs",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
