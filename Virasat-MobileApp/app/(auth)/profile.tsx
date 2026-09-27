@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -24,8 +26,11 @@ import { typography } from '@/src/theme/typography';
 import { getProfile, updateProfile } from '@/src/api/users.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
-import { setSessionUser } from '@/src/store/session.slice';
+import { clearSession, setSessionUser } from '@/src/store/session.slice';
+import { clearVaultData } from '@/src/store/vault.slice';
+import { removeAccessToken } from '@/src/storage/auth.storage';
 import { useSubscription } from '@/src/store/subscription.slice';
+import { LogOut, Shield } from 'lucide-react-native';
 import {
   findCountry,
   findLanguage,
@@ -48,6 +53,8 @@ export default function ProfileScreen() {
 
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [signOutModalVisible, setSignOutModalVisible] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const countryPickerItems = useMemo<PickerItem[]>(() => {
     return getAllCountries().map((c) => ({
@@ -179,6 +186,26 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const executeSignOut = async () => {
+    try {
+      setSigningOut(true);
+      await removeAccessToken();
+      dispatch(clearSession());
+      dispatch(clearVaultData());
+      setSignOutModalVisible(false);
+      router.replace('/(auth)/welcome' as never);
+    } catch {
+      setSignOutModalVisible(false);
+      router.replace('/(auth)/welcome' as never);
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    setSignOutModalVisible(true);
   };
 
   const handleSelectCountry = (item: PickerItem) => {
@@ -321,40 +348,81 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Subscription & Plan in Edit Mode */}
+          {/* Account Settings in Edit Mode */}
           {mode === 'edit' && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/(auth)/my-plan' as never)}
-              style={styles.planCardAction}
-            >
-              <View style={styles.planActionIconCircle}>
-                <Text style={styles.planActionIcon}>✦</Text>
-              </View>
-              <View style={styles.planActionContent}>
-                <Text style={styles.planActionTitle}>Plan & Subscription</Text>
-                <Text style={styles.planActionSubtitle}>
-                  {currentPlan ? `Virasat ${currentPlan.name} · ${currentPlan.price === 0 ? 'Free' : `₹${currentPlan.price}/yr`}` : 'Manage your membership'}
-                </Text>
-              </View>
-              <Text style={styles.planActionChevron}>›</Text>
-            </Pressable>
-          )}
+            <View style={styles.settingsSection}>
+              {/* Plan & Subscription */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/(auth)/my-plan' as never)}
+                style={styles.planCardAction}
+              >
+                <View style={styles.planActionIconCircle}>
+                  <Text style={styles.planActionIcon}>✦</Text>
+                </View>
+                <View style={styles.planActionContent}>
+                  <Text style={styles.planActionTitle}>Plan & Subscription</Text>
+                  <Text style={styles.planActionSubtitle}>
+                    {currentPlan
+                      ? `Virasat ${currentPlan.name} · ${currentPlan.price === 0 ? 'Free' : `₹${currentPlan.price}/yr`}`
+                      : 'Manage your membership'}
+                  </Text>
+                </View>
+                <Text style={styles.planActionChevron}>›</Text>
+              </Pressable>
 
-          {/* Danger Zone in Edit Mode */}
-          {mode === 'edit' && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/(auth)/delete-account' as never)}
-              style={styles.dangerZone}
-            >
-              <Text style={styles.dangerIcon}>⚠</Text>
-              <View style={styles.dangerContent}>
-                <Text style={styles.dangerTitle}>Delete Account</Text>
-                <Text style={styles.dangerSubtitle}>Permanently remove vault data and assignments</Text>
-              </View>
-              <Text style={styles.dangerChevron}>›</Text>
-            </Pressable>
+              {/* Security & Biometrics */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/(auth)/security' as never)}
+                style={styles.planCardAction}
+              >
+                <View style={[styles.planActionIconCircle, { backgroundColor: colors.brand.sage }]}>
+                  <Shield size={18} color={colors.primary.deepForest} />
+                </View>
+                <View style={styles.planActionContent}>
+                  <Text style={styles.planActionTitle}>Security & Biometrics</Text>
+                  <Text style={styles.planActionSubtitle}>
+                    Manage biometric unlock and device protection
+                  </Text>
+                </View>
+                <Text style={styles.planActionChevron}>›</Text>
+              </Pressable>
+
+              {/* Sign Out Action */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleSignOut}
+                style={styles.signOutCardAction}
+              >
+                <View style={styles.signOutIconCircle}>
+                  <LogOut size={18} color="#B42318" />
+                </View>
+                <View style={styles.planActionContent}>
+                  <Text style={styles.signOutTitle}>Sign Out</Text>
+                  <Text style={styles.signOutSubtitle}>
+                    Sign out of your account on this device
+                  </Text>
+                </View>
+                <Text style={styles.signOutChevron}>›</Text>
+              </Pressable>
+
+              {/* Danger Zone */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/(auth)/delete-account' as never)}
+                style={styles.dangerZone}
+              >
+                <Text style={styles.dangerIcon}>⚠</Text>
+                <View style={styles.dangerContent}>
+                  <Text style={styles.dangerTitle}>Delete Account</Text>
+                  <Text style={styles.dangerSubtitle}>
+                    Permanently remove vault data and assignments
+                  </Text>
+                </View>
+                <Text style={styles.dangerChevron}>›</Text>
+              </Pressable>
+            </View>
           )}
 
           <Text style={styles.footerText}>
@@ -400,6 +468,56 @@ export default function ProfileScreen() {
         onSelect={handleSelectLanguage}
         emptyMessage="No matching languages found"
       />
+
+      <Modal
+        visible={signOutModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!signingOut) setSignOutModalVisible(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => {
+              if (!signingOut) setSignOutModalVisible(false);
+            }}
+          />
+          <View style={styles.signOutModalCard}>
+            <View style={styles.modalIconCircle}>
+              <LogOut size={22} color="#DC2626" />
+            </View>
+
+            <Text style={styles.modalTitle}>Sign Out</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to sign out of your Virasat account on this device?
+            </Text>
+
+            <View style={styles.modalButtonRow}>
+              <Pressable
+                style={styles.modalCancelButton}
+                disabled={signingOut}
+                onPress={() => setSignOutModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.modalConfirmButton}
+                disabled={signingOut}
+                onPress={() => void executeSignOut()}
+              >
+                {signingOut ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Sign Out</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -459,11 +577,15 @@ const styles = StyleSheet.create({
     borderTopColor: colors.neutral.border,
   },
 
-  planCardAction: {
+  settingsSection: {
     marginTop: 20,
+    gap: 12,
+  },
+
+  planCardAction: {
     padding: 16,
     borderRadius: 14,
-    backgroundColor: colors.brand.white,
+    backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.brand.sage,
     flexDirection: 'row',
@@ -501,8 +623,41 @@ const styles = StyleSheet.create({
     color: colors.neutral.textMuted,
   },
 
+  signOutCardAction: {
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: colors.neutral.white,
+    borderWidth: 1,
+    borderColor: '#FED7D7',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  signOutIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  signOutTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
+    color: '#B42318',
+  },
+  signOutSubtitle: {
+    marginTop: 2,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 12,
+    color: colors.neutral.textMuted,
+  },
+  signOutChevron: {
+    fontSize: 20,
+    color: '#B42318',
+  },
+
   dangerZone: {
-    marginTop: 14,
     padding: 16,
     borderRadius: 14,
     backgroundColor: '#FEF2F2',
@@ -533,6 +688,86 @@ const styles = StyleSheet.create({
   dangerChevron: {
     fontSize: 20,
     color: '#DC2626',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  signOutModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.neutral.white,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: 20,
+    color: colors.primary.deepForest,
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.neutral.textSecondary,
+    textAlign: 'center',
+    marginBottom: 22,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: colors.brand.mint,
+    borderWidth: 1,
+    borderColor: colors.brand.sage,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 13.5,
+    color: colors.primary.deepForest,
+  },
+  modalConfirmButton: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 13.5,
+    color: '#FFFFFF',
   },
 
   header: {

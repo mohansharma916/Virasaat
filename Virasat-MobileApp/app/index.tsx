@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -17,7 +18,7 @@ import {
 } from '@/src/storage/auth.storage';
 import { authenticateWithBiometric } from '@/src/services/biometric';
 import { useAppDispatch } from '@/src/store/hooks';
-import { hydrateSession } from '@/src/store/session.slice';
+import { clearSession, hydrateSession } from '@/src/store/session.slice';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -76,13 +77,35 @@ export default function SplashScreen() {
       try {
         await dispatch(hydrateSession()).unwrap();
         return '/(auth)/home';
-      } catch (reason) {
-        if (!isAxiosError(reason) || reason.response?.status !== 401) {
-          if (active) setError('Unable to confirm your session. Check your connection and retry.');
-          return null;
+      } catch (reason: any) {
+        const isUnauthorized =
+          reason?.isUnauthorized === true ||
+          reason?.status === 401 ||
+          reason?.status === 403 ||
+          (isAxiosError(reason) &&
+            (reason.response?.status === 401 || reason.response?.status === 403)) ||
+          (typeof reason?.message === 'string' &&
+            (reason.message.includes('401') ||
+              reason.message.includes('Unauthorized') ||
+              reason.message.includes('expired')));
+
+        if (isUnauthorized) {
+          await removeAccessToken();
+          dispatch(clearSession());
+          return '/(auth)/welcome';
         }
-        await removeAccessToken();
-        return '/(auth)/welcome';
+
+        if (active) {
+          const isNet =
+            reason?.isNetworkError ||
+            (isAxiosError(reason) && !reason.response);
+          setError(
+            isNet
+              ? 'Unable to reach Virasat servers. Please check your internet connection.'
+              : reason?.message || 'Unable to confirm your session. Please retry.'
+          );
+        }
+        return null;
       }
     };
 
@@ -113,9 +136,7 @@ export default function SplashScreen() {
       >
         <Text style={styles.monogram}>V</Text>
 
-        <Text style={styles.logo}>
-          VIRASAT
-        </Text>
+        <Text style={styles.logo}>VIRASAT</Text>
       </Animated.View>
 
       <Animated.View
@@ -126,27 +147,54 @@ export default function SplashScreen() {
           },
         ]}
       >
-        <Text style={styles.subtitle}>
-          Your Digital Legacy
-        </Text>
+        <Text style={styles.subtitle}>Your Digital Legacy</Text>
 
-        <Text style={styles.subtitleStrong}>
-          Secured.
-        </Text>
+        <Text style={styles.subtitleStrong}>Secured.</Text>
       </Animated.View>
 
-      {!!error && <View style={{ padding: 24, gap: 16 }}><Text accessibilityRole="alert">{error}</Text><Button title="Retry" onPress={() => { setError(''); setRetry((value) => value + 1); }} /></View>}
-      <View style={styles.bottomContainer}>
-        <Text style={styles.loadingText}>
-          Preparing your vault
-        </Text>
+      {error ? (
+        <View style={styles.errorCard}>
+          <View style={styles.errorIconCircle}>
+            <Text style={styles.errorIcon}>!</Text>
+          </View>
+          <Text style={styles.errorTitle}>Connection Issue</Text>
+          <Text style={styles.errorMessage} accessibilityRole="alert">
+            {error}
+          </Text>
 
-        <View style={styles.dots}>
-          <View style={styles.dot} />
-          <View style={[styles.dot, styles.dotMiddle]} />
-          <View style={styles.dot} />
+          <View style={styles.errorActions}>
+            <Button
+              title="Retry Connection"
+              onPress={() => {
+                setError('');
+                setRetry((val) => val + 1);
+              }}
+            />
+            <Pressable
+              style={styles.switchAccountButton}
+              onPress={async () => {
+                await removeAccessToken();
+                dispatch(clearSession());
+                router.replace('/(auth)/welcome' as never);
+              }}
+            >
+              <Text style={styles.switchAccountText}>
+                Sign in with another account
+              </Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={styles.bottomContainer}>
+          <Text style={styles.loadingText}>Preparing your vault</Text>
+
+          <View style={styles.dots}>
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.dotMiddle]} />
+            <View style={styles.dot} />
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -225,5 +273,74 @@ const styles = StyleSheet.create({
 
   dotMiddle: {
     marginHorizontal: 5,
+  },
+
+  errorCard: {
+    marginTop: 32,
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.neutral.white,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+
+  errorIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.semantic.warningSoft,
+    borderWidth: 1,
+    borderColor: colors.semantic.warning,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+
+  errorIcon: {
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 20,
+    color: colors.semantic.warning,
+  },
+
+  errorTitle: {
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: typography.sizes.h3,
+    color: colors.primary.deepForest,
+    marginBottom: 6,
+  },
+
+  errorMessage: {
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
+    color: colors.neutral.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+
+  errorActions: {
+    width: '100%',
+    gap: 12,
+  },
+
+  switchAccountButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  switchAccountText: {
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: typography.sizes.bodyMedium,
+    color: colors.primary.forest,
+    textDecorationLine: 'underline',
   },
 });

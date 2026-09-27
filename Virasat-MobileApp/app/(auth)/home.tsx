@@ -12,6 +12,12 @@ import { hydrateSession } from '@/src/store/session.slice';
 import { refreshVaultData } from '@/src/store/vault.slice';
 import { fetchSubscription } from '@/src/store/subscription.slice';
 import { LEGACY_CATEGORY_KEYS } from '@/src/utils/legacy-flow';
+import {
+  Home as HomeIcon,
+  Shield as VaultIcon,
+  Users as PeopleIcon,
+  User as ProfileIcon,
+} from 'lucide-react-native';
 
 const emptySummary = { documents: 0, investments: 0, messages: 0, videos: 0 };
 
@@ -341,19 +347,24 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-  <View
-  style={[
-    styles.bottomNav,
-    {
-      paddingBottom: Math.max(insets.bottom, 8),
-      height: 73 + insets.bottom,
-    },
-  ]}
->
-        <BottomNavItem icon="⌂" label="Home" active onPress={() => {}} />
-        <BottomNavItem icon="◈" label="Vault" onPress={() => openLegacy()} />
-        <BottomNavItem icon="♡" label="People" onPress={() => router.push('/(auth)/people' as never)} />
-        <BottomNavItem icon="⚙" label="Profile" onPress={() => router.push({ pathname: '/(auth)/profile', params: { mode: 'edit' } } as never)} />
+      <View
+        style={[
+          styles.bottomNav,
+          {
+            paddingBottom: Math.max(insets.bottom, 12),
+          },
+        ]}
+      >
+        <BottomNavItem icon={HomeIcon} label="Home" active onPress={() => {}} />
+        <BottomNavItem icon={VaultIcon} label="Vault" onPress={() => openLegacy()} />
+        <BottomNavItem icon={PeopleIcon} label="People" onPress={() => router.push('/(auth)/people' as never)} />
+        <BottomNavItem
+          icon={ProfileIcon}
+          label="Profile"
+          onPress={() =>
+            router.push({ pathname: '/(auth)/profile', params: { mode: 'edit' } } as never)
+          }
+        />
       </View>
     </SafeAreaView>
   );
@@ -383,11 +394,34 @@ function LegacyCard({ icon, title, count, onPress }: { icon: string; title: stri
   );
 }
 
-function BottomNavItem({ icon, label, active = false, onPress }: { icon: string; label: string; active?: boolean; onPress: () => void }) {
+function BottomNavItem({
+  icon: IconComponent,
+  label,
+  active = false,
+  onPress,
+}: {
+  icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  label: string;
+  active?: boolean;
+  onPress: () => void;
+}) {
   return (
-    <Pressable onPress={onPress} style={styles.navItem}>
-      <Text style={[styles.navIcon, active && styles.navIconActive]}>{icon}</Text>
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.navItem, pressed && styles.navItemPressed]}
+    >
+      <View style={[styles.iconContainer, active && styles.iconContainerActive]}>
+        <IconComponent
+          size={20}
+          color={active ? colors.primary.deepForest : colors.neutral.textMuted}
+          strokeWidth={active ? 2.4 : 1.8}
+        />
+      </View>
       <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
+      {active && <View style={styles.activeDot} />}
     </Pressable>
   );
 }
@@ -540,24 +574,66 @@ const styles = StyleSheet.create({
   securityIcon: { fontSize: 12, marginRight: 7 },
   securityText: { flex: 1, fontFamily: typography.fonts.inter.regular, fontSize: 9.5, lineHeight: 15, color: colors.neutral.textMuted },
 
-bottomNav: {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  paddingHorizontal: 18,
-  paddingTop: 9,
-  backgroundColor: colors.neutral.white,
-  borderTopWidth: 1,
-  borderTopColor: colors.neutral.border,
-  flexDirection: 'row',
-  justifyContent: 'space-around',
-},
-  navItem: { width: 70, alignItems: 'center', justifyContent: 'center' },
-  navIcon: { fontSize: 19, color: colors.neutral.textMuted },
-  navIconActive: { color: colors.primary.forest },
-  navLabel: { marginTop: 4, fontFamily: typography.fonts.inter.medium, fontSize: 9, color: colors.neutral.textMuted },
-  navLabelActive: { fontFamily: typography.fonts.inter.semiBold, color: colors.primary.forest },
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: colors.neutral.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(215, 225, 221, 0.7)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    shadowColor: '#063F34',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 2,
+  },
+  navItemPressed: {
+    transform: [{ scale: 0.93 }],
+    opacity: 0.85,
+  },
+  iconContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainerActive: {
+    backgroundColor: colors.brand.mint,
+  },
+  navLabel: {
+    marginTop: 3,
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: 10.5,
+    color: colors.neutral.textMuted,
+  },
+  navLabelActive: {
+    fontFamily: typography.fonts.inter.semiBold,
+    color: colors.primary.deepForest,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary.forest,
+    marginTop: 3,
+  },
 
   pressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   buttonPressed: { opacity: 0.85 },
