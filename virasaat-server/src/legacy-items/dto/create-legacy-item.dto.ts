@@ -22,4 +22,15 @@ export class CreateLegacyItemDto {
   @IsString()
   @MaxLength(128)
   requestKey?: string;
+
+  @IsOptional()
+  file?: any;
+
+  @IsOptional()
+  @IsString()
+  fileName?: string;
+
+  @IsOptional()
+  @IsString()
+  mimeType?: string;
 }

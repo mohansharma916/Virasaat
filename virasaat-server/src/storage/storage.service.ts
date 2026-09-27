@@ -1,6 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadGatewayException,
+  ServiceUnavailableException,
+  BadRequestException,
+} from '@nestjs/common';
 import { S3StorageService, S3UploadResult } from './s3-storage.service';
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { readFile, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 
@@ -38,7 +44,8 @@ export class StorageService {
 
   /**
    * Save encrypted vault item file:
-   * Uses S3 when configured; falls back gracefully to private local disk if AWS keys are not yet provided.
+   * Directly uploads to AWS S3.
+   * If S3 is not configured or upload fails, throws an explicit exception immediately (no local fallback).
    */
   async saveVaultItemFile(params: {
     vaultId: string;
@@ -47,15 +54,22 @@ export class StorageService {
     mimeType?: string;
     metadata?: Record<string, string>;
   }): Promise<StorageSaveResult> {
+    if (!this.s3StorageService.isConfigured()) {
+      const errorMsg =
+        'AWS S3 is not configured. Direct S3 storage is required for all vault items. Please check AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET_NAME in environment settings.';
+      this.logger.error(errorMsg);
+      throw new ServiceUnavailableException(errorMsg);
+    }
+
     const fileId = randomUUID();
     const checksumSha256 = createHash('sha256')
       .update(params.ciphertext)
       .digest('hex');
 
-    if (this.s3StorageService.isConfigured()) {
-      // Partitioned S3 object key: vaults/{vaultId}/items/{itemId || fileId}/{fileId}.bin
-      const s3Key = `vaults/${params.vaultId}/items/${params.itemId || fileId}/${fileId}.bin`;
+    // Partitioned S3 object key: vaults/{vaultId}/items/{itemId || fileId}/{fileId}.bin
+    const s3Key = `vaults/${params.vaultId}/items/${params.itemId || fileId}/${fileId}.bin`;
 
+    try {
       const uploadResult =
         await this.s3StorageService.uploadEncryptedCiphertext({
           key: s3Key,
@@ -70,7 +84,7 @@ export class StorageService {
         });
 
       this.logger.log(
-        `Vault item file stored securely in S3: ${uploadResult.s3Uri} (size=${uploadResult.sizeBytes} bytes, checksum=${checksumSha256})`,
+        `Vault item file stored directly in S3: ${uploadResult.s3Uri} (size=${uploadResult.sizeBytes} bytes, checksum=${checksumSha256})`,
       );
 
       return {
@@ -80,31 +94,13 @@ export class StorageService {
         sizeBytes: params.ciphertext.length,
         s3Uri: uploadResult.s3Uri,
       };
+    } catch (error: any) {
+      const failureMsg = `Direct S3 upload failed for key '${s3Key}': ${error?.message || error}`;
+      this.logger.error(failureMsg, error?.stack);
+      throw new BadGatewayException(
+        `AWS S3 Upload Failed: ${error?.message || 'Unable to store file in AWS S3. Please verify bucket permissions.'}`,
+      );
     }
-
-    // Local private storage fallback
-    const storageDirectory = resolve(
-      process.env.PRIVATE_STORAGE_DIR ?? 'storage',
-    );
-    const storageFileName = `${fileId}.bin`;
-
-    await mkdir(storageDirectory, { recursive: true });
-    await writeFile(
-      resolve(storageDirectory, storageFileName),
-      params.ciphertext,
-      { mode: 0o600 },
-    );
-
-    this.logger.debug(
-      `Vault item stored in local private directory: ${storageFileName} (S3 not configured)`,
-    );
-
-    return {
-      storageType: 'LOCAL',
-      storageKey: storageFileName,
-      checksumSha256,
-      sizeBytes: params.ciphertext.length,
-    };
   }
 
   /**
@@ -118,9 +114,15 @@ export class StorageService {
     // Check if stored in S3 (e.g. starts with 'vaults/' or 's3://')
     if (this.isS3Key(ciphertextRef)) {
       const cleanKey = this.extractS3Key(ciphertextRef);
-      const s3Result =
-        await this.s3StorageService.downloadEncryptedCiphertext(cleanKey);
-      return s3Result.ciphertext;
+      try {
+        const s3Result =
+          await this.s3StorageService.downloadEncryptedCiphertext(cleanKey);
+        return s3Result.ciphertext;
+      } catch (error: any) {
+        throw new BadGatewayException(
+          `Failed to retrieve document from AWS S3: ${error?.message || 'S3 download failed'}`,
+        );
+      }
     }
 
     // Otherwise, retrieve from local storage directory

@@ -2,8 +2,8 @@
 import { S3StorageService } from './s3-storage.service';
 import { StorageService } from './storage.service';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
 describe('Storage and S3 Security', () => {
@@ -25,26 +25,20 @@ describe('Storage and S3 Security', () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it('falls back safely to private local directory when S3 is unconfigured', async () => {
+  it('rejects upload immediately when S3 is unconfigured (no local fallback)', async () => {
     const s3Service = new S3StorageService();
     expect(s3Service.isConfigured()).toBe(false);
 
     const storage = new StorageService(s3Service);
     const testCiphertext = Buffer.from('encrypted-vault-payload-aes-256-gcm');
 
-    const result = await storage.saveVaultItemFile({
-      vaultId: 'vault-123',
-      ciphertext: testCiphertext,
-      mimeType: 'application/pdf',
-    });
-
-    expect(result.storageType).toBe('LOCAL');
-    expect(result.storageKey.endsWith('.bin')).toBe(true);
-    expect(result.sizeBytes).toBe(testCiphertext.length);
-
-    // Verify it can be read back and matches exactly
-    const readBack = await storage.readVaultItemCiphertext(result.storageKey);
-    expect(readBack).toEqual(testCiphertext);
+    await expect(
+      storage.saveVaultItemFile({
+        vaultId: 'vault-123',
+        ciphertext: testCiphertext,
+        mimeType: 'application/pdf',
+      }),
+    ).rejects.toThrow('AWS S3 is not configured');
   });
 
   it('uploads to S3 with SHA-256 checksum, SSE encryption, and partitioned key structure', async () => {
@@ -117,13 +111,10 @@ describe('Storage and S3 Security', () => {
     const s3Service = new S3StorageService();
     const storage = new StorageService(s3Service);
 
-    // Save locally first
+    // Simulate an existing legacy local file on disk
     const ciphertext = Buffer.from('legacy-local-file-content');
-    const localSaved = await storage.saveVaultItemFile({
-      vaultId: 'vault-1',
-      ciphertext,
-    });
-    expect(localSaved.storageType).toBe('LOCAL');
+    const legacyFileName = 'legacy-local-file.bin';
+    await writeFile(resolve(tempDir, legacyFileName), ciphertext);
 
     // Now configure S3
     const mockSend = jest.fn().mockResolvedValue({});
@@ -135,7 +126,7 @@ describe('Storage and S3 Security', () => {
     const migration = await storage.migrateLocalFileToS3({
       vaultId: 'vault-1',
       itemId: 'item-1',
-      localFileName: localSaved.storageKey,
+      localFileName: legacyFileName,
       mimeType: 'application/pdf',
     });
 

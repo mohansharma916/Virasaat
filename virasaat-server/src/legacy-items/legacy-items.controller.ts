@@ -12,6 +12,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
 
@@ -54,13 +55,52 @@ export class LegacyItemsController {
           mimetype: string;
         }
       | undefined,
-    @Body() dto: CreateLegacyItemDto,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    )
+    dto: CreateLegacyItemDto,
   ) {
+    let resolvedFile = file;
+
+    // Fallback if file was not captured by multer directly (e.g. data URI, buffer, or base64 in body)
+    if (!resolvedFile?.buffer?.length && req.body?.file) {
+      if (Buffer.isBuffer(req.body.file)) {
+        resolvedFile = {
+          buffer: req.body.file,
+          mimetype: req.body.mimeType || req.body.mimetype || 'application/octet-stream',
+        };
+      } else if (typeof req.body.file === 'string' && req.body.file.startsWith('data:')) {
+        const matches = req.body.file.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          resolvedFile = {
+            buffer: Buffer.from(matches[2], 'base64'),
+            mimetype: matches[1],
+          };
+        }
+      } else if (typeof req.body.file === 'string' && req.body.file.length > 50) {
+        try {
+          const buf = Buffer.from(req.body.file, 'base64');
+          if (buf.length > 0) {
+            resolvedFile = {
+              buffer: buf,
+              mimetype: req.body.mimeType || req.body.mimetype || 'application/octet-stream',
+            };
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     return this.safeItem(
       await this.legacyItemsService.createEncryptedUpload(
         req.user.id,
         dto,
-        file,
+        resolvedFile,
       ),
     );
   }

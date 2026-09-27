@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -101,7 +102,9 @@ export default function LegacyVideoMessageScreen() {
         },
       });
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'We could not save your video message. Please try again.'));
+      const msg = getApiErrorMessage(requestError, 'We could not save your video message. Please try again.');
+      setError(msg);
+      Alert.alert('S3 Upload Failed', msg);
     } finally {
       busy.current = false;
       setSaving(false);

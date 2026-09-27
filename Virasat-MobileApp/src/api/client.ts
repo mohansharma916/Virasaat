@@ -26,6 +26,17 @@ export const api = create({
 });
 
 api.interceptors.request.use(async (config) => {
+  // If sending FormData, do not set application/json; let Axios/React Native/browser set multipart boundary
+  if (
+    config.data instanceof FormData ||
+    (config.data && typeof (config.data as any).append === 'function')
+  ) {
+    if (config.headers) {
+      delete (config.headers as any)['Content-Type'];
+      delete (config.headers as any)['content-type'];
+    }
+  }
+
   const isAuthRequest =
     config.url?.startsWith('/auth/register') ||
     config.url?.startsWith('/auth/login') ||

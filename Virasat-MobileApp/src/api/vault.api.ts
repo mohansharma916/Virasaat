@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { api } from './client';
 
 export type LegacyItemType =
@@ -51,6 +52,7 @@ export interface UploadLegacyItemRequest extends CreateLegacyItemRequest {
     uri: string;
     name: string;
     mimeType?: string | null;
+    file?: any;
   };
 }
 
@@ -90,11 +92,30 @@ export async function uploadLegacyItem(
     formData.append('description', data.description);
   }
 
-  formData.append('file', {
-    uri: data.file.uri,
-    name: data.file.name,
-    type: data.file.mimeType ?? 'application/octet-stream',
-  } as unknown as Blob);
+  if (Platform.OS === 'web') {
+    if (data.file.file instanceof Blob) {
+      formData.append('file', data.file.file, data.file.name);
+    } else if (data.file.uri) {
+      try {
+        const response = await fetch(data.file.uri);
+        const blob = await response.blob();
+        formData.append('file', blob, data.file.name);
+      } catch {
+        formData.append('file', {
+          uri: data.file.uri,
+          name: data.file.name,
+          type: data.file.mimeType ?? 'application/octet-stream',
+        } as unknown as Blob);
+      }
+    }
+  } else {
+    // React Native (iOS & Android)
+    formData.append('file', {
+      uri: data.file.uri,
+      name: data.file.name,
+      type: data.file.mimeType ?? 'application/octet-stream',
+    } as unknown as Blob);
+  }
 
   const response = await api.post<LegacyItem>(
     '/vault/items/upload',
@@ -102,8 +123,11 @@ export async function uploadLegacyItem(
     {
       signal: options?.signal,
       timeout: 120_000,
-      onUploadProgress: (event) => { if (event.total) options?.onProgress?.(Math.round(event.loaded / event.total * 100)); },
-      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (event) => {
+        if (event.total) {
+          options?.onProgress?.(Math.round((event.loaded / event.total) * 100));
+        }
+      },
     },
   );
 

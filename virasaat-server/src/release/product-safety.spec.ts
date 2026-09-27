@@ -2,7 +2,7 @@ jest.mock('../auth/guards/jwt-auth.guard', () => ({ JwtAuthGuard: class {} }));
 jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -246,12 +246,29 @@ describe('PRD 2.1 safety boundaries', () => {
       create: (data: unknown) => data,
       save: jest.fn((data: unknown) => Promise.resolve(data)),
     };
+    const mockStorageService = {
+      saveVaultItemFile: jest.fn(async (params: any) => {
+        const fileName = 'test-file.bin';
+        await writeFile(join(directory, fileName), params.ciphertext);
+        return {
+          storageType: 'S3',
+          storageKey: fileName,
+          checksumSha256: 'mock-checksum',
+          sizeBytes: params.ciphertext.length,
+          s3Uri: `s3://mock-bucket/${fileName}`,
+        };
+      }),
+      readVaultItemCiphertext: jest.fn(async (ref: string) =>
+        readFile(join(directory, ref)),
+      ),
+    };
     const service = new LegacyItemsService(
       repository as never,
       {} as never,
       {} as never,
       { getUserVault: async () => ({ id: 'vault' }) } as never,
       { encrypt } as never,
+      mockStorageService as never,
     );
     try {
       const saved = await service.createEncryptedUpload(

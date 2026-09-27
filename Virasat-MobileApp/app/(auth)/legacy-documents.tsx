@@ -27,6 +27,7 @@ type DocumentItem = {
   size: number;
   uri: string;
   mimeType?: string | null;
+  file?: any;
 };
 
 export default function LegacyDocumentsScreen() {
@@ -89,6 +90,7 @@ export default function LegacyDocumentsScreen() {
         size: file.size ?? 0,
         uri: file.uri,
         mimeType: file.mimeType,
+        file: (file as any).file,
       };
 
       setDocuments((current) => [
@@ -134,7 +136,7 @@ export default function LegacyDocumentsScreen() {
           requestKey: document.id,
           type: category === 'VIDEOS' ? 'VIDEO' : category === 'OTHER' ? 'OTHER' : document.mimeType?.startsWith('image/') ? 'IMAGE' : 'DOCUMENT',
           category, title: isVideo ? 'Video message' : 'Protected document', description: `File size: ${document.size} bytes`,
-          file: { uri: document.uri, name: document.name, mimeType: document.mimeType },
+          file: { uri: document.uri, name: document.name, mimeType: document.mimeType, file: document.file },
         }, { signal: transfer.current.signal, onProgress: setProgress });
         dispatch(addLegacyItem(item));
         setDocuments((current) => current.filter((entry) => entry.id !== document.id));
@@ -144,7 +146,11 @@ export default function LegacyDocumentsScreen() {
 
       router.replace('/(auth)/home');
     } catch (error) {
-      setUploadStatus(transfer.current?.signal.aborted ? 'Transfer stopped. Confirmed files remain saved. Retry remaining files safely.' : getApiErrorMessage(error));
+      const msg = transfer.current?.signal.aborted
+        ? 'Transfer stopped. Confirmed files remain saved. Retry remaining files safely.'
+        : getApiErrorMessage(error);
+      setUploadStatus(msg);
+      Alert.alert('S3 Upload Failed', msg);
     } finally {
       transfer.current = null;
       setSaving(false);

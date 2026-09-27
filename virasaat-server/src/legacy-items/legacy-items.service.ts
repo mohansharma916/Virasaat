@@ -116,17 +116,24 @@ export class LegacyItemsService {
       mimetype: string;
     },
   ) {
-    if (!file?.buffer?.length) {
+    const fileBuffer = Buffer.isBuffer(file?.buffer)
+      ? file.buffer
+      : file?.buffer
+        ? Buffer.from(file.buffer as any)
+        : null;
+
+    if (!fileBuffer || !fileBuffer.length) {
       throw new BadRequestException('A file is required.');
     }
 
+    const mimeType = file?.mimetype || 'application/octet-stream';
     const vault = await this.vaultService.getUserVault(userId);
-    const encryptedFile = this.encryptionService.encrypt(file.buffer);
+    const encryptedFile = this.encryptionService.encrypt(fileBuffer);
 
     const savedStorage = await this.storageService.saveVaultItemFile({
       vaultId: vault.id,
       ciphertext: encryptedFile.ciphertext,
-      mimeType: file.mimetype,
+      mimeType,
       metadata: {
         itemType: data.type,
         itemCategory: data.category,
@@ -141,7 +148,7 @@ export class LegacyItemsService {
     const item = this.itemRepository.create({
       vaultId: vault.id,
       requestKey: data.requestKey ?? null,
-      requestHash: this.requestHash(data, file.buffer),
+      requestHash: this.requestHash(data, fileBuffer),
       type: data.type,
       category: data.category,
       title: data.title,
@@ -154,7 +161,7 @@ export class LegacyItemsService {
         iv: encryptedFile.iv,
         authTag: encryptedFile.authTag,
         algorithm: encryptedFile.algorithm,
-        mimeType: file.mimetype,
+        mimeType,
         storageType: savedStorage.storageType,
         storageKey: savedStorage.storageKey,
         s3Uri: savedStorage.s3Uri,
