@@ -72,7 +72,9 @@ export class PlanEntitlementService implements OnModuleInit {
         }
       }
     } catch (err) {
-      this.logger.warn(`Could not seed plans immediately: ${(err as Error).message}`);
+      this.logger.warn(
+        `Could not seed plans immediately: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -252,7 +254,10 @@ export class PlanEntitlementService implements OnModuleInit {
     if (maxLimit !== null && currentUsage >= maxLimit) {
       const plan = await this.getUserPlan(userId);
       let requiredPlan = PlanCode.SECURE;
-      if (plan.code === PlanCode.SECURE || (maxLimit >= 3 && limit === PlanLimit.TRUSTED_PERSONS)) {
+      if (
+        plan.code === PlanCode.SECURE ||
+        (maxLimit >= 3 && limit === PlanLimit.TRUSTED_PERSONS)
+      ) {
         requiredPlan = PlanCode.FAMILY;
       }
 
@@ -276,7 +281,9 @@ export class PlanEntitlementService implements OnModuleInit {
     userId: string,
     reason: string = 'DOWNGRADE_OR_EXPIRY_PRESERVATION',
   ): Promise<ReleasePolicySnapshot | null> {
-    const policy = await this.releasePolicyRepository.findOne({ where: { userId } });
+    const policy = await this.releasePolicyRepository.findOne({
+      where: { userId },
+    });
     if (!policy) return null;
 
     const snapshot = this.snapshotRepository.create({
@@ -326,7 +333,10 @@ export class PlanEntitlementService implements OnModuleInit {
       .leftJoinAndSelect('sub.plan', 'plan')
       .getOne();
 
-    if (existingSameToken && existingSameToken.status === SubscriptionStatus.ACTIVE) {
+    if (
+      existingSameToken &&
+      existingSameToken.status === SubscriptionStatus.ACTIVE
+    ) {
       return existingSameToken;
     }
 
@@ -379,7 +389,9 @@ export class PlanEntitlementService implements OnModuleInit {
       sub = await this.subscriptionRepository.save(sub);
     }
 
-    this.logger.log(`User ${userId} successfully subscribed to plan ${targetPlan.code}`);
+    this.logger.log(
+      `User ${userId} successfully subscribed to plan ${targetPlan.code}`,
+    );
     return sub;
   }
 
@@ -392,7 +404,10 @@ export class PlanEntitlementService implements OnModuleInit {
   ): Promise<Subscription> {
     const sub = await this.getUserSubscription(userId);
     // If user already has an active paid subscription, return it
-    if (sub.status === SubscriptionStatus.ACTIVE && sub.plan.code !== PlanCode.STARTER) {
+    if (
+      sub.status === SubscriptionStatus.ACTIVE &&
+      sub.plan.code !== PlanCode.STARTER
+    ) {
       return sub;
     }
 
@@ -421,7 +436,10 @@ export class PlanEntitlementService implements OnModuleInit {
     const sub = await this.getUserSubscription(userId);
 
     // Snapshot existing release policy to preserve all rules and verifiers
-    await this.preserveReleasePolicySnapshot(userId, `DOWNGRADE_TO_${targetPlanCode}`);
+    await this.preserveReleasePolicySnapshot(
+      userId,
+      `DOWNGRADE_TO_${targetPlanCode}`,
+    );
 
     sub.plan = targetPlan;
     sub.planId = targetPlan.id;

@@ -1,25 +1,21 @@
 import {
   ConflictException,
   Injectable,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
-
 import { Repository } from 'typeorm';
-
 import { OAuth2Client } from 'google-auth-library';
-
 import { JwtService } from '@nestjs/jwt';
-
 import { ConfigService } from '@nestjs/config';
-
 import * as bcrypt from 'bcrypt';
 
 import { UsersService } from '../users/users.service';
-
 import { VaultService } from '../vault/vault.service';
-
+import { NotificationsService } from '../notification/notifications.service';
+import { EmailTemplateType } from '../notification/email/email-template.types';
 import { EmailSignup } from './entities/email-signup.entity';
 
 @Injectable()
@@ -28,20 +24,19 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
-
     private readonly vaultService: VaultService,
-
     private readonly jwtService: JwtService,
-
     private readonly configService: ConfigService,
-
     @InjectRepository(EmailSignup)
     private readonly emailSignupRepository: Repository<EmailSignup>,
+    @Optional()
+    private readonly notificationsService?: NotificationsService,
   ) {
     this.googleClient = new OAuth2Client(
       this.configService.getOrThrow<string>('GOOGLE_CLIENT_ID'),
     );
   }
+
 
   // ==================================================
   // EMAIL + PASSWORD SIGNUP
@@ -112,11 +107,21 @@ export class AuthService {
     }
 
     /**
-     * TODO:
      * Send OTP through NotificationService.
-     *
-     * Never expose OTP in production.
      */
+    if (this.notificationsService) {
+      await this.notificationsService.sendTemplatedEmail({
+        to: normalizedEmail,
+        templateType: EmailTemplateType.OTP_VERIFICATION,
+        data: {
+          recipientName: name,
+          otpCode: otp,
+          expiryMinutes: 10,
+          purpose: 'SIGNUP',
+        },
+      });
+    }
+
     console.log(`[DEV] Email verification OTP for ${normalizedEmail}: ${otp}`);
 
     return {
@@ -206,6 +211,23 @@ export class AuthService {
     const vault = await this.vaultService.createForUser(user.id);
 
     /**
+     * Dispatch After Signup Welcome Email
+     */
+    if (this.notificationsService) {
+      await this.notificationsService.sendTemplatedEmail({
+        to: user.email,
+        userId: user.id,
+        templateType: EmailTemplateType.WELCOME,
+        data: {
+          recipientName: user.name,
+          userEmail: user.email,
+          vaultId: vault.id,
+          dashboardUrl: 'https://virasaat.com/dashboard',
+        },
+      });
+    }
+
+    /**
      * Mark signup completed.
      */
     signup.verified = true;
@@ -265,6 +287,19 @@ export class AuthService {
     signup.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     signup.attempts = 0;
     await this.emailSignupRepository.save(signup);
+
+    if (this.notificationsService) {
+      await this.notificationsService.sendTemplatedEmail({
+        to: normalizedEmail,
+        templateType: EmailTemplateType.OTP_VERIFICATION,
+        data: {
+          recipientName: signup.name,
+          otpCode: otp,
+          expiryMinutes: 10,
+          purpose: 'SIGNUP',
+        },
+      });
+    }
 
     console.log(`[DEV] Email verification OTP for ${normalizedEmail}: ${otp}`);
 
@@ -414,6 +449,21 @@ export class AuthService {
     });
 
     const vault = await this.vaultService.createForUser(user.id);
+
+    // Send Welcome Email for new Google signups
+    if (this.notificationsService) {
+      await this.notificationsService.sendTemplatedEmail({
+        to: user.email,
+        userId: user.id,
+        templateType: EmailTemplateType.WELCOME,
+        data: {
+          recipientName: user.name,
+          userEmail: user.email,
+          vaultId: vault.id,
+          dashboardUrl: 'https://virasaat.com/dashboard',
+        },
+      });
+    }
 
     const accessToken = await this.generateToken(user);
 

@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   planCard: {
-    backgroundColor: colors.brand.white,
+    backgroundColor: colors.neutral.white,
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,

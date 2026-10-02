@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
@@ -12,17 +12,11 @@ import { hydrateSession } from '@/src/store/session.slice';
 import { refreshVaultData } from '@/src/store/vault.slice';
 import { fetchSubscription } from '@/src/store/subscription.slice';
 import { LEGACY_CATEGORY_KEYS } from '@/src/utils/legacy-flow';
-import {
-  Home as HomeIcon,
-  Shield as VaultIcon,
-  Users as PeopleIcon,
-  User as ProfileIcon,
-} from 'lucide-react-native';
+import { BottomNavBar } from '@/src/components/BottomNavBar';
 
 const emptySummary = { documents: 0, investments: 0, messages: 0, videos: 0 };
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.session.user);
   const items = useAppSelector((state) => state.vault.items);
@@ -347,25 +341,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomNav,
-          {
-            paddingBottom: Math.max(insets.bottom, 12),
-          },
-        ]}
-      >
-        <BottomNavItem icon={HomeIcon} label="Home" active onPress={() => {}} />
-        <BottomNavItem icon={VaultIcon} label="Vault" onPress={() => openLegacy()} />
-        <BottomNavItem icon={PeopleIcon} label="People" onPress={() => router.push('/(auth)/people' as never)} />
-        <BottomNavItem
-          icon={ProfileIcon}
-          label="Profile"
-          onPress={() =>
-            router.push({ pathname: '/(auth)/profile', params: { mode: 'edit' } } as never)
-          }
-        />
-      </View>
+      <BottomNavBar activeTab="home" />
     </SafeAreaView>
   );
 }
@@ -394,37 +370,6 @@ function LegacyCard({ icon, title, count, onPress }: { icon: string; title: stri
   );
 }
 
-function BottomNavItem({
-  icon: IconComponent,
-  label,
-  active = false,
-  onPress,
-}: {
-  icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
-  label: string;
-  active?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [styles.navItem, pressed && styles.navItemPressed]}
-    >
-      <View style={[styles.iconContainer, active && styles.iconContainerActive]}>
-        <IconComponent
-          size={20}
-          color={active ? colors.primary.deepForest : colors.neutral.textMuted}
-          strokeWidth={active ? 2.4 : 1.8}
-        />
-      </View>
-      <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
-      {active && <View style={styles.activeDot} />}
-    </Pressable>
-  );
-}
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.brand.ivory },

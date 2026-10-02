@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   planCard: {
-    backgroundColor: colors.brand.white,
+    backgroundColor: colors.neutral.white,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   secondaryAction: {
     borderWidth: 1,
     borderColor: colors.brand.sage,
-    backgroundColor: colors.brand.white,
+    backgroundColor: colors.neutral.white,
     borderRadius: 14,
     height: 50,
     alignItems: 'center',

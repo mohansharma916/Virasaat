@@ -71,9 +71,15 @@ export class LegacyItemsController {
       if (Buffer.isBuffer(req.body.file)) {
         resolvedFile = {
           buffer: req.body.file,
-          mimetype: req.body.mimeType || req.body.mimetype || 'application/octet-stream',
+          mimetype:
+            req.body.mimeType ||
+            req.body.mimetype ||
+            'application/octet-stream',
         };
-      } else if (typeof req.body.file === 'string' && req.body.file.startsWith('data:')) {
+      } else if (
+        typeof req.body.file === 'string' &&
+        req.body.file.startsWith('data:')
+      ) {
         const matches = req.body.file.match(/^data:([^;]+);base64,(.+)$/);
         if (matches && matches.length === 3) {
           resolvedFile = {
@@ -81,13 +87,19 @@ export class LegacyItemsController {
             mimetype: matches[1],
           };
         }
-      } else if (typeof req.body.file === 'string' && req.body.file.length > 50) {
+      } else if (
+        typeof req.body.file === 'string' &&
+        req.body.file.length > 50
+      ) {
         try {
           const buf = Buffer.from(req.body.file, 'base64');
           if (buf.length > 0) {
             resolvedFile = {
               buffer: buf,
-              mimetype: req.body.mimeType || req.body.mimetype || 'application/octet-stream',
+              mimetype:
+                req.body.mimeType ||
+                req.body.mimetype ||
+                'application/octet-stream',
             };
           }
         } catch {

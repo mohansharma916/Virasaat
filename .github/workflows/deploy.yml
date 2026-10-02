@@ -27,11 +27,41 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 
+  test-mobile:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Virasat-MobileApp
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Virasat-MobileApp/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Type check
+        run: npx tsc --noEmit
+
   deploy:
-    needs: test
+    needs: [test, test-mobile]
     runs-on: ubuntu-latest
 
     steps:
@@ -69,7 +99,10 @@ jobs:
               echo "Starting database..."
               docker compose up -d postgres
 
-              
+              echo "Running migrations..."
+              docker compose run --rm api npm run db:migrate:prd21 || true
+              docker compose run --rm api npm run db:migrate:subscriptions || true
+
               echo "Deploying API..."
               docker compose up -d
 

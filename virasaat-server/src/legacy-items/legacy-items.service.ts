@@ -47,7 +47,8 @@ export class LegacyItemsService {
     private readonly encryptionService: EncryptionService,
 
     @Optional() storageService?: StorageService,
-    @Optional() private readonly planEntitlementService?: PlanEntitlementService,
+    @Optional()
+    private readonly planEntitlementService?: PlanEntitlementService,
   ) {
     this.storageService =
       storageService ?? new StorageService(new S3StorageService());
@@ -69,7 +70,8 @@ export class LegacyItemsService {
     // Limit check for personal messages
     if (
       this.planEntitlementService &&
-      (data.type === LegacyItemType.TEXT || data.category === 'PERSONAL_MESSAGES')
+      (data.type === LegacyItemType.TEXT ||
+        data.category === 'PERSONAL_MESSAGES')
     ) {
       const isExistingRetry = data.requestKey
         ? await this.itemRepository.findOne({
@@ -79,7 +81,11 @@ export class LegacyItemsService {
 
       if (!isExistingRetry) {
         const textCount = await this.itemRepository.count({
-          where: { vaultId: vault.id, type: LegacyItemType.TEXT, status: LegacyItemStatus.ACTIVE },
+          where: {
+            vaultId: vault.id,
+            type: LegacyItemType.TEXT,
+            status: LegacyItemStatus.ACTIVE,
+          },
         });
         await this.planEntitlementService.assertWithinLimit(
           userId,
@@ -168,7 +174,11 @@ export class LegacyItemsService {
 
       if (!isExistingRetry) {
         const videoCount = await this.itemRepository.count({
-          where: { vaultId: vault.id, type: LegacyItemType.VIDEO, status: LegacyItemStatus.ACTIVE },
+          where: {
+            vaultId: vault.id,
+            type: LegacyItemType.VIDEO,
+            status: LegacyItemStatus.ACTIVE,
+          },
         });
         await this.planEntitlementService.assertWithinLimit(
           userId,
@@ -654,7 +664,11 @@ export class LegacyItemsService {
     const vault = await this.vaultService.getUserVault(userId);
     const items = await this.itemRepository
       .createQueryBuilder('item')
-      .addSelect(['item.ciphertextRef', 'item.encryptionKeyRef', 'item.encryptionKeyVersion'])
+      .addSelect([
+        'item.ciphertextRef',
+        'item.encryptionKeyRef',
+        'item.encryptionKeyVersion',
+      ])
       .where('item.vaultId = :vaultId', { vaultId: vault.id })
       .getMany();
 
@@ -665,7 +679,10 @@ export class LegacyItemsService {
     let inlineEncrypted = 0;
 
     for (const item of items) {
-      if (item.ciphertextRef?.startsWith('vaults/') || item.ciphertextRef?.startsWith('s3://')) {
+      if (
+        item.ciphertextRef?.startsWith('vaults/') ||
+        item.ciphertextRef?.startsWith('s3://')
+      ) {
         s3Stored += 1;
       } else if (item.ciphertextRef) {
         localDisk += 1;
@@ -686,7 +703,8 @@ export class LegacyItemsService {
         localDisk,
         inlineEncrypted,
       },
-      allSyncedToS3: s3Details.configured && items.length > 0 && s3Stored === items.length,
+      allSyncedToS3:
+        s3Details.configured && items.length > 0 && s3Stored === items.length,
     };
   }
 }

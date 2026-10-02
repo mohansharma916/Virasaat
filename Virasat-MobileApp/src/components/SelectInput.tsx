@@ -1,8 +1,10 @@
 import {
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   View,
+  ViewStyle,
 } from 'react-native';
 
 import { colors } from '@/src/theme/colors';
@@ -14,6 +16,7 @@ type SelectInputProps = {
   placeholder: string;
   onPress: () => void;
   required?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 export function SelectInput({
@@ -22,9 +25,10 @@ export function SelectInput({
   placeholder,
   onPress,
   required = true,
+  containerStyle,
 }: SelectInputProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <Text style={styles.label}>
         {label}
 

@@ -31,7 +31,10 @@ export class Subscription {
   })
   status!: SubscriptionStatus;
 
-  @Column({ type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'timestamp with time zone',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   startDate!: Date;
 
   @Column({ type: 'timestamp with time zone', nullable: true })

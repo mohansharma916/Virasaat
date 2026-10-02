@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
 import { listRecipients, type Recipient } from '@/src/api/recipients.api';
@@ -17,9 +17,9 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useSubscription } from '@/src/store/subscription.slice';
 import { UpgradeModal } from '@/src/components/UpgradeModal';
 import { PlanLimit } from '@/src/types/subscription.types';
+import { BottomNavBar } from '@/src/components/BottomNavBar';
 
 export default function PeopleScreen() {
-  const insets = useSafeAreaInsets();
   const { currentPlan, getLimit } = useSubscription();
   const [people, setPeople] = useState<Recipient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -199,7 +199,7 @@ export default function PeopleScreen() {
         })}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <View style={styles.actionContainer}>
         <Pressable
           onPress={handleAddPerson}
           style={({ pressed }) => [
@@ -211,6 +211,8 @@ export default function PeopleScreen() {
           <Text style={styles.buttonArrow}>→</Text>
         </Pressable>
       </View>
+
+      <BottomNavBar activeTab="people" />
 
       <UpgradeModal
         visible={upgradeModalVisible}
@@ -464,12 +466,11 @@ const styles = StyleSheet.create({
     color: colors.neutral.textMuted,
     marginLeft: 8,
   },
-  bottomBar: {
+  actionContainer: {
     paddingHorizontal: 24,
-    paddingTop: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
     backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
   },
   primaryButton: {
     height: 54,

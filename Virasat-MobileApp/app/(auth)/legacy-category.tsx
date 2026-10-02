@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
@@ -16,6 +16,7 @@ import { LEGACY_CATEGORY_KEYS,
   type LegacyCategory, } from '@/src/utils/legacy-flow';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
+import { BottomNavBar } from '@/src/components/BottomNavBar';
 type CategoryConfig = {
   id: LegacyCategory;
   title: string;
@@ -68,7 +69,6 @@ const CATEGORY_CONFIG: CategoryConfig[] = [
 ];
 
 export default function LegacyCategoryScreen() {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const savedItems = useAppSelector((state) => state.vault.items);
   const params = useLocalSearchParams<{
@@ -291,7 +291,7 @@ export default function LegacyCategoryScreen() {
       </ScrollView>
 
       {/* Sticky Bottom Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <View style={[styles.bottomBar, { paddingBottom: 8 }]}>
         <Pressable
           disabled={!allComplete}
           onPress={handleReview}
@@ -310,6 +310,8 @@ export default function LegacyCategoryScreen() {
           <Text style={styles.buttonArrow}>→</Text>
         </Pressable>
       </View>
+
+      <BottomNavBar activeTab="vault" />
     </SafeAreaView>
   );
 }

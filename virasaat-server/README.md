@@ -44,7 +44,59 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Email & Nodemailer Setup (Demo Purpose)
+
+Virasaat uses **Nodemailer** to send transactional emails (OTP signups, password resets, check-in reminders, welcome emails, and emergency disclosures).
+
+### 1. Configure Environment Variables
+
+Add your SMTP credentials in `virasaat-server/.env`:
+
+```env
+# Quick Setup for Gmail:
+SMTP_SERVICE="gmail"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="xxxx xxxx xxxx xxxx"
+SMTP_FROM="\"Virasaat\" <your-email@gmail.com>"
+```
+
+> **Note for Gmail users:**
+> Google requires a **16-character App Password** (not your regular account password).
+> 1. Go to your [Google Account Security Settings](https://myaccount.google.com/security)
+> 2. Ensure **2-Step Verification** is turned ON.
+> 3. Go to [App Passwords](https://myaccount.google.com/apppasswords)
+> 4. Enter an app name (e.g. `Virasaat Demo`) and click **Create**.
+> 5. Copy the 16-character generated password into `SMTP_PASS` in your `.env`.
+
+### 2. Verify Email Delivery via CLI
+
+Test your configuration immediately from the command line:
+
+```bash
+# Self-test sending to your SMTP_USER email
+npm run email:test
+
+# Send to any recipient
+npm run email:test -- recipient@gmail.com
+```
+
+### 3. Verify via REST API
+
+- **Check SMTP status:** `GET http://localhost:3002/notifications/email-templates/status`
+- **Send a test template:** `POST http://localhost:3002/notifications/email-templates/test-send`
+  ```json
+  {
+    "to": "your-email@gmail.com",
+    "templateType": "OTP_VERIFICATION"
+  }
+  ```
+
+### 4. Mock Fallback Mode
+
+If `SMTP_USER` and `SMTP_PASS` are not provided, the server runs in **MOCK mode** — email content and OTPs will be cleanly logged to the console without interrupting application flows.
+
 ## Run tests
+
 
 ```bash
 # unit tests

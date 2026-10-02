@@ -25,12 +25,13 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getProfile, updateProfile } from '@/src/api/users.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
-import { useAppDispatch } from '@/src/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { clearSession, setSessionUser } from '@/src/store/session.slice';
 import { clearVaultData } from '@/src/store/vault.slice';
 import { removeAccessToken } from '@/src/storage/auth.storage';
 import { useSubscription } from '@/src/store/subscription.slice';
 import { LogOut, Shield } from 'lucide-react-native';
+import { BottomNavBar } from '@/src/components/BottomNavBar';
 import {
   findCountry,
   findLanguage,
@@ -44,6 +45,7 @@ export default function ProfileScreen() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.session.user);
   const { currentPlan } = useSubscription();
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
@@ -267,14 +269,43 @@ export default function ProfileScreen() {
             </View>
           )}
 
+          {/* User Profile Card (in Edit Mode) */}
+          {mode === 'edit' && (
+            <View style={styles.userBadgeCard}>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarText}>
+                  {(name || user?.name || '?')
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </Text>
+              </View>
+              <View style={styles.userBadgeContent}>
+                <Text style={styles.userBadgeName} numberOfLines={1}>
+                  {name || user?.name || 'Account Holder'}
+                </Text>
+                <Text style={styles.userBadgeEmail} numberOfLines={1}>
+                  {user?.email || 'Verified Account'}
+                </Text>
+                <View style={styles.verifiedTag}>
+                  <Text style={styles.verifiedTagText}>✓ Active Account</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Heading */}
-          <View style={styles.heading}>
-            <Text style={styles.title}>
-              {mode === 'edit' ? 'Profile Details' : 'Complete your profile'}
+          <View style={[styles.heading, mode === 'edit' && styles.headingCompact]}>
+            <Text style={[styles.title, mode === 'edit' && styles.titleCompact]}>
+              {mode === 'edit' ? 'Personal Details' : 'Complete your profile'}
             </Text>
 
-            <Text style={styles.subtitle}>
-              {mode === 'edit' ? 'Update your personal preferences.' : 'Tell us a little about yourself.'}
+            <Text style={[styles.subtitle, mode === 'edit' && styles.subtitleCompact]}>
+              {mode === 'edit'
+                ? 'Your legal name, residence, and communication language.'
+                : 'Tell us a little about yourself.'}
             </Text>
           </View>
 
@@ -298,55 +329,72 @@ export default function ProfileScreen() {
               autoCapitalize="words"
               autoComplete="name"
               returnKeyType="done"
+              containerStyle={styles.fieldCompact}
             />
 
-            <SelectInput
-              label="Country"
-              placeholder="Select your country"
-              value={displayCountry}
-              onPress={() => setCountryModalVisible(true)}
-            />
+            {/* 2-Column Row for Country & Preferred Language */}
+            <View style={styles.twoColumnRow}>
+              <View style={styles.columnLeft}>
+                <SelectInput
+                  label="Country"
+                  placeholder="Select"
+                  value={displayCountry}
+                  onPress={() => setCountryModalVisible(true)}
+                  containerStyle={styles.fieldCompact}
+                />
+                {errors.country && (
+                  <Text style={styles.columnError}>
+                    {errors.country}
+                  </Text>
+                )}
+              </View>
 
-            {errors.country && (
-              <Text style={styles.error}>
-                {errors.country}
-              </Text>
-            )}
-
-            <SelectInput
-              label="Preferred language"
-              placeholder="Select your language"
-              value={displayLanguage}
-              onPress={() => setLanguageModalVisible(true)}
-            />
-
-            {errors.language && (
-              <Text style={styles.error}>
-                {errors.language}
-              </Text>
-            )}
-          </View>
-
-          {/* Privacy information */}
-          <View style={styles.infoCard}>
-            <View style={styles.infoIcon}>
-              <Text style={styles.infoIconText}>
-                i
-              </Text>
+              <View style={styles.columnRight}>
+                <SelectInput
+                  label="Language"
+                  placeholder="Select"
+                  value={displayLanguage}
+                  onPress={() => setLanguageModalVisible(true)}
+                  containerStyle={styles.fieldCompact}
+                />
+                {errors.language && (
+                  <Text style={styles.columnError}>
+                    {errors.language}
+                  </Text>
+                )}
+              </View>
             </View>
 
-            <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>
-                Why we ask this
-              </Text>
-
-              <Text style={styles.infoText}>
-                This information helps us keep your
-                account accurate and provide the
-                right experience for you.
+            <View style={styles.privacyFootnote}>
+              <Text style={styles.privacyFootnoteIcon}>🔒</Text>
+              <Text style={styles.privacyFootnoteText}>
+                Used solely for verification and communication preferences.
               </Text>
             </View>
           </View>
+
+          {/* Privacy information (only in onboarding) */}
+          {mode !== 'edit' && (
+            <View style={styles.infoCard}>
+              <View style={styles.infoIcon}>
+                <Text style={styles.infoIconText}>
+                  i
+                </Text>
+              </View>
+
+              <View style={styles.infoContent}>
+                <Text style={styles.infoTitle}>
+                  Why we ask this
+                </Text>
+
+                <Text style={styles.infoText}>
+                  This information helps us keep your
+                  account accurate and provide the
+                  right experience for you.
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Account Settings in Edit Mode */}
           {mode === 'edit' && (
@@ -431,7 +479,7 @@ export default function ProfileScreen() {
         </ScrollView>
 
         {/* Sticky Bottom Bar */}
-        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <View style={[styles.bottomBar, { paddingBottom: mode === 'edit' ? 8 : Math.max(insets.bottom, 16) }]}>
           {submitError ? (
             <Text style={styles.error}>{submitError}</Text>
           ) : null}
@@ -441,6 +489,8 @@ export default function ProfileScreen() {
             loading={loading}
           />
         </View>
+
+        {mode === 'edit' && <BottomNavBar activeTab="profile" />}
       </KeyboardAvoidingView>
 
       <SearchablePickerModal
@@ -698,7 +748,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   signOutModalCard: {
     width: '100%',
@@ -836,12 +886,20 @@ const styles = StyleSheet.create({
     marginTop: 38,
     marginBottom: 30,
   },
+  headingCompact: {
+    marginTop: 18,
+    marginBottom: 14,
+  },
 
   title: {
     fontFamily: typography.fonts.playfair.semiBold,
     fontSize: 31,
     lineHeight: 40,
     color: colors.primary.deepForest,
+  },
+  titleCompact: {
+    fontSize: 22,
+    lineHeight: 28,
   },
 
   subtitle: {
@@ -850,6 +908,109 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: colors.neutral.textSecondary,
+  },
+  subtitleCompact: {
+    marginTop: 3,
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+
+  userBadgeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.neutral.white,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    marginTop: 12,
+    shadowColor: colors.primary.deepForest,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  avatarCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: colors.brand.mint,
+    borderWidth: 1.5,
+    borderColor: colors.primary.forest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 16,
+    color: colors.primary.deepForest,
+  },
+  userBadgeContent: {
+    flex: 1,
+  },
+  userBadgeName: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 15,
+    color: colors.neutral.textPrimary,
+  },
+  userBadgeEmail: {
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 12,
+    color: colors.neutral.textSecondary,
+    marginTop: 1,
+  },
+  verifiedTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.semantic.successSoft,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 5,
+    marginTop: 4,
+  },
+  verifiedTagText: {
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: 9.5,
+    color: colors.semantic.success,
+  },
+
+  twoColumnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  columnLeft: {
+    flex: 1,
+  },
+  columnRight: {
+    flex: 1,
+  },
+  columnError: {
+    marginTop: -8,
+    marginBottom: 10,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: '#B42318',
+  },
+  fieldCompact: {
+    marginBottom: 12,
+  },
+
+  privacyFootnote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    paddingHorizontal: 2,
+    gap: 6,
+  },
+  privacyFootnoteIcon: {
+    fontSize: 11,
+  },
+  privacyFootnoteText: {
+    flex: 1,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.neutral.textMuted,
   },
 
   form: {

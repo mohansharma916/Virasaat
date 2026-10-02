@@ -1,0 +1,39 @@
+VIRASAAT
+Digital Legacy & Inheritance Vault
+============================================================
+
+URGENT: MISSED CHECK-IN ALERT
+------------------------------------------------------------
+
+
+URGENT: MISSED CHECK-IN NOTICE
+------------------------------------------------------------
+Hello Mohan Sharma,
+
+We did not receive your confirmation for the scheduled check-in on October 2, 2026.
+
+A 7-day grace period is currently ACTIVE until October 9, 2026.
+
+CURRENT STATUS:
+- Your vault remains completely private and sealed.
+- No files have been released.
+- If you do not check in before October 9, 2026, the contingency verification protocol with your trusted contacts will begin.
+
+CONFIRM SAFETY NOW:
+Click below to confirm you are safe and reset your schedule:
+https://virasaat.com/check-in/recover?token=demo_token
+
+
+------------------------------------------------------------
+SECURITY REASSURANCE:
+Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+
+This is an automated communication regarding your Virasaat digital vault and security settings.
+
+Help & Security: https://virasaat.com/security
+Privacy Policy: https://virasaat.com/privacy
+Terms of Service: https://virasaat.com/terms
+
+(C) 2026 Virasaat Technologies Inc. All rights reserved.
+Safeguarding digital legacies with sovereignty, dignity, and care.
+============================================================

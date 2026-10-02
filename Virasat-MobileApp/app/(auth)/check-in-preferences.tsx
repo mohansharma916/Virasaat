@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     minHeight: 57,
     paddingHorizontal: 14,
     borderRadius: 14,
-    backgroundColor: colors.brand.white,
+    backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.brand.sage,
     flexDirection: 'row',

@@ -9,10 +9,7 @@ import { RecipientsService } from './recipients.service';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Recipient]),
-    SubscriptionsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Recipient]), SubscriptionsModule],
 
   controllers: [RecipientsController],
 

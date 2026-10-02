@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PlanEntitlementService } from './plan-entitlement.service';
 import { PurchaseDto } from './dto/purchase.dto';
@@ -14,9 +7,7 @@ import { PlanCode } from './subscription.constants';
 
 @Controller()
 export class SubscriptionsController {
-  constructor(
-    private readonly entitlementService: PlanEntitlementService,
-  ) {}
+  constructor(private readonly entitlementService: PlanEntitlementService) {}
 
   /**
    * Public list of available plans, features, limits, and pricing.

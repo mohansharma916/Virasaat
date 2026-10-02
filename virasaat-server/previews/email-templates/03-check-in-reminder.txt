@@ -1,0 +1,38 @@
+VIRASAAT
+Digital Legacy & Inheritance Vault
+============================================================
+
+ROUTINE CHECK-IN REMINDER
+------------------------------------------------------------
+
+
+Hello Mohan Sharma,
+
+This is your routine scheduled check-in for your Virasaat account (Monthly).
+
+CHECK-IN DETAILS:
+- Status: Pending (due in 3 days)
+- Cadence: Monthly
+- Due Date: October 5, 2026 at 10:00 AM
+
+CONFIRM YOUR CHECK-IN:
+Click the link below to confirm you are safe and reset your check-in timer:
+https://virasaat.com/check-in/confirm?token=demo_token
+
+WHY WE SEND THIS:
+Confirming your safety takes one click and ensures your private vault remains secure and locked.
+
+
+------------------------------------------------------------
+SECURITY REASSURANCE:
+Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+
+This is an automated communication regarding your Virasaat digital vault and security settings.
+
+Help & Security: https://virasaat.com/security
+Privacy Policy: https://virasaat.com/privacy
+Terms of Service: https://virasaat.com/terms
+
+(C) 2026 Virasaat Technologies Inc. All rights reserved.
+Safeguarding digital legacies with sovereignty, dignity, and care.
+============================================================

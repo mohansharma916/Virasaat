@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import {
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   TextInputProps,
   View,
+  ViewStyle,
 } from 'react-native';
 
 import { colors } from '@/src/theme/colors';
@@ -14,18 +16,20 @@ type InputProps = TextInputProps & {
   label: string;
   error?: string;
   required?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 export function Input({
   label,
   error,
   required = true,
+  containerStyle,
   ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <Text style={styles.label}>
         {label}
         {required && <Text style={styles.required}> *</Text>}

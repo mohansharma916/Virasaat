@@ -21,6 +21,8 @@ import {
 import { UpdateCheckInDto } from './dto/update-check-in.dto';
 import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
 import { Feature } from '../subscriptions/subscription.constants';
+import { NotificationsService } from '../notification/notifications.service';
+import { EmailTemplateType } from '../notification/email/email-template.types';
 
 @Injectable()
 export class CheckInService {
@@ -33,6 +35,9 @@ export class CheckInService {
 
     @Optional()
     private readonly planEntitlementService?: PlanEntitlementService,
+
+    @Optional()
+    private readonly notificationsService?: NotificationsService,
   ) {}
 
   /**
@@ -128,7 +133,7 @@ export class CheckInService {
    * Confirm the user's check-in.
    */
   async confirmCheckIn(userId: string, eventId: string) {
-    return this.policyRepository.manager.transaction(async (manager) => {
+    const result = await this.policyRepository.manager.transaction(async (manager) => {
       const policies = manager.getRepository(CheckInPolicy);
       const events = manager.getRepository(CheckInEvent);
       const policy = await policies.findOne({
@@ -176,6 +181,32 @@ export class CheckInService {
         respondedAt: event.respondedAt,
       };
     });
+
+    if (this.notificationsService) {
+      this.notificationsService
+        .sendTemplatedEmail({
+          to: `user_${userId}@virasaat.internal`,
+          userId,
+          templateType: EmailTemplateType.CHECK_IN_CONFIRMED,
+          data: {
+            recipientName: 'Valued Member',
+            confirmedAt: new Date().toLocaleString('en-US', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            }),
+            nextCheckInDate: result.nextCheckInAt
+              ? new Date(result.nextCheckInAt).toLocaleDateString('en-US', {
+                  dateStyle: 'long',
+                })
+              : 'Next cycle',
+            cadence: 'Monthly Routine',
+            dashboardUrl: 'https://virasaat.com/dashboard',
+          },
+        })
+        .catch(() => {});
+    }
+
+    return result;
   }
 
   /**

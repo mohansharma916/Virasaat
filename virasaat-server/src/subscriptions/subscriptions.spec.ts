@@ -3,10 +3,7 @@ jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
 
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PlanEntitlementService } from './plan-entitlement.service';
 import {
   DEFAULT_PLANS,
@@ -56,7 +53,8 @@ function createMockRepository<T = any>() {
       ...dto,
     })),
     save: jest.fn(async (entity: any) => {
-      const id = entity.id ?? `mock-${Math.random().toString(36).substring(2, 9)}`;
+      const id =
+        entity.id ?? `mock-${Math.random().toString(36).substring(2, 9)}`;
       const saved = { ...entity, id };
       store.set(id, saved);
       return saved;
@@ -111,7 +109,10 @@ describe('Subscription and Entitlement System', () => {
       create: jest.fn((val: any) => val),
       save: jest.fn((val: any) => Promise.resolve(val)),
     };
-    const recipientsService = new RecipientsService(recipientRepo as any, service);
+    const recipientsService = new RecipientsService(
+      recipientRepo as any,
+      service,
+    );
 
     await expect(
       recipientsService.create('starter-user', {
@@ -146,13 +147,21 @@ describe('Subscription and Entitlement System', () => {
     });
 
     // 0 -> 1 allowed
-    await expect(service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 0)).resolves.not.toThrow();
+    await expect(
+      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 0),
+    ).resolves.not.toThrow();
     // 1 -> 2 allowed
-    await expect(service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 1)).resolves.not.toThrow();
+    await expect(
+      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 1),
+    ).resolves.not.toThrow();
     // 2 -> 3 allowed
-    await expect(service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 2)).resolves.not.toThrow();
+    await expect(
+      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 2),
+    ).resolves.not.toThrow();
     // 3 -> 4 rejected
-    await expect(service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 3)).rejects.toThrow(ForbiddenException);
+    await expect(
+      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 3),
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('4. FAMILY can add up to 8 Trusted Persons', async () => {
@@ -162,8 +171,12 @@ describe('Subscription and Entitlement System', () => {
       purchaseToken: 'valid-family-token-12345',
     });
 
-    await expect(service.assertWithinLimit('family-user', PlanLimit.TRUSTED_PERSONS, 7)).resolves.not.toThrow();
-    await expect(service.assertWithinLimit('family-user', PlanLimit.TRUSTED_PERSONS, 8)).rejects.toThrow(ForbiddenException);
+    await expect(
+      service.assertWithinLimit('family-user', PlanLimit.TRUSTED_PERSONS, 7),
+    ).resolves.not.toThrow();
+    await expect(
+      service.assertWithinLimit('family-user', PlanLimit.TRUSTED_PERSONS, 8),
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('5. STARTER cannot use custom check-in', async () => {
@@ -173,7 +186,11 @@ describe('Subscription and Entitlement System', () => {
       save: jest.fn((val: any) => Promise.resolve(val)),
     };
     const eventRepo = { findOne: jest.fn().mockResolvedValue(null) };
-    const checkInService = new CheckInService(checkInRepo as any, eventRepo as any, service);
+    const checkInService = new CheckInService(
+      checkInRepo as any,
+      eventRepo as any,
+      service,
+    );
 
     await expect(
       checkInService.updatePolicy('starter-user', {
@@ -199,7 +216,11 @@ describe('Subscription and Entitlement System', () => {
       create: jest.fn((v: any) => v),
       save: jest.fn((v: any) => Promise.resolve(v)),
     };
-    const checkInService = new CheckInService(checkInRepo as any, eventRepo as any, service);
+    const checkInService = new CheckInService(
+      checkInRepo as any,
+      eventRepo as any,
+      service,
+    );
 
     await expect(
       checkInService.updatePolicy('secure-user-2', {
@@ -232,7 +253,10 @@ describe('Subscription and Entitlement System', () => {
     await expect(
       releaseService.updatePolicy('family-user-2', {
         verificationLevel: VerificationLevel.HIGH,
-        escalationConfig: { multipleVerifiers: true, requiredVerifiers: ['p1', 'p2'] },
+        escalationConfig: {
+          multipleVerifiers: true,
+          requiredVerifiers: ['p1', 'p2'],
+        },
       }),
     ).resolves.toBeDefined();
   });
@@ -327,7 +351,10 @@ describe('Subscription and Entitlement System', () => {
       trigger: ReleaseTrigger.CHECK_IN_ESCALATION,
       verificationLevel: VerificationLevel.HIGH,
       verificationRequired: true,
-      escalationConfig: { multipleVerifiers: true, requiredVerifiers: ['a', 'b'] },
+      escalationConfig: {
+        multipleVerifiers: true,
+        requiredVerifiers: ['a', 'b'],
+      },
     });
     await policyRepo.save(policy);
 
@@ -415,11 +442,14 @@ describe('Subscription and Entitlement System', () => {
       }),
     })) as any;
 
-    const firstResult = await service.verifyAndProcessPurchase('idempotent-user', {
-      planCode: PlanCode.SECURE,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: token,
-    });
+    const firstResult = await service.verifyAndProcessPurchase(
+      'idempotent-user',
+      {
+        planCode: PlanCode.SECURE,
+        provider: 'GOOGLE_PLAY',
+        purchaseToken: token,
+      },
+    );
 
     expect(firstResult.id).toBe('sub-existing');
   });
