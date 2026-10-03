@@ -9,6 +9,7 @@ import { UsersModule } from '../users/users.module';
 import { VaultModule } from '../vault/vault.module';
 import { NotificationsModule } from '../notification/notification.module';
 import { EmailSignup } from './entities/email-signup.entity';
+import { PasswordReset } from './entities/password-reset.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -16,7 +17,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     UsersModule,
     VaultModule,
     NotificationsModule,
-    TypeOrmModule.forFeature([EmailSignup]),
+    TypeOrmModule.forFeature([EmailSignup, PasswordReset]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

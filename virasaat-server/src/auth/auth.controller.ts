@@ -14,6 +14,9 @@ import { ResendVerificationDto } from './dto/resend-verification.dto';
 
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -62,6 +65,31 @@ export class AuthController {
   }
 
   /**
+   * Smart Forgot Password - checks account type (Email vs Google)
+   * and initiates recovery OTP.
+   */
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  /**
+   * Verify password reset OTP and set new password.
+   */
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.email, dto.otp, dto.newPassword);
+  }
+
+  /**
+   * Resend password reset OTP.
+   */
+  @Post('resend-password-reset')
+  async resendPasswordReset(@Body() dto: ForgotPasswordDto) {
+    return this.authService.resendPasswordReset(dto.email);
+  }
+
+  /**
    * Current User
    */
   @Get('me')
@@ -70,3 +98,4 @@ export class AuthController {
     return req.user;
   }
 }
+

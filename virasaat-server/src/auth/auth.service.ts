@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Optional,
@@ -17,6 +18,7 @@ import { VaultService } from '../vault/vault.service';
 import { NotificationsService } from '../notification/notifications.service';
 import { EmailTemplateType } from '../notification/email/email-template.types';
 import { EmailSignup } from './entities/email-signup.entity';
+import { PasswordReset } from './entities/password-reset.entity';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +31,8 @@ export class AuthService {
     private readonly configService: ConfigService,
     @InjectRepository(EmailSignup)
     private readonly emailSignupRepository: Repository<EmailSignup>,
+    @InjectRepository(PasswordReset)
+    private readonly passwordResetRepository: Repository<PasswordReset>,
     @Optional()
     private readonly notificationsService?: NotificationsService,
   ) {
@@ -527,6 +531,173 @@ export class AuthService {
   }
 
   // ==================================================
+  // FORGOT PASSWORD / ACCOUNT RECOVERY
+  // ==================================================
+
+  /**
+   * Smart password recovery strategy:
+   * 1. If no account exists with this email -> return NOT_FOUND status with user-friendly guidance.
+   * 2. If account was registered via Google Sign-In (no password) -> return GOOGLE_ACCOUNT status prompting Google Sign-In.
+   * 3. If account has email & password -> generate secure 6-digit OTP and send via Nodemailer.
+   */
+  async forgotPassword(email: string) {
+    const normalizedEmail = this.normalizeEmail(email);
+    const user = await this.usersService.findByEmailWithPassword(normalizedEmail);
+
+    if (!user) {
+      return {
+        status: 'NOT_FOUND',
+        message: 'No Virasaat account found with this email address. Please check your email or sign up.',
+      };
+    }
+
+    // Check if user is a Google-only account without a local password
+    if (user.googleId && !user.passwordHash) {
+      return {
+        status: 'GOOGLE_ACCOUNT',
+        authMethod: 'GOOGLE',
+        message: 'This account was created with Google Sign-In. You do not have a separate password.',
+        email: user.email,
+        name: user.name,
+      };
+    }
+
+    // Password-based account -> generate 6-digit OTP
+    const otp = this.generateOtp();
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
+
+    // Invalidate any existing unused reset OTPs for this email
+    await this.passwordResetRepository.update(
+      { email: normalizedEmail, used: false },
+      { used: true },
+    );
+
+    const passwordReset = this.passwordResetRepository.create({
+      email: normalizedEmail,
+      otpHash,
+      expiresAt,
+      attempts: 0,
+      used: false,
+    });
+    await this.passwordResetRepository.save(passwordReset);
+
+    // Send password reset template via NotificationsService (Nodemailer)
+    if (this.notificationsService) {
+      await this.notificationsService.sendTemplatedEmail({
+        to: normalizedEmail,
+        templateType: EmailTemplateType.PASSWORD_RESET,
+        data: {
+          recipientName: user.name,
+          resetCode: otp,
+          expiryMinutes: 15,
+          resetUrl: 'https://virasaat.com/auth/reset-password',
+        },
+      });
+    }
+
+    return {
+      status: 'OTP_SENT',
+      authMethod: 'PASSWORD',
+      message: 'A 6-digit password reset code has been sent to your email.',
+      email: user.email,
+      developmentOtp: process.env.NODE_ENV !== 'production' ? otp : undefined,
+    };
+  }
+
+  /**
+   * Verify the 6-digit reset OTP and update the user's password.
+   */
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    const normalizedEmail = this.normalizeEmail(email);
+    const user = await this.usersService.findByEmailWithPassword(normalizedEmail);
+
+    if (!user) {
+      throw new BadRequestException('No account found with this email.');
+    }
+
+    const resetRecord = await this.passwordResetRepository.findOne({
+      where: {
+        email: normalizedEmail,
+        used: false,
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    if (!resetRecord) {
+      throw new BadRequestException(
+        'No active password reset request found. Please request a new code.',
+      );
+    }
+
+    if (new Date() > resetRecord.expiresAt) {
+      throw new BadRequestException(
+        'Password reset code has expired. Please request a new code.',
+      );
+    }
+
+    if (resetRecord.attempts >= 5) {
+      throw new BadRequestException(
+        'Too many failed attempts. Please request a new reset code.',
+      );
+    }
+
+    const isOtpValid = await bcrypt.compare(otp, resetRecord.otpHash);
+    if (!isOtpValid) {
+      resetRecord.attempts += 1;
+      await this.passwordResetRepository.save(resetRecord);
+      throw new BadRequestException('Invalid verification code. Please check and try again.');
+    }
+
+    // Mark reset code as used
+    resetRecord.used = true;
+    await this.passwordResetRepository.save(resetRecord);
+
+    // Hash new password and update user
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.usersService.update(user.id, {
+      passwordHash,
+      emailVerified: true,
+    });
+
+    // Send security alert email
+    if (this.notificationsService) {
+      try {
+        await this.notificationsService.sendTemplatedEmail({
+          to: normalizedEmail,
+          userId: user.id,
+          templateType: EmailTemplateType.SECURITY_ALERT,
+          data: {
+            recipientName: user.name,
+            alertTitle: 'Password Changed',
+            alertDescription:
+              'Your Virasaat master account password has been successfully reset. If you did not perform this action, please contact support immediately.',
+            eventTime: new Date().toUTCString(),
+            deviceInfo: 'Virasaat Mobile App',
+            reviewActivityUrl: 'https://virasaat.com/security',
+          },
+        });
+      } catch (err) {
+        // Notification failure shouldn't fail the password reset
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Your password has been successfully reset. Please sign in with your new password.',
+    };
+  }
+
+  /**
+   * Resend the password reset code.
+   */
+  async resendPasswordReset(email: string) {
+    return this.forgotPassword(email);
+  }
+
+  // ==================================================
   // JWT
   // ==================================================
 
@@ -549,3 +720,4 @@ export class AuthService {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 }
+
