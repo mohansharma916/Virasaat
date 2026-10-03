@@ -95,3 +95,39 @@ export async function getCurrentUser(): Promise<AuthenticatedUser> {
   const response = await api.get<AuthenticatedUser>('/auth/me');
   return response.data;
 }
+
+export interface ForgotPasswordResponse {
+  status: 'OTP_SENT' | 'GOOGLE_ACCOUNT' | 'NOT_FOUND';
+  authMethod?: 'PASSWORD' | 'GOOGLE';
+  message: string;
+  email?: string;
+  name?: string;
+  developmentOtp?: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+  const response = await api.post<ForgotPasswordResponse>('/auth/forgot-password', { email });
+  return response.data;
+}
+
+export async function resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+  const response = await api.post<ResetPasswordResponse>('/auth/reset-password', data);
+  return response.data;
+}
+
+export async function resendPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+  const response = await api.post<ForgotPasswordResponse>('/auth/resend-password-reset', { email });
+  return response.data;
+}
+

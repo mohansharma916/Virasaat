@@ -111,7 +111,15 @@ export default function LoginScreen() {
             <View style={styles.field}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>PASSWORD</Text>
-                <Pressable onPress={() => { }} hitSlop={8}>
+                <Pressable
+                  onPress={() => {
+                    router.push({
+                      pathname: '/(auth)/forgot-password',
+                      params: email.trim() ? { email: email.trim() } : {},
+                    });
+                  }}
+                  hitSlop={8}
+                >
                   <Text style={styles.forgot}>Forgot password?</Text>
                 </Pressable>
               </View>

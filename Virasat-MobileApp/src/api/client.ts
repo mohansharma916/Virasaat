@@ -42,7 +42,10 @@ api.interceptors.request.use(async (config) => {
     config.url?.startsWith('/auth/login') ||
     config.url?.startsWith('/auth/google') ||
     config.url?.startsWith('/auth/verify-email') ||
-    config.url?.startsWith('/auth/resend-verification');
+    config.url?.startsWith('/auth/resend-verification') ||
+    config.url?.startsWith('/auth/forgot-password') ||
+    config.url?.startsWith('/auth/reset-password') ||
+    config.url?.startsWith('/auth/resend-password-reset');
 
   if (isAuthRequest) {
     return config;

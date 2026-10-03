@@ -22,7 +22,14 @@ import { Button } from './Button';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
-const publicRoutes = new Set(['/', '/welcome', '/login', '/signup', '/verify']);
+const publicRoutes = new Set([
+  '/',
+  '/welcome',
+  '/login',
+  '/signup',
+  '/verify',
+  '/forgot-password',
+]);
 
 export function SessionGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
