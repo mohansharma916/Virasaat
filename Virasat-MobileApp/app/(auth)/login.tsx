@@ -59,8 +59,9 @@ export default function LoginScreen() {
     setError('');
     try {
 
+      const normalizedEmail = email.trim().toLowerCase();
       const result = await login({
-        email,
+        email: normalizedEmail,
         password,
       });
 

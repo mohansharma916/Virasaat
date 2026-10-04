@@ -55,7 +55,11 @@ export default function ItemSettingsScreen() {
   }, [retry]);
 
   const save = async () => {
-    if (busy.current || !policy || !itemId || !recipientId) return;
+    if (busy.current || !itemId || !recipientId) return;
+    if (!policy?.enabled) {
+      setError('Please configure and enable a release policy before confirming assignment.');
+      return;
+    }
     busy.current = true;
     setSaving(true);
     setError('');
@@ -78,7 +82,7 @@ export default function ItemSettingsScreen() {
     }
   };
 
-  const canSave = itemId && recipientId && !saving && !loading;
+  const canSave = Boolean(itemId && recipientId && policy?.enabled && !saving && !loading);
 
   return (
     <SafeAreaView style={styles.safeArea}>

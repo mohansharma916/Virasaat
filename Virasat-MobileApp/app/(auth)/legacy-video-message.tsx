@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import {
   CameraView,
   useCameraPermissions,
+  useMicrophonePermissions,
 } from 'expo-camera';
 
 import { colors } from '@/src/theme/colors';
@@ -38,7 +39,20 @@ export default function LegacyVideoMessageScreen() {
     categories?: string;
   }>();
   const cameraRef = useRef<CameraView>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
+
+  const permissionsLoading = !cameraPermission || !microphonePermission;
+  const permissionsGranted = Boolean(cameraPermission?.granted && microphonePermission?.granted);
+
+  const requestAllPermissions = async () => {
+    if (!cameraPermission?.granted) {
+      await requestCameraPermission();
+    }
+    if (!microphonePermission?.granted) {
+      await requestMicrophonePermission();
+    }
+  };
 
   const [recording, setRecording] = useState(false);
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
@@ -137,20 +151,20 @@ export default function LegacyVideoMessageScreen() {
     setRecordedUri(null);
   };
 
-  if (!permission) {
+  if (permissionsLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary.forest} />
           <Text style={styles.loadingText}>
-            Checking camera permission...
+            Checking camera and audio permissions...
           </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!permission.granted) {
+  if (!permissionsGranted) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
@@ -173,23 +187,23 @@ export default function LegacyVideoMessageScreen() {
             </View>
 
             <Text style={styles.title}>
-              Camera access is needed
+              Camera & microphone access needed
             </Text>
 
             <Text style={styles.subtitle}>
-              Virasat needs access to your camera so you can
-              record a private video message for your loved ones.
+              Virasat needs access to your camera and microphone so you can
+              record a private video message with audio for your loved ones.
             </Text>
 
             <Pressable
-              onPress={requestPermission}
+              onPress={requestAllPermissions}
               style={({ pressed }) => [
                 styles.primaryButton,
                 pressed && styles.buttonPressed,
               ]}
             >
               <Text style={styles.primaryButtonText}>
-                Allow Camera Access
+                Allow Access
               </Text>
               <Text style={styles.primaryButtonArrow}>→</Text>
             </Pressable>

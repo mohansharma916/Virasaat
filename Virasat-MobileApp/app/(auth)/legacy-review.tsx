@@ -34,6 +34,7 @@ export default function LegacyReviewScreen() {
   ).length;
   const investmentsCount = items.filter((item) => item.type === 'FINANCIAL').length;
   const messagesCount = items.filter((item) => item.type === 'TEXT').length;
+  const videosCount = items.filter((item) => item.type === 'VIDEO').length;
   const handleContinue = () => {
     router.push('/(auth)/check-in-preferences');
   };
@@ -123,6 +124,19 @@ export default function LegacyReviewScreen() {
             onPress={() =>
               router.push(
                 '/(auth)/legacy-message',
+              )
+            }
+          />
+
+          <View style={styles.divider} />
+
+          <ReviewRow
+            icon="🎥"
+            title="Video Messages"
+            value={`${videosCount} ${videosCount === 1 ? 'video' : 'videos'}`}
+            onPress={() =>
+              router.push(
+                '/(auth)/legacy-video-message',
               )
             }
           />

@@ -112,9 +112,11 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <View style={styles.headerActions}>
+            {__DEV__ && (
             <Pressable style={styles.headerButton} hitSlop={10} onPress={() => router.push('/(auth)/dev-screen' as never)}>
               <Text style={styles.headerIcon}>♢</Text>
             </Pressable>
+            )}
             <Pressable style={styles.headerButton} hitSlop={10} onPress={() => router.push({ pathname: '/(auth)/profile', params: { mode: 'edit' } } as never)}>
               <Text style={styles.menuIcon}>☰</Text>
             </Pressable>

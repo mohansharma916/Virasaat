@@ -19,7 +19,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.Virasat"
+      "package": "com.anonymous.Virasat",
+      "versionCode": 1,
+      "allowBackup": false
     },
     "web": {
       "output": "static",
@@ -43,7 +45,20 @@
         }
       ],
       "expo-font",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Virasat to record video messages for your loved ones.",
+          "microphonePermission": "Allow Virasat to record audio with your video messages."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Virasat to select photos and videos for your vault."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

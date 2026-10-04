@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Provider } from 'react-redux';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { fonts } from '@/src/theme/fonts';
 import { store } from '@/src/store/store';
@@ -33,11 +34,13 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
+      <SafeAreaProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+      </SafeAreaProvider>
     </Provider>
   );
 }

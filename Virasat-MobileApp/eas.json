@@ -1,0 +1,25 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "production": {
+      "environment": "production",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.status410.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "699341673834-mqvqtg2smi7lbg62ptvcqdhr71v5u039.apps.googleusercontent.com"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}

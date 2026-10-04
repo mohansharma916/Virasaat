@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 import { signInWithGoogle } from '@/src/utils/google-auth';
@@ -30,7 +31,6 @@ export default function SignupScreen() {
   const dispatch = useAppDispatch();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
 
 
@@ -58,7 +58,7 @@ export default function SignupScreen() {
     if (!email.trim()) {
       newErrors.email = 'Please enter your email address.';
     } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     ) {
       newErrors.email = 'Please enter a valid email address.';
     }
@@ -123,17 +123,19 @@ export default function SignupScreen() {
       setLoading(true);
       setSubmitError('');
 
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedName = name.trim();
+
       const result = await register({
-        email: email.trim(),
-        name: name.trim(),
+        email: normalizedEmail,
+        name: normalizedName,
         password,
       });
-  
 
       router.push({
         pathname: '/(auth)/verify',
         params: {
-          email: email.trim(),
+          email: normalizedEmail,
           developmentOtp: result.developmentOtp ?? '',
         },
       });
@@ -399,9 +401,9 @@ function SafeAreaWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <View style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
       {children}
-    </View>
+    </SafeAreaView>
   );
 }
 

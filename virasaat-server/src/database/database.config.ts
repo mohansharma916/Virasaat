@@ -16,6 +16,7 @@ export const databaseConfig = (
   autoLoadEntities: true,
 
   synchronize:
-    config.get<string>('NODE_ENV') !== 'production' &&
-    config.get<string>('DB_SYNCHRONIZE') !== 'false',
+    config.get<string>('DB_SYNCHRONIZE') === 'true' ||
+    (config.get<string>('NODE_ENV') !== 'production' &&
+      config.get<string>('DB_SYNCHRONIZE') !== 'false'),
 });

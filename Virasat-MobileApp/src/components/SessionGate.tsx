@@ -29,6 +29,7 @@ const publicRoutes = new Set([
   '/signup',
   '/verify',
   '/forgot-password',
+  '/dev-screen',
 ]);
 
 export function SessionGate({ children }: { children: ReactNode }) {
@@ -38,7 +39,8 @@ export function SessionGate({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [validated, setValidated] = useState(false);
-  const isPublic = publicRoutes.has(pathname);
+  const normalizedPath = pathname.replace(/^\/\(auth\)/, '') || '/';
+  const isPublic = publicRoutes.has(pathname) || publicRoutes.has(normalizedPath);
 
   useEffect(
     () =>

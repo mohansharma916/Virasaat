@@ -210,7 +210,8 @@ export default function VerifyScreen() {
         return;
       }
 
-      const result = await verifyEmail(email, code);
+      const normalizedEmail = email.trim().toLowerCase();
+      const result = await verifyEmail(normalizedEmail, code.trim());
       await saveAccessToken(result.accessToken);
       dispatch(setSessionUser(result.user));
       router.replace('/(auth)/security');

@@ -33,14 +33,14 @@ export default function WelcomeScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-  onPress={() => router.push('/(auth)/dev-screen')}
-  activeOpacity={0.7}
->
-  <Text style={styles.devButtonText}>
-    DEV: Screen Navigator
-  </Text>
-</TouchableOpacity>
+        {__DEV__ && (
+          <TouchableOpacity
+            onPress={() => router.push('/(auth)/dev-screen')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.devButtonText}>DEV: Screen Navigator</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Hero */}
         <View style={styles.heroContainer}>

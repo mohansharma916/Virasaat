@@ -6,142 +6,52 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Redirect, router } from 'expo-router';
 import { ChevronRight, Code2 } from 'lucide-react-native';
-
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
 const screens = [
-  {
-    number: '01',
-    title: 'Welcome',
-    route: '/(auth)/welcome',
-  },
-  {
-    number: '02',
-    title: 'Signup',
-    route: '/(auth)/signup',
-  },
-  {
-    number: '03',
-    title: 'Verify',
-    route: '/(auth)/verify',
-  },
-  {
-    number: '04',
-    title: 'Security',
-    route: '/(auth)/security',
-  },
-  {
-    number: '05',
-    title: 'Profile',
-    route: '/(auth)/profile',
-  },
-  {
-    number: '06',
-    title: 'Legacy Setup',
-    route: '/(auth)/legacy-setup',
-  },
-  {
-    number: '07',
-    title: 'Legacy Category',
-    route: '/(auth)/legacy-category',
-  },
-  {
-    number: '08',
-    title: 'Legacy Documents',
-    route: '/(auth)/legacy-documents',
-  },
-  {
-    number: '09',
-    title: 'Legacy Investments',
-    route: '/(auth)/legacy-investments',
-  },
-  {
-    number: '10',
-    title: 'Investment Details',
-    route: '/(auth)/legacy-investment-details',
-  },
-  {
-    number: '11',
-    title: 'Legacy Message',
-    route: '/(auth)/legacy-message',
-  },
-  {
-    number: '12',
-    title: 'Legacy Video Message',
-    route: '/(auth)/legacy-video-message',
-  },
-  {
-    number: '13',
-    title: 'Trusted Person Intro',
-    route: '/(auth)/trusted-person-intro',
-  },
-  {
-    number: '14',
-    title: 'Trusted Person',
-    route: '/(auth)/trusted-person',
-  },
-  {
-    number: '15',
-    title: 'Trusted Person Review',
-    route: '/(auth)/trusted-person-review',
-  },
-  {
-    number: '16',
-    title: 'Trusted Person Confirmation',
-    route: '/(auth)/trusted-person-confirmation',
-  },
-  {
-    number: '17',
-    title: 'Trusted Person Success',
-    route: '/(auth)/trusted-person-success',
-  },
-  {
-    number: '18',
-    title: 'Legacy Review',
-    route: '/(auth)/legacy-review',
-  },
-  {
-    number: '19',
-    title: 'Release Rules',
-    route: '/(auth)/release-rules',
-  },
-  {
-    number: '20',
-    title: 'Check-in Preferences',
-    route: '/(auth)/check-in-preferences',
-  },
-  {
-    number: '21',
-    title: 'Login',
-    route: '/(auth)/login',
-  },
-  {
-    number: '22',
-    title: 'Dashboard',
-    route: '/(auth)/home',
-  },
-  {
-    number: '23',
-    title: 'Plan Comparison',
-    route: '/(auth)/plans',
-  },
-  {
-    number: '24',
-    title: 'My Plan & Subscription',
-    route: '/(auth)/my-plan',
-  },
+  { number: '01', title: 'Welcome', route: '/(auth)/welcome' },
+  { number: '02', title: 'Signup', route: '/(auth)/signup' },
+  { number: '03', title: 'Login', route: '/(auth)/login' },
+  { number: '04', title: 'Verify Email', route: '/(auth)/verify' },
+  { number: '05', title: 'Forgot Password', route: '/(auth)/forgot-password' },
+  { number: '06', title: 'Security & PIN', route: '/(auth)/security' },
+  { number: '07', title: 'Profile Settings', route: '/(auth)/profile' },
+  { number: '08', title: 'Legacy Setup', route: '/(auth)/legacy-setup' },
+  { number: '09', title: 'Legacy Category', route: '/(auth)/legacy-category' },
+  { number: '10', title: 'Legacy Documents', route: '/(auth)/legacy-documents' },
+  { number: '11', title: 'Legacy Investments', route: '/(auth)/legacy-investments' },
+  { number: '12', title: 'Investment Details', route: '/(auth)/legacy-investment-details' },
+  { number: '13', title: 'Legacy Message', route: '/(auth)/legacy-message' },
+  { number: '14', title: 'Legacy Video Message', route: '/(auth)/legacy-video-message' },
+  { number: '15', title: 'Trusted Person Intro', route: '/(auth)/trusted-person-intro' },
+  { number: '16', title: 'Trusted Person Form', route: '/(auth)/trusted-person' },
+  { number: '17', title: 'Trusted Person Review', route: '/(auth)/trusted-person-review' },
+  { number: '18', title: 'Trusted Person Confirmation', route: '/(auth)/trusted-person-confirmation' },
+  { number: '19', title: 'Trusted Person Success', route: '/(auth)/trusted-person-success' },
+  { number: '20', title: 'Trusted Persons Directory', route: '/(auth)/people' },
+  { number: '21', title: 'Legacy Review', route: '/(auth)/legacy-review' },
+  { number: '22', title: 'Item Assignment Settings', route: '/(auth)/item-settings' },
+  { number: '23', title: 'Release Rules', route: '/(auth)/release-rules' },
+  { number: '24', title: 'Check-in Preferences', route: '/(auth)/check-in-preferences' },
+  { number: '25', title: 'Dashboard (Home)', route: '/(auth)/home' },
+  { number: '26', title: 'Plan Comparison', route: '/(auth)/plans' },
+  { number: '27', title: 'My Plan & Billing', route: '/(auth)/my-plan' },
+  { number: '28', title: 'Delete Account', route: '/(auth)/delete-account' },
 ];
 
 export default function DevScreen() {
+  if (!__DEV__) return <Redirect href="/(auth)/welcome" />;
+
   const openScreen = (route: string) => {
     router.push(route as any);
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -149,15 +59,13 @@ export default function DevScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Code2 size={22}  />
+            <Code2 size={22} color={colors.primary.deepForest} />
           </View>
 
           <Text style={styles.eyebrow}>DEVELOPMENT ONLY</Text>
-
           <Text style={styles.title}>Screen Navigator</Text>
-
           <Text style={styles.description}>
-            Open any Virasat screen directly during development.
+            Direct access to all 28 Virasat mobile screens for testing and verification.
           </Text>
         </View>
 
@@ -171,7 +79,7 @@ export default function DevScreen() {
               activeOpacity={0.75}
             >
               <View style={styles.numberContainer}>
-                <Text style={styles.container}>{screen.number}</Text>
+                <Text style={styles.numberText}>{screen.number}</Text>
               </View>
 
               <View style={styles.screenInfo}>
@@ -179,114 +87,123 @@ export default function DevScreen() {
                 <Text style={styles.route}>{screen.route}</Text>
               </View>
 
-              <ChevronRight
-                size={19}
-                // color={colors.neutral}
-              />
+              <ChevronRight size={18} color={colors.neutral.textMuted} />
             </TouchableOpacity>
           ))}
         </View>
 
         <Text style={styles.warning}>
-          Temporary development screen — remove before production.
+          Development utility only — hidden in production builds.
         </Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    // backgroundColor: colors.background,
+    backgroundColor: colors.brand.ivory,
   },
 
   content: {
-    paddingHorizontal: 22,
-    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     paddingBottom: 40,
   },
 
   header: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
 
   iconContainer: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    // backgroundColor: colors.surface,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.brand.mint,
     borderWidth: 1,
-    // borderColor: colors.border,
+    borderColor: colors.neutral.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
+    marginBottom: 14,
   },
 
   eyebrow: {
-    // ...typography.caption,
-    // color: colors.primary,
-    letterSpacing: 1.8,
-    marginBottom: 7,
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 10,
+    letterSpacing: 2,
+    color: colors.primary.forest,
+    marginBottom: 6,
   },
 
   title: {
-    // ...typography.h1,
-    // color: colors.text,
+    fontFamily: typography.fonts.playfair.bold,
+    fontSize: 26,
+    color: colors.neutral.textPrimary,
   },
 
   description: {
-    // ...typography.body,
-    // color: colors.muted,
-    marginTop: 8,
-    lineHeight: 22,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 14,
+    color: colors.neutral.textMuted,
+    marginTop: 6,
+    lineHeight: 20,
   },
 
   list: {
-    gap: 10,
+    gap: 8,
   },
 
   screenCard: {
-    minHeight: 68,
-    // backgroundColor: colors.surface,
-    borderRadius: 18,
+    minHeight: 64,
+    backgroundColor: colors.neutral.white,
+    borderRadius: 14,
     borderWidth: 1,
-    // borderColor: colors.border,
+    borderColor: colors.neutral.border,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
+    paddingVertical: 10,
   },
 
   numberContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.brand.mint,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 13,
+    marginRight: 12,
   },
 
- 
+  numberText: {
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 12,
+    color: colors.primary.deepForest,
+  },
 
   screenInfo: {
     flex: 1,
   },
 
   screenTitle: {
-   
-    fontWeight: '600',
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
+    color: colors.neutral.textPrimary,
   },
 
   route: {
-    // ...typography.caption,
-    // color: colors.muted,
-    marginTop: 3,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: colors.neutral.textMuted,
+    marginTop: 2,
   },
 
   warning: {
-    // ...typography.caption,
-    // color: colors.muted,
-    // textAlign: 'center',
-    // marginTop: 24,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: colors.neutral.textMuted,
+    textAlign: 'center',
+    marginTop: 24,
   },
 });
