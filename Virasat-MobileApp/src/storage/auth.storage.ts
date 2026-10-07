@@ -82,3 +82,34 @@ export const getBiometricUnlockEnabled = async () => {
   const value = await readValue(BIOMETRIC_UNLOCK_ENABLED_KEY);
   return value === 'true';
 };
+
+const LAST_EMAIL_KEY = 'last_email';
+const BIOMETRIC_SAVED_SESSION_KEY = 'biometric_saved_session';
+
+export const saveLastEmail = async (email: string) => {
+  await writeValue(LAST_EMAIL_KEY, email);
+};
+
+export const getLastEmail = async () => {
+  return readValue(LAST_EMAIL_KEY);
+};
+
+export const saveBiometricSession = async (sessionData: { email: string; token: string; user?: any }) => {
+  await writeValue(BIOMETRIC_SAVED_SESSION_KEY, JSON.stringify(sessionData));
+  await saveBiometricUnlockEnabled(true);
+};
+
+export const getBiometricSession = async (): Promise<{ email: string; token: string; user?: any } | null> => {
+  const data = await readValue(BIOMETRIC_SAVED_SESSION_KEY);
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+};
+
+export const clearBiometricSession = async () => {
+  await removeValue(BIOMETRIC_SAVED_SESSION_KEY);
+  await saveBiometricUnlockEnabled(false);
+};

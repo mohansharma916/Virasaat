@@ -1,15 +1,38 @@
-import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { saveAccessToken } from '@/src/storage/auth.storage';
+import {
+  saveAccessToken,
+  getAccessToken,
+  saveLastEmail,
+  getLastEmail,
+  saveBiometricSession,
+  getBiometricSession,
+} from '@/src/storage/auth.storage';
 import { googleLogin, login } from '@/src/api/auth.api';
 import { signInWithGoogle } from '@/src/utils/google-auth';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
-import { setSessionUser } from '@/src/store/session.slice';
+import { setSessionUser, hydrateSession } from '@/src/store/session.slice';
+import {
+  authenticateWithBiometric,
+  getBiometricType,
+  isBiometricAvailable,
+  type BiometricType,
+} from '@/src/services/biometric';
 
 export default function LoginScreen() {
   const dispatch = useAppDispatch();
@@ -20,18 +43,119 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Biometric state (Face ID / Fingerprint)
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState<BiometricType>('Face ID');
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [hasSavedSession, setHasSavedSession] = useState(false);
+
   const canContinue = email.trim().length > 0 && password.length > 0;
 
-  const finishAuthentication = async (result: Awaited<ReturnType<typeof login>>) => {
-    await saveAccessToken(result.accessToken);
-    dispatch(setSessionUser(result.user));
+  useEffect(() => {
+    let active = true;
 
+    void (async () => {
+      try {
+        const [available, bioType, lastEmail, bioSession, existingToken] = await Promise.all([
+          isBiometricAvailable(),
+          getBiometricType(),
+          getLastEmail(),
+          getBiometricSession(),
+          getAccessToken(),
+        ]);
+
+        if (!active) return;
+
+        setBiometricAvailable(available);
+        setBiometricType(bioType);
+
+        if (lastEmail && !email) {
+          setEmail(lastEmail);
+        }
+
+        if (bioSession?.token || existingToken) {
+          setHasSavedSession(true);
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const finishAuthentication = async (
+    result: Awaited<ReturnType<typeof login>>,
+    userEmail?: string
+  ) => {
+    const finalEmail = userEmail || result.user?.email || email;
+
+    await saveAccessToken(result.accessToken);
+    if (finalEmail) {
+      await saveLastEmail(finalEmail);
+      await saveBiometricSession({
+        email: finalEmail,
+        token: result.accessToken,
+        user: result.user,
+      });
+    }
+
+    dispatch(setSessionUser(result.user));
     router.replace('/(auth)/home');
   };
 
+  const handleBiometricLogin = async () => {
+    if (loading || googleLoading || biometricLoading) return;
+
+    setError('');
+    setBiometricLoading(true);
+
+    try {
+      const bioResult = await authenticateWithBiometric(
+        `Sign in to Virasat with ${biometricType}`
+      );
+
+      if (!bioResult.success) {
+        if (bioResult.error && !bioResult.error.includes('cancel')) {
+          setError(`${biometricType} verification failed. Please try again or use your password.`);
+        }
+        return;
+      }
+
+      // Biometric verified! Check if we have an active token or saved session
+      const token = await getAccessToken();
+      const bioSession = await getBiometricSession();
+
+      if (token || bioSession?.token) {
+        if (!token && bioSession?.token) {
+          await saveAccessToken(bioSession.token);
+        }
+        try {
+          const hydrated = await dispatch(hydrateSession()).unwrap();
+          if (hydrated) {
+            router.replace('/(auth)/home');
+            return;
+          }
+        } catch {
+          // Token expired, require password once to re-authenticate
+        }
+      }
+
+      // If no valid session exists, guide user
+      setError(
+        `${biometricType} recognized! Enter your password once to connect ${biometricType} for 1-tap sign-in.`
+      );
+    } catch {
+      setError(`Unable to authenticate with ${biometricType}. Please use your password.`);
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
 
   const handleGoogleLogin = async () => {
-    if (loading || googleLoading) return;
+    if (loading || googleLoading || biometricLoading) return;
 
     setGoogleLoading(true);
     setError('');
@@ -44,8 +168,7 @@ export default function LoginScreen() {
       }
 
       const result = await googleLogin(idToken);
-
-      await finishAuthentication(result);
+      await finishAuthentication(result, result.user?.email);
     } catch (error) {
       setError(getApiErrorMessage(error, 'Google sign-in failed. Please try again.'));
     } finally {
@@ -54,27 +177,26 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!canContinue || loading) return;
+    if (!canContinue || loading || biometricLoading) return;
     setLoading(true);
     setError('');
-    try {
 
+    try {
       const normalizedEmail = email.trim().toLowerCase();
       const result = await login({
         email: normalizedEmail,
         password,
       });
 
-      await finishAuthentication(result);
+      await finishAuthentication(result, normalizedEmail);
     } catch (error) {
       setError(getApiErrorMessage(error, 'Unable to sign in. Please try again.'));
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
   };
 
-
+  const isFaceID = biometricType === 'Face ID';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -85,13 +207,54 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.hero}>
-            <View style={styles.iconCircle}><Text style={styles.lockIcon}>⌑</Text></View>
+            <View style={styles.iconCircle}>
+              <Text style={styles.lockIcon}>⌑</Text>
+            </View>
             <Text style={styles.eyebrow}>WELCOME BACK</Text>
             <Text style={styles.title}>Your legacy is waiting.</Text>
             <Text style={styles.subtitle}>
               Sign in to securely manage the information you've chosen to preserve.
             </Text>
           </View>
+
+          {/* Quick Biometric Login Button (Face ID / Fingerprint) */}
+          {biometricAvailable && (
+            <Pressable
+              disabled={loading || googleLoading || biometricLoading}
+              onPress={handleBiometricLogin}
+              style={({ pressed }) => [
+                styles.biometricButton,
+                pressed && styles.buttonPressed,
+                biometricLoading && styles.biometricButtonDisabled,
+              ]}
+            >
+              {biometricLoading ? (
+                <View style={styles.biometricLoadingRow}>
+                  <ActivityIndicator size="small" color={colors.primary.deepForest} />
+                  <Text style={styles.biometricLoadingText}>Scanning {biometricType}...</Text>
+                </View>
+              ) : (
+                <View style={styles.biometricContentRow}>
+                  <View style={styles.biometricBadge}>
+                    <Text style={styles.biometricIconSymbol}>
+                      {isFaceID ? '👤' : '👆'}
+                    </Text>
+                  </View>
+                  <View style={styles.biometricTextCol}>
+                    <Text style={styles.biometricTitle}>
+                      Sign in with {biometricType}
+                    </Text>
+                    <Text style={styles.biometricSub}>
+                      {hasSavedSession
+                        ? '1-Tap biometric vault unlock'
+                        : `Instant login with ${biometricType}`}
+                    </Text>
+                  </View>
+                  <Text style={styles.biometricArrowSymbol}>→</Text>
+                </View>
+              )}
+            </Pressable>
+          )}
 
           <View style={styles.form}>
             <View style={styles.field}>
@@ -144,7 +307,7 @@ export default function LoginScreen() {
             </View>
 
             <Pressable
-              disabled={!canContinue || loading}
+              disabled={!canContinue || loading || biometricLoading}
               onPress={handleLogin}
               style={({ pressed }) => [styles.loginButton, !canContinue && styles.loginButtonDisabled, pressed && canContinue && !loading && styles.buttonPressed]}
             >
@@ -169,7 +332,7 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={handleGoogleLogin}
-            disabled={loading || googleLoading}
+            disabled={loading || googleLoading || biometricLoading}
             style={({ pressed }) => [
               styles.googleButton,
               pressed && !googleLoading && styles.buttonPressed,
@@ -194,7 +357,7 @@ export default function LoginScreen() {
 
           <View style={styles.securityNote}>
             <Text style={styles.securityIcon}>🔒</Text>
-            <Text style={styles.securityText}>Your information remains private and protected.</Text>
+            <Text style={styles.securityText}>Protected with hardware biometric encryption.</Text>
           </View>
 
           <Text style={styles.footer}>
@@ -218,7 +381,77 @@ const styles = StyleSheet.create({
   eyebrow: { marginTop: 10, fontFamily: typography.fonts.inter.semiBold, fontSize: 9, letterSpacing: 1.6, color: colors.primary.forest },
   title: { marginTop: 6, textAlign: 'center', fontFamily: typography.fonts.playfair.semiBold, fontSize: 25, lineHeight: 32, color: colors.primary.deepForest },
   subtitle: { maxWidth: 330, marginTop: 4, textAlign: 'center', fontFamily: typography.fonts.inter.regular, fontSize: 12, lineHeight: 18, color: colors.neutral.textSecondary },
-  form: { marginTop: 18 },
+
+  // Biometric Button Styles
+  biometricButton: {
+    marginTop: 18,
+    borderRadius: 16,
+    backgroundColor: '#EAF3EF',
+    borderWidth: 1.5,
+    borderColor: colors.primary.forest,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    shadowColor: colors.primary.forest,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  biometricButtonDisabled: {
+    opacity: 0.7,
+  },
+  biometricContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  biometricLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    gap: 10,
+  },
+  biometricLoadingText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 13,
+    color: colors.primary.deepForest,
+  },
+  biometricBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: colors.primary.deepForest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  biometricIconSymbol: {
+    fontSize: 20,
+    color: colors.brand.mint,
+  },
+  biometricTextCol: {
+    flex: 1,
+  },
+  biometricTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
+    color: colors.primary.deepForest,
+  },
+  biometricSub: {
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 11,
+    color: colors.primary.forest,
+    marginTop: 1,
+  },
+  biometricArrowSymbol: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary.deepForest,
+    marginLeft: 8,
+  },
+
+  form: { marginTop: 16 },
   googleButton: {
     height: 50,
     marginTop: 10,

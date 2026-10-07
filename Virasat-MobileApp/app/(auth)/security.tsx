@@ -15,7 +15,9 @@ import { router } from 'expo-router';
 
 import {
   authenticateWithBiometric,
+  getBiometricType,
   isBiometricAvailable,
+  BiometricType,
 } from '@/src/services/biometric';
 import {
   getBiometricUnlockEnabled,
@@ -33,6 +35,9 @@ export default function SecurityScreen() {
   const [biometricEnabled, setBiometricEnabled] =
     useState(false);
 
+  const [biometricType, setBiometricType] =
+    useState<BiometricType>('Face ID');
+
   const [checkingBiometric, setCheckingBiometric] =
     useState(true);
 
@@ -46,14 +51,16 @@ export default function SecurityScreen() {
 
     void (async () => {
       try {
-        const [available, enabled] = await Promise.all([
+        const [available, enabled, bioType] = await Promise.all([
           isBiometricAvailable(),
           getBiometricUnlockEnabled(),
+          getBiometricType(),
         ]);
 
         if (active) {
           setBiometricAvailable(available);
           setBiometricEnabled(available && enabled);
+          setBiometricType(bioType);
         }
       } catch {
         if (active) {
@@ -93,8 +100,9 @@ export default function SecurityScreen() {
     try {
       setAuthenticating(true);
 
-      const result =
-        await authenticateWithBiometric();
+      const result = await authenticateWithBiometric(
+        `Enable ${biometricType} for Virasat`
+      );
 
       if (result.success) {
         setBiometricEnabled(true);
@@ -102,13 +110,13 @@ export default function SecurityScreen() {
       } else {
         setBiometricEnabled(false);
         setError(
-          'Biometric verification was not completed.'
+          `${biometricType} verification was not completed.`
         );
       }
     } catch {
       setBiometricEnabled(false);
       setError(
-        'Unable to enable biometric security.'
+        `Unable to enable ${biometricType} security.`
       );
     } finally {
       setAuthenticating(false);
@@ -176,18 +184,17 @@ export default function SecurityScreen() {
         <View style={styles.securityCard}>
           <View style={styles.cardIcon}>
             <Text style={styles.cardIconText}>
-              ◉
+              {biometricType === 'Face ID' ? '👤' : '👆'}
             </Text>
           </View>
 
           <View style={styles.cardContent}>
             <Text style={styles.cardTitle}>
-              Biometric Security
+              {biometricType} Login
             </Text>
 
             <Text style={styles.cardDescription}>
-              Use {biometricName.toLowerCase()} to
-              protect access to your Virasat vault.
+              Unlock your Virasat vault instantly using {biometricType}. Fast, private, and secure.
             </Text>
 
             {checkingBiometric ? (
