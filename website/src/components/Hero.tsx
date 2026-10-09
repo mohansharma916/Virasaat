@@ -71,6 +71,24 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
     }
   };
 
+  const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      const targetId = href.replace('#', '');
+      const element = document.getElementById(targetId);
+      if (element) {
+        const navOffset = 84;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+        window.history.pushState(null, '', href);
+      }
+    }
+  };
+
   return (
     <section
       style={{
@@ -284,6 +302,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
           >
             <a
               href="#mobile-app"
+              onClick={(e) => handleScrollTo(e, '#mobile-app')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -304,10 +323,12 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
 
             <a
               href="#how-it-works"
+              onClick={(e) => handleScrollTo(e, '#how-it-works')}
               style={{
                 color: 'var(--text-secondary)',
                 fontSize: '0.84rem',
                 textDecoration: 'none',
+                cursor: 'pointer',
               }}
             >
               See How It Works ↓

@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Bell,
   Fingerprint,
+  Mail,
 } from 'lucide-react';
 
 interface MobileAppShowcaseProps {
@@ -499,146 +500,227 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
                         </div>
                       </div>
 
-                      {/* Master Portfolio Card */}
+                      {/* Vault Overview Card (Directly matching actual phone app home.tsx) */}
                       <div
                         style={{
-                          background: 'linear-gradient(135deg, #0B5D4B 0%, #063F34 100%)',
+                          background: 'linear-gradient(135deg, #063F34 0%, #04241E 100%)',
                           borderRadius: '16px',
                           padding: '14px',
-                          border: '1px solid rgba(212, 175, 55, 0.4)',
+                          border: '1px solid rgba(212, 175, 55, 0.35)',
                           marginBottom: '12px',
-                          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
+                          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.35)',
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.68rem', color: '#EAF4F0', letterSpacing: '0.04em' }}>
-                            TOTAL PROTECTED ASSETS
-                          </span>
-                          <span
+                        {/* Top Row: Lock icon + Status Dot + VAULT OVERVIEW */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div
                             style={{
-                              fontSize: '0.62rem',
-                              background: 'rgba(53, 184, 107, 0.25)',
-                              color: '#35B86B',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontWeight: 700,
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              background: 'rgba(220, 235, 229, 0.12)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '1px solid rgba(220, 235, 229, 0.2)',
                             }}
                           >
-                            AES-256
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFF', letterSpacing: '-0.02em' }}>
-                          ₹ 2,48,50,000
-                        </div>
-                        <div style={{ fontSize: '0.68rem', color: 'var(--sage)', marginTop: '2px' }}>
-                          Across 14 Folios, Policies & Real Estate
-                        </div>
-
-                        {/* Heartbeat Status Strip */}
-                        <div
-                          style={{
-                            marginTop: '10px',
-                            paddingTop: '8px',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.12)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#35B86B' }} />
-                            <span style={{ fontSize: '0.66rem', color: '#EAF4F0' }}>Heartbeat: Active</span>
+                            <Lock size={13} color="#ECC862" />
                           </div>
-                          <span style={{ fontSize: '0.64rem', color: '#ECC862' }}>Next: in 24 days</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#35B86B', boxShadow: '0 0 6px #35B86B' }} />
+                            <span style={{ fontSize: '0.62rem', color: '#EAF4F0', letterSpacing: '0.08em', fontWeight: 700 }}>
+                              VAULT OVERVIEW
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Title & Description matching phone app */}
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFF', letterSpacing: '-0.01em', marginBottom: '3px' }}>
+                          14 Items Preserved
+                        </div>
+                        <div style={{ fontSize: '0.64rem', color: 'var(--sage)', lineHeight: 1.45, marginBottom: '10px' }}>
+                          Documents, videos and accounts remain encrypted on your device.
+                        </div>
+
+                        {/* Divider */}
+                        <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.12)', marginBottom: '8px' }} />
+
+                        {/* Meta Row: Preserved items count & Cloud Badge */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '0.58rem', color: 'var(--sage)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                              STATUS:
+                            </span>
+                            <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#FFF' }}>
+                              All Items Preserved
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: 'rgba(234, 244, 240, 0.12)',
+                              padding: '2px 8px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(234, 244, 240, 0.2)',
+                              fontSize: '0.6rem',
+                              color: '#EAF4F0',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <span>☁ AWS S3 Encrypted</span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* 4 Legacy Categories Grid */}
-                      <div style={{ fontSize: '0.72rem', color: 'var(--sage)', fontWeight: 600, marginBottom: '8px' }}>
-                        VAULT CATEGORIES
+                      {/* 4 Legacy Categories Grid (Matching actual phone app) */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--sage)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                          YOUR LEGACY
+                        </span>
+                        <span style={{ fontSize: '0.62rem', color: '#ECC862', fontWeight: 600 }}>
+                          View all →
+                        </span>
                       </div>
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                        {/* Documents Protected */}
                         <div
-                          onClick={() => setActiveScreen('finance')}
                           style={{
-                            background: 'rgba(8, 43, 36, 0.7)',
-                            border: '1px solid rgba(220, 235, 229, 0.14)',
+                            background: 'rgba(8, 43, 36, 0.75)',
+                            border: '1px solid rgba(220, 235, 229, 0.16)',
                             borderRadius: '12px',
                             padding: '10px',
-                            cursor: 'pointer',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <TrendingUp size={16} color="#ECC862" />
-                            <span style={{ fontSize: '0.64rem', color: '#ECC862', fontWeight: 700 }}>4 Items</span>
+                            <div
+                              style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '8px',
+                                background: 'rgba(53, 184, 107, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <FileText size={14} color="#35B86B" />
+                            </div>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFF' }}>5</span>
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#FFF', fontWeight: 700 }}>Financial</div>
-                          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Mutual Funds, Demat</div>
+                          <div style={{ fontSize: '0.76rem', color: '#FFF', fontWeight: 700 }}>Documents Protected</div>
+                          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Will, Deeds, Passports</div>
                         </div>
 
+                        {/* Videos Protected */}
                         <div
                           onClick={() => setActiveScreen('video')}
                           style={{
-                            background: 'rgba(8, 43, 36, 0.7)',
-                            border: '1px solid rgba(220, 235, 229, 0.14)',
+                            background: 'rgba(8, 43, 36, 0.75)',
+                            border: '1px solid rgba(220, 235, 229, 0.16)',
                             borderRadius: '12px',
                             padding: '10px',
                             cursor: 'pointer',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <Heart size={16} color="#E86262" />
-                            <span style={{ fontSize: '0.64rem', color: '#E86262', fontWeight: 700 }}>2 Videos</span>
+                            <div
+                              style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '8px',
+                                background: 'rgba(232, 98, 98, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Heart size={14} color="#E86262" />
+                            </div>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFF' }}>2</span>
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#FFF', fontWeight: 700 }}>Milestones</div>
-                          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>4K Video Capsules</div>
+                          <div style={{ fontSize: '0.76rem', color: '#FFF', fontWeight: 700 }}>Videos Protected</div>
+                          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>4K Video Capsules</div>
                         </div>
 
+                        {/* Financial Folios */}
                         <div
+                          onClick={() => setActiveScreen('finance')}
                           style={{
-                            background: 'rgba(8, 43, 36, 0.7)',
-                            border: '1px solid rgba(220, 235, 229, 0.14)',
-                            borderRadius: '12px',
-                            padding: '10px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <FileText size={16} color="#35B86B" />
-                            <span style={{ fontSize: '0.64rem', color: '#35B86B', fontWeight: 700 }}>5 Docs</span>
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: '#FFF', fontWeight: 700 }}>Legal Wills</div>
-                          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Will, Deeds, Passports</div>
-                        </div>
-
-                        <div
-                          onClick={() => setActiveScreen('heartbeat')}
-                          style={{
-                            background: 'rgba(8, 43, 36, 0.7)',
-                            border: '1px solid rgba(220, 235, 229, 0.14)',
+                            background: 'rgba(8, 43, 36, 0.75)',
+                            border: '1px solid rgba(220, 235, 229, 0.16)',
                             borderRadius: '12px',
                             padding: '10px',
                             cursor: 'pointer',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <Activity size={16} color="#3D8BFF" />
-                            <span style={{ fontSize: '0.64rem', color: '#3D8BFF', fontWeight: 700 }}>Active</span>
+                            <div
+                              style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '8px',
+                                background: 'rgba(212, 175, 55, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <TrendingUp size={14} color="#ECC862" />
+                            </div>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFF' }}>4</span>
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#FFF', fontWeight: 700 }}>Heartbeat</div>
-                          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Safety Protocol</div>
+                          <div style={{ fontSize: '0.76rem', color: '#FFF', fontWeight: 700 }}>Financial Folios</div>
+                          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Mutual Funds, Demat</div>
+                        </div>
+
+                        {/* Private Messages */}
+                        <div
+                          style={{
+                            background: 'rgba(8, 43, 36, 0.75)',
+                            border: '1px solid rgba(220, 235, 229, 0.16)',
+                            borderRadius: '12px',
+                            padding: '10px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <div
+                              style={{
+                                width: '26px',
+                                height: '26px',
+                                borderRadius: '8px',
+                                background: 'rgba(61, 139, 255, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Mail size={14} color="#3D8BFF" />
+                            </div>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#FFF' }}>3</span>
+                          </div>
+                          <div style={{ fontSize: '0.76rem', color: '#FFF', fontWeight: 700 }}>Private Messages</div>
+                          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Letters for Family</div>
                         </div>
                       </div>
 
-                      {/* Designated Guardian Card */}
+                      {/* Designated Trusted Person Card (Matching phone app trustedCard) */}
+                      <div style={{ fontSize: '0.7rem', color: 'var(--sage)', fontWeight: 700, letterSpacing: '0.06em', marginBottom: '6px' }}>
+                        TRUSTED PERSON
+                      </div>
                       <div
                         style={{
-                          background: 'rgba(6, 34, 28, 0.8)',
-                          border: '1px solid rgba(212, 175, 55, 0.25)',
+                          background: 'rgba(6, 34, 28, 0.85)',
+                          border: '1px solid rgba(53, 184, 107, 0.3)',
                           borderRadius: '12px',
                           padding: '10px 12px',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '10px',
+                          marginBottom: '10px',
                         }}
                       >
                         <div
@@ -655,14 +737,57 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
                           <UserCheck size={16} color="#35B86B" />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.74rem', color: '#FFF', fontWeight: 700 }}>
+                          <div style={{ fontSize: '0.6rem', color: '#35B86B', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.06em' }}>
+                            TRUSTED PERSON ACTIVE
+                          </div>
+                          <div style={{ fontSize: '0.76rem', color: '#FFF', fontWeight: 700 }}>
                             Dr. Ananya Sharma (Wife)
                           </div>
-                          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-                            Designated Beneficiary • Verified
+                        </div>
+                        <span style={{ fontSize: '0.65rem', color: '#ECC862', fontWeight: 600 }}>Manage →</span>
+                      </div>
+
+                      {/* Next Check-In Card (Matching phone app checkInCard) */}
+                      <div style={{ fontSize: '0.7rem', color: 'var(--sage)', fontWeight: 700, letterSpacing: '0.06em', marginBottom: '6px' }}>
+                        NEXT CHECK-IN
+                      </div>
+                      <div
+                        onClick={() => setActiveScreen('heartbeat')}
+                        style={{
+                          background: 'rgba(8, 43, 36, 0.75)',
+                          border: '1px solid rgba(220, 235, 229, 0.16)',
+                          borderRadius: '12px',
+                          padding: '10px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              background: 'rgba(53, 184, 107, 0.2)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Activity size={14} color="#35B86B" />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.76rem', color: '#FFF', fontWeight: 700 }}>
+                              You're all set
+                            </div>
+                            <div style={{ fontSize: '0.62rem', color: 'var(--sage)' }}>
+                              Next check-in: in 24 days (Monthly)
+                            </div>
                           </div>
                         </div>
-                        <span style={{ fontSize: '0.65rem', color: '#35B86B', fontWeight: 700 }}>Active</span>
+                        <span style={{ fontSize: '0.64rem', color: '#35B86B', fontWeight: 700 }}>Active</span>
                       </div>
                     </div>
                   )}
@@ -814,7 +939,7 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
                           "For Ananya on her 18th Birthday"
                         </div>
                         <div style={{ fontSize: '0.64rem', color: 'var(--sage)', marginBottom: '8px' }}>
-                          Duration: 04:32 • Encrypted Client-Side with AES-256
+                          Duration: 04:32 • Secure & Privately Encrypted
                         </div>
 
                         <div
@@ -1034,7 +1159,7 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
                         <div style={{ fontSize: '0.64rem', color: 'var(--sage)', marginBottom: '12px' }}>
                           {biometricSimStatus === 'idle' && 'Tap below to test instant biometric login in the app.'}
                           {biometricSimStatus === 'scanning' && 'Verifying on-device Secure Enclave hardware...'}
-                          {biometricSimStatus === 'success' && '✓ Master AES-256 key unlocked locally. No passwords needed.'}
+                          {biometricSimStatus === 'success' && '✓ Vault unlocked locally. No passwords needed.'}
                         </div>
 
                         <button

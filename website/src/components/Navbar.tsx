@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Sparkles, Volume2, VolumeX, Menu, X, ArrowRight, Lock, Smartphone } from 'lucide-react';
+import { Shield, Sparkles, Menu, X, ArrowRight, Lock, Smartphone } from 'lucide-react';
 
 interface NavbarProps {
   onOpenWaitlist: () => void;
@@ -10,9 +10,6 @@ interface NavbarProps {
 export default function Navbar({ onOpenWaitlist }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
-  const [gainNode, setGainNode] = useState<GainNode | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,51 +19,26 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Web Audio API ambient tranquility chime (432Hz harmonic serene tone)
-  const toggleAmbientAudio = () => {
-    try {
-      if (!isAudioPlaying) {
-        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        const ctx = audioCtx || new AudioContextClass();
-        if (ctx.state === 'suspended') {
-          ctx.resume();
-        }
-
-        const masterGain = ctx.createGain();
-        masterGain.gain.setValueAtTime(0.001, ctx.currentTime);
-        masterGain.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 1.5);
-        masterGain.connect(ctx.destination);
-
-        // Gentle singing bowl chord (432Hz fundamental + 864Hz octave harmonic)
-        const osc1 = ctx.createOscillator();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(432, ctx.currentTime);
-
-        const osc2 = ctx.createOscillator();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(432 * 1.5, ctx.currentTime); // Perfect fifth (648Hz)
-
-        osc1.connect(masterGain);
-        osc2.connect(masterGain);
-
-        osc1.start();
-        osc2.start();
-
-        setAudioCtx(ctx);
-        setGainNode(masterGain);
-        setIsAudioPlaying(true);
-      } else {
-        if (gainNode && audioCtx) {
-          gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
-          setTimeout(() => {
-            setIsAudioPlaying(false);
-          }, 800);
-        } else {
-          setIsAudioPlaying(false);
-        }
+  const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      const targetId = href.replace('#', '');
+      if (!targetId) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.history.pushState(null, '', window.location.pathname);
+        return;
       }
-    } catch {
-      setIsAudioPlaying(!isAudioPlaying);
+      const element = document.getElementById(targetId);
+      if (element) {
+        const navOffset = 84;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+        window.history.pushState(null, '', href);
+      }
     }
   };
 
@@ -74,7 +46,7 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
     { label: 'Why It Matters', href: '#problem' },
     { label: 'What You Can Store', href: '#vault' },
     { label: 'Mobile App', href: '#mobile-app' },
-    { label: 'How It Works', href: '#heartbeat' },
+    { label: 'How It Works', href: '#how-it-works' },
     { label: 'Calculator', href: '#calculator' },
     { label: 'Safety & Privacy', href: '#security' },
     { label: 'FAQ', href: '#faq' },
@@ -105,6 +77,7 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
           {/* Logo */}
           <a
             href="#"
+            onClick={(e) => handleAnchorClick(e, '#')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -188,6 +161,7 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
               <a
                 key={link.label}
                 href={link.href}
+                onClick={(e) => handleAnchorClick(e, link.href)}
                 style={{
                   color: 'var(--text-secondary)',
                   textDecoration: 'none',
@@ -206,30 +180,11 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
 
           {/* Action CTAs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Ambient Tranquility Audio Toggle */}
-            <button
-              onClick={toggleAmbientAudio}
-              title={isAudioPlaying ? 'Mute ambient harmony' : 'Play peaceful 432Hz ambient focus tone'}
-              style={{
-                background: isAudioPlaying ? 'rgba(212, 175, 55, 0.2)' : 'rgba(220, 235, 229, 0.06)',
-                border: isAudioPlaying ? '1px solid var(--gold-primary)' : '1px solid var(--border-subtle)',
-                color: isAudioPlaying ? 'var(--gold-primary)' : 'var(--text-secondary)',
-                borderRadius: '50%',
-                width: '38px',
-                height: '38px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {isAudioPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            </button>
 
             {/* App Coming Soon Badge (Desktop) */}
             <a
               href="#mobile-app"
+              onClick={(e) => handleAnchorClick(e, '#mobile-app')}
               className="desktop-nav"
               style={{
                 display: 'flex',
@@ -314,7 +269,10 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
               <a
                 key={link.label}
                 href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleAnchorClick(e, link.href);
+                }}
                 style={{
                   color: 'var(--text-primary)',
                   fontSize: '1.2rem',

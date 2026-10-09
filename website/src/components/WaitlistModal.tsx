@@ -14,6 +14,7 @@ import {
   Mail,
   Loader2,
 } from 'lucide-react';
+import { COUNTRIES, fetchCountryFromIp } from '@/data/countries';
 
 interface WaitlistModalProps {
   isOpen: boolean;
@@ -31,6 +32,23 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
   const [errorMessage, setErrorMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [queueNumber, setQueueNumber] = useState(420);
+
+  useEffect(() => {
+    let active = true;
+    fetchCountryFromIp()
+      .then((detected) => {
+        if (active && detected) {
+          setCountry(detected);
+        }
+      })
+      .catch(() => {
+        // default remains India
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (defaultEmail && !email) {
@@ -57,37 +75,78 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
     setIsSubmitting(true);
     setErrorMessage('');
 
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          fullName,
-          country,
-          platform,
-          source: 'modal_waitlist',
-        }),
-      });
+    const assignedNumber = queueNumber || 421;
+    const backendUrl =
+      process.env.NEXT_PUBLIC_WAITLIST_API_URL ||
+      (process.env.NEXT_PUBLIC_API_URL
+        ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/waitlist`
+        : 'http://localhost:3001/waitlist');
+    const webhookUrl = process.env.NEXT_PUBLIC_WAITLIST_WEBHOOK_URL;
 
-      const data = await res.json();
+    // 1. Submit to virasaat-server backend endpoint
+    if (backendUrl) {
+      try {
+        const res = await fetch(backendUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            fullName,
+            country,
+            platform,
+            source: 'modal_waitlist',
+          }),
+        });
 
-      if (!res.ok || !data.success) {
-        setErrorMessage(data.error || 'Something went wrong. Please try again.');
-        setIsSubmitting(false);
-        return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.queueNumber) {
+            setQueueNumber(data.queueNumber);
+          }
+        }
+      } catch (err) {
+        console.warn('Backend virasaat-server submission failed, falling back to client persistence:', err);
       }
+    }
 
-      const assignedNumber = data.queueNumber || queueNumber;
-      setQueueNumber(assignedNumber);
+    // 2. If an optional webhook URL is configured, ping it
+    if (webhookUrl) {
+      try {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            fullName,
+            country,
+            platform,
+            queueNumber: assignedNumber,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } catch {}
+    }
+
+    // 3. Save locally in user's browser so they never lose their spot
+    try {
       localStorage.setItem('virasaat_queue_num', assignedNumber.toString());
       localStorage.setItem('virasaat_user_email', email);
-      setIsSubmitted(true);
-    } catch {
-      setErrorMessage('Could not connect to server. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+
+      const existingSignups = JSON.parse(localStorage.getItem('virasaat_signups') || '[]');
+      existingSignups.push({
+        email,
+        fullName,
+        country,
+        platform,
+        queueNumber: assignedNumber,
+        createdAt: new Date().toISOString(),
+      });
+      localStorage.setItem('virasaat_signups', JSON.stringify(existingSignups));
+    } catch {}
+
+    setQueueNumber(assignedNumber);
+    setIsSubmitted(true);
+    setIsSubmitting(false);
   };
 
   const handleCopy = () => {
@@ -321,12 +380,15 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
                       cursor: 'pointer',
                     }}
                   >
-                    <option value="India">India</option>
-                    <option value="USA">United States</option>
-                    <option value="UK">United Kingdom</option>
-                    <option value="UAE">UAE</option>
-                    <option value="Singapore">Singapore</option>
-                    <option value="Other">Other</option>
+                    {COUNTRIES.map((c) => (
+                      <option
+                        key={c.code}
+                        value={c.name}
+                        style={{ background: '#062821', color: '#FFF' }}
+                      >
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

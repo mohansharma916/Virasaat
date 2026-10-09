@@ -8,6 +8,24 @@ export default function Footer() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      const targetId = href.replace('#', '');
+      const element = document.getElementById(targetId);
+      if (element) {
+        const navOffset = 84;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - navOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+        window.history.pushState(null, '', href);
+      }
+    }
+  };
+
   return (
     <footer
       style={{
@@ -65,37 +83,37 @@ export default function Footer() {
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <li>
-                <a href="#problem" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <a href="#problem" onClick={(e) => handleScrollTo(e, '#problem')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   Why It Matters
                 </a>
               </li>
               <li>
-                <a href="#vault" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <a href="#vault" onClick={(e) => handleScrollTo(e, '#vault')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   What You Can Store
                 </a>
               </li>
               <li>
-                <a href="#mobile-app" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <a href="#mobile-app" onClick={(e) => handleScrollTo(e, '#mobile-app')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   Mobile App
                 </a>
               </li>
               <li>
-                <a href="#heartbeat" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <a href="#how-it-works" onClick={(e) => handleScrollTo(e, '#how-it-works')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   How It Works
                 </a>
               </li>
               <li>
-                <a href="#calculator" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <a href="#calculator" onClick={(e) => handleScrollTo(e, '#calculator')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   Calculator
                 </a>
               </li>
               <li>
-                <a href="#security" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <a href="#security" onClick={(e) => handleScrollTo(e, '#security')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   Safety & Privacy
                 </a>
               </li>
               <li>
-                <a href="#faq" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                <a href="#faq" onClick={(e) => handleScrollTo(e, '#faq')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   FAQ
                 </a>
               </li>

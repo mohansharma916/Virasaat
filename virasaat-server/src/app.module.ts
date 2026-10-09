@@ -16,6 +16,7 @@ import { AuditModule } from './audit/audit.module';
 import { EncryptionModule } from './encryption/encryption.module';
 import { StorageModule } from './storage/storage.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { WaitlistModule } from './waitlist/waitlist.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -43,6 +44,7 @@ import { AppService } from './app.service';
     EncryptionModule,
     StorageModule,
     SubscriptionsModule,
+    WaitlistModule,
   ],
 
   controllers: [AppController],

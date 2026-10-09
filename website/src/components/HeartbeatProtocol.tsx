@@ -94,7 +94,17 @@ export default function HeartbeatProtocol() {
   ];
 
   return (
-    <section id="heartbeat" className="section" style={{ background: 'rgba(4, 27, 22, 0.75)', position: 'relative' }}>
+    <section
+      id="how-it-works"
+      className="section"
+      style={{
+        background: 'rgba(4, 27, 22, 0.75)',
+        position: 'relative',
+        scrollMarginTop: '84px',
+      }}
+    >
+      {/* Anchor for backward compatibility with #heartbeat */}
+      <div id="heartbeat" style={{ position: 'absolute', top: 0, scrollMarginTop: '84px' }} />
       <div className="container">
         {/* Header */}
         <div style={{ textAlign: 'center', maxWidth: '840px', margin: '0 auto 54px' }}>
