@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -30,7 +31,7 @@ import { clearSession, setSessionUser } from '@/src/store/session.slice';
 import { clearVaultData } from '@/src/store/vault.slice';
 import { removeAccessToken } from '@/src/storage/auth.storage';
 import { useSubscription } from '@/src/store/subscription.slice';
-import { LogOut, Shield } from 'lucide-react-native';
+import { FileText, Lock, LogOut, Shield } from 'lucide-react-native';
 import { BottomNavBar } from '@/src/components/BottomNavBar';
 import {
   findCountry,
@@ -432,6 +433,42 @@ export default function ProfileScreen() {
                   <Text style={styles.planActionTitle}>Security & Biometrics</Text>
                   <Text style={styles.planActionSubtitle}>
                     Manage biometric unlock and device protection
+                  </Text>
+                </View>
+                <Text style={styles.planActionChevron}>›</Text>
+              </Pressable>
+
+              {/* Privacy Policy */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void Linking.openURL('https://virasaat.app/privacy/')}
+                style={styles.planCardAction}
+              >
+                <View style={[styles.planActionIconCircle, { backgroundColor: colors.brand.sage }]}>
+                  <Lock size={18} color={colors.primary.deepForest} />
+                </View>
+                <View style={styles.planActionContent}>
+                  <Text style={styles.planActionTitle}>Privacy Policy</Text>
+                  <Text style={styles.planActionSubtitle}>
+                    DPDP Act 2023 · Zero-knowledge encryption rights
+                  </Text>
+                </View>
+                <Text style={styles.planActionChevron}>›</Text>
+              </Pressable>
+
+              {/* Terms of Service */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void Linking.openURL('https://virasaat.app/terms/')}
+                style={styles.planCardAction}
+              >
+                <View style={[styles.planActionIconCircle, { backgroundColor: colors.brand.sage }]}>
+                  <FileText size={18} color={colors.primary.deepForest} />
+                </View>
+                <View style={styles.planActionContent}>
+                  <Text style={styles.planActionTitle}>Terms & Digital Custody</Text>
+                  <Text style={styles.planActionSubtitle}>
+                    Testamentary disclaimers & custody agreement
                   </Text>
                 </View>
                 <Text style={styles.planActionChevron}>›</Text>

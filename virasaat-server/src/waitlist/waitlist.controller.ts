@@ -16,4 +16,9 @@ export class WaitlistController {
   async getStats() {
     return this.waitlistService.getStats();
   }
+
+  @Get('stats')
+  async getStatsAlias() {
+    return this.waitlistService.getStats();
+  }
 }

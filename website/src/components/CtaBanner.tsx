@@ -2,51 +2,32 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Sparkles, ArrowRight, Lock, CheckCircle2, Mail, Loader2, Check } from 'lucide-react';
+import { Sparkles, ArrowRight, Lock, CheckCircle2, Mail, Check } from 'lucide-react';
 
 interface CtaBannerProps {
-  onOpenWaitlist: () => void;
+  onOpenWaitlist: (email?: string) => void;
 }
 
 export default function CtaBanner({ onOpenWaitlist }: CtaBannerProps) {
   const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedQueue, setSubmittedQueue] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !email.includes('@')) {
-      setErrorMsg('Please enter a valid email address.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMsg('');
-
+  React.useEffect(() => {
     try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, source: 'cta_banner' }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setErrorMsg(data.error || 'Something went wrong. Please try again.');
-        setIsSubmitting(false);
-        return;
+      const savedQueue = localStorage.getItem('virasaat_queue_num');
+      const savedEmail = localStorage.getItem('virasaat_user_email');
+      if (savedQueue) {
+        setSubmittedQueue(parseInt(savedQueue, 10));
       }
+      if (savedEmail) {
+        setEmail(savedEmail);
+      }
+    } catch {}
+  }, []);
 
-      const qNum = data.queueNumber || 420;
-      setSubmittedQueue(qNum);
-      localStorage.setItem('virasaat_queue_num', qNum.toString());
-      localStorage.setItem('virasaat_user_email', email);
-    } catch {
-      setErrorMsg('Network error. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onOpenWaitlist(email.trim());
   };
 
   return (
@@ -144,56 +125,52 @@ export default function CtaBanner({ onOpenWaitlist }: CtaBannerProps) {
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
                     className="btn btn-gold"
                     style={{
                       padding: '12px 24px',
                       fontSize: '0.94rem',
                       borderRadius: '12px',
-                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                      opacity: isSubmitting ? 0.75 : 1,
+                      cursor: 'pointer',
                     }}
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={16} />
-                        <span>Join Waitlist</span>
-                        <ArrowRight size={15} />
-                      </>
-                    )}
+                    <Sparkles size={16} />
+                    <span>Join Waitlist</span>
+                    <ArrowRight size={15} />
                   </button>
                 </form>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px' }}>
-                  <div
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: 'rgba(53, 184, 107, 0.25)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Check size={18} color="#35B86B" />
-                  </div>
-                  <div>
-                    <div style={{ color: '#35B86B', fontWeight: 700, fontSize: '0.92rem' }}>
-                      Spot #{submittedQueue} Reserved! Confirmation email sent to {email}.
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '6px 8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'rgba(53, 184, 107, 0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={18} color="#35B86B" />
+                    </div>
+                    <div>
+                      <div style={{ color: '#35B86B', fontWeight: 700, fontSize: '0.92rem' }}>
+                        Spot #{submittedQueue} Reserved! Confirmation email sent.
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>
+                        We will notify {email} as soon as invites open.
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {errorMsg && (
-                <div style={{ color: '#FF9494', fontSize: '0.82rem', marginTop: '6px', paddingLeft: '6px' }}>
-                  {errorMsg}
+                  <button
+                    onClick={() => onOpenWaitlist()}
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '10px' }}
+                  >
+                    View My Pass
+                  </button>
                 </div>
               )}
             </div>
@@ -214,7 +191,7 @@ export default function CtaBanner({ onOpenWaitlist }: CtaBannerProps) {
 
               {/* Apple Store Pill */}
               <div
-                onClick={onOpenWaitlist}
+                onClick={() => onOpenWaitlist()}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -237,7 +214,7 @@ export default function CtaBanner({ onOpenWaitlist }: CtaBannerProps) {
 
               {/* Google Play Pill */}
               <div
-                onClick={onOpenWaitlist}
+                onClick={() => onOpenWaitlist()}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

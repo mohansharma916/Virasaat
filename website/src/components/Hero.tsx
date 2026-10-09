@@ -15,60 +15,38 @@ import {
   Play,
   Smartphone,
   Mail,
-  Loader2,
   Check,
 } from 'lucide-react';
 
 interface HeroProps {
-  onOpenWaitlist: () => void;
+  onOpenWaitlist: (email?: string) => void;
 }
 
 export default function Hero({ onOpenWaitlist }: HeroProps) {
   const [activeTab, setActiveTab] = useState<'financial' | 'memories' | 'documents' | 'heartbeat'>('financial');
   const [isPlayingVideoModal, setIsPlayingVideoModal] = useState(false);
 
-  // Quick inline waitlist state
+  // Quick waitlist state
   const [emailInput, setEmailInput] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedQueue, setSubmittedQueue] = useState<number | null>(null);
-  const [submitError, setSubmitError] = useState('');
 
-  const handleHeroSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailInput || !emailInput.includes('@')) {
-      setSubmitError('Please enter a valid email address');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError('');
-
+  // Load existing reservation if already signed up
+  React.useEffect(() => {
     try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: emailInput,
-          source: 'hero_inline_input',
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setSubmitError(data.error || 'Something went wrong. Please try again.');
-        setIsSubmitting(false);
-        return;
+      const savedQueue = localStorage.getItem('virasaat_queue_num');
+      const savedEmail = localStorage.getItem('virasaat_user_email');
+      if (savedQueue) {
+        setSubmittedQueue(parseInt(savedQueue, 10));
       }
+      if (savedEmail) {
+        setEmailInput(savedEmail);
+      }
+    } catch {}
+  }, []);
 
-      const qNum = data.queueNumber || 420;
-      setSubmittedQueue(qNum);
-      localStorage.setItem('virasaat_queue_num', qNum.toString());
-      localStorage.setItem('virasaat_user_email', emailInput);
-    } catch {
-      setSubmitError('Network error. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleHeroSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onOpenWaitlist(emailInput.trim());
   };
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -212,29 +190,18 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
                   className="btn btn-gold"
                   style={{
                     padding: '12px 24px',
                     fontSize: '0.96rem',
                     borderRadius: '14px',
                     whiteSpace: 'nowrap',
-                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                    opacity: isSubmitting ? 0.75 : 1,
+                    cursor: 'pointer',
                   }}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={16} />
-                      <span>Join Waitlist</span>
-                      <ArrowRight size={15} />
-                    </>
-                  )}
+                  <Sparkles size={16} />
+                  <span>Join Waitlist</span>
+                  <ArrowRight size={15} />
                 </button>
               </form>
             ) : (
@@ -273,18 +240,12 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                 </div>
 
                 <button
-                  onClick={onOpenWaitlist}
+                  onClick={() => onOpenWaitlist()}
                   className="btn btn-secondary"
                   style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '10px' }}
                 >
                   View My Pass
                 </button>
-              </div>
-            )}
-
-            {submitError && (
-              <div style={{ color: '#FF9494', fontSize: '0.82rem', textAlign: 'left', marginTop: '8px', paddingLeft: '8px' }}>
-                {submitError}
               </div>
             )}
           </div>
@@ -1018,7 +979,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                 <span>Chosen Family Contact: <strong>Ananya Sharma</strong> (Spouse)</span>
               </div>
               <button
-                onClick={onOpenWaitlist}
+                onClick={() => onOpenWaitlist()}
                 style={{
                   background: 'transparent',
                   border: 'none',

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Shield, Lock, Heart, ArrowUp } from 'lucide-react';
+import Link from 'next/link';
+import { Shield, Lock, Heart, ArrowUp, FileText, Scale } from 'lucide-react';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -123,17 +124,24 @@ export default function Footer() {
           {/* Legal & Security */}
           <div>
             <h4 style={{ color: 'var(--warm-ivory)', fontSize: '0.95rem', fontWeight: 700, marginBottom: '16px' }}>
-              Trust & Standards
+              Legal & Compliance
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <li>
-                <span style={{ color: 'var(--sage)' }}>DPDP Act 2026 Compliant</span>
+                <Link href="/privacy" style={{ color: '#ECC862', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>Privacy Policy (DPDP Act)</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" style={{ color: '#ECC862', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>Terms & Digital Custody</span>
+                </Link>
               </li>
               <li>
                 <span style={{ color: 'var(--sage)' }}>Hardware Secure Enclave Auth</span>
               </li>
               <li>
-                <span style={{ color: 'var(--sage)' }}>Zero Third-Party Tracking</span>
+                <span style={{ color: 'var(--sage)' }}>Zero Third-Party Ad Tracking</span>
               </li>
               <li>
                 <span style={{ color: 'var(--sage)' }}>Client-Side Key Generation</span>
@@ -231,6 +239,16 @@ export default function Footer() {
         >
           <div>
             © {new Date().getFullYear()} Virasaat Technologies Inc. All rights reserved.
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <Link href="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              Privacy Policy
+            </Link>
+            <span style={{ opacity: 0.3 }}>•</span>
+            <Link href="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              Terms & Conditions
+            </Link>
           </div>
 
           <button

@@ -37,11 +37,27 @@ export class WaitlistService {
       };
     }
 
-    // 2. Calculate next queue number (base 420)
-    const currentCount = await this.waitlistRepo.count();
-    const queueNumber = 420 + currentCount + 1;
+    // 2. Calculate next queue number (start at 72, increment by 1, maintained in DB)
+    const baseStart =
+      parseInt(this.configService.get<string>('WAITLIST_START_NUMBER') || '72', 10) || 72;
 
-    // 3. Save new record
+    const [currentCount, maxRecord] = await Promise.all([
+      this.waitlistRepo.count(),
+      this.waitlistRepo
+        .createQueryBuilder('waitlist')
+        .select('MAX(waitlist.queueNumber)', 'max')
+        .getRawOne(),
+    ]);
+
+    const currentMax =
+      maxRecord?.max != null && !isNaN(parseInt(maxRecord.max, 10))
+        ? parseInt(maxRecord.max, 10)
+        : null;
+
+    const queueNumber =
+      currentMax !== null && currentMax >= baseStart ? currentMax + 1 : baseStart;
+
+    // 3. Save new record to DB
     const record = this.waitlistRepo.create({
       email,
       fullName: fullName || null,
@@ -54,7 +70,7 @@ export class WaitlistService {
     });
 
     const savedRecord = await this.waitlistRepo.save(record);
-    this.logger.log(`New waitlist entry created: ${email} (#${queueNumber})`);
+    this.logger.log(`New waitlist entry created in DB: ${email} (#${queueNumber})`);
 
     // 4. Dispatch Email Notifications
     const adminEmail =
@@ -187,11 +203,27 @@ export class WaitlistService {
   }
 
   async getStats() {
+    const baseStart =
+      parseInt(this.configService.get<string>('WAITLIST_START_NUMBER') || '72', 10) || 72;
     const count = await this.waitlistRepo.count();
+
+    const maxRecord = await this.waitlistRepo
+      .createQueryBuilder('waitlist')
+      .select('MAX(waitlist.queueNumber)', 'max')
+      .getRawOne();
+
+    const currentMax =
+      maxRecord?.max != null && !isNaN(parseInt(maxRecord.max, 10))
+        ? parseInt(maxRecord.max, 10)
+        : null;
+
+    const nextQueueNumber =
+      currentMax !== null && currentMax >= baseStart ? currentMax + 1 : baseStart;
+
     return {
       success: true,
       totalCount: count,
-      nextQueueNumber: 420 + count + 1,
+      nextQueueNumber,
     };
   }
 }

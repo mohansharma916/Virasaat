@@ -31,8 +31,9 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [copied, setCopied] = useState(false);
-  const [queueNumber, setQueueNumber] = useState(420);
+  const [queueNumber, setQueueNumber] = useState(72);
 
+  // Fetch country from IP
   useEffect(() => {
     let active = true;
     fetchCountryFromIp()
@@ -50,37 +51,63 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
     };
   }, []);
 
+  // Update email if passed from Hero / CTA
   useEffect(() => {
-    if (defaultEmail && !email) {
+    if (defaultEmail) {
       setEmail(defaultEmail);
     }
-  }, [defaultEmail, email]);
+  }, [defaultEmail]);
 
+  // Check saved registration or fetch live next queue number
   useEffect(() => {
     const savedQueue = localStorage.getItem('virasaat_queue_num');
     const savedEmail = localStorage.getItem('virasaat_user_email');
+    const savedName = localStorage.getItem('virasaat_user_name');
     if (savedQueue && savedEmail) {
-      setQueueNumber(parseInt(savedQueue));
+      setQueueNumber(parseInt(savedQueue, 10));
       setEmail(savedEmail);
+      if (savedName) setFullName(savedName);
       setIsSubmitted(true);
+      return;
     }
+
+    // Attempt to query live next queue number from backend stats
+    const backendUrl =
+      process.env.NEXT_PUBLIC_WAITLIST_API_URL ||
+      (process.env.NEXT_PUBLIC_API_URL
+        ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/waitlist`
+        : 'http://localhost:3000/waitlist');
+
+    fetch(backendUrl)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.nextQueueNumber === 'number') {
+          setQueueNumber(data.nextQueueNumber);
+        }
+      })
+      .catch(() => {
+        // Fallback remains base 72
+      });
   }, []);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !fullName) {
+      setErrorMessage('Please fill in your name and a valid email address.');
+      return;
+    }
 
     setIsSubmitting(true);
     setErrorMessage('');
 
-    const assignedNumber = queueNumber || 421;
+    let assignedNumber = queueNumber || 72;
     const backendUrl =
       process.env.NEXT_PUBLIC_WAITLIST_API_URL ||
       (process.env.NEXT_PUBLIC_API_URL
         ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/waitlist`
-        : 'http://localhost:3001/waitlist');
+        : 'http://localhost:3000/waitlist');
     const webhookUrl = process.env.NEXT_PUBLIC_WAITLIST_WEBHOOK_URL;
 
     // 1. Submit to virasaat-server backend endpoint
@@ -90,10 +117,10 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email,
-            fullName,
-            country,
-            platform,
+            email: email.trim().toLowerCase(),
+            fullName: fullName.trim(),
+            country: country.trim(),
+            platform: platform.trim(),
             source: 'modal_waitlist',
           }),
         });
@@ -101,6 +128,7 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
         if (res.ok) {
           const data = await res.json();
           if (data.queueNumber) {
+            assignedNumber = data.queueNumber;
             setQueueNumber(data.queueNumber);
           }
         }
@@ -131,6 +159,7 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
     try {
       localStorage.setItem('virasaat_queue_num', assignedNumber.toString());
       localStorage.setItem('virasaat_user_email', email);
+      localStorage.setItem('virasaat_user_name', fullName);
 
       const existingSignups = JSON.parse(localStorage.getItem('virasaat_signups') || '[]');
       existingSignups.push({
@@ -260,7 +289,7 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
               </h3>
 
               <p style={{ fontSize: '0.92rem', color: 'var(--sage)', lineHeight: 1.5, margin: 0 }}>
-                Be the first to protect your family's accounts and memories. Early members get free lifetime core access.
+                Be the first to protect your family's accounts and memories. Founding members get free lifetime core vault access.
               </p>
             </div>
 
@@ -312,12 +341,13 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
 
               <div>
                 <label style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>
-                  Your Name (Optional)
+                  Your Full Name <span style={{ color: '#ECC862' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <User size={16} color="var(--sage)" style={{ position: 'absolute', left: '14px', top: '14px' }} />
                   <input
                     type="text"
+                    required
                     placeholder="e.g. Vikram Sharma"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
@@ -338,7 +368,7 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>
-                    Your Phone
+                    Preferred Device
                   </label>
                   <select
                     value={platform}
@@ -363,7 +393,7 @@ export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: Wa
 
                 <div>
                   <label style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>
-                    Country
+                    Country <span style={{ color: '#ECC862' }}>*</span>
                   </label>
                   <select
                     value={country}

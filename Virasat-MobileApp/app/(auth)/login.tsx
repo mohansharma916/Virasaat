@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -361,7 +362,20 @@ export default function LoginScreen() {
           </View>
 
           <Text style={styles.footer}>
-            By continuing, you agree to Virasat's Terms and Privacy Policy.
+            By continuing, you agree to Virasat's{' '}
+            <Text
+              style={{ color: colors.primary.deepForest, textDecorationLine: 'underline', fontWeight: '600' }}
+              onPress={() => void Linking.openURL('https://virasaat.app/terms/')}
+            >
+              Terms
+            </Text>{' '}
+            and{' '}
+            <Text
+              style={{ color: colors.primary.deepForest, textDecorationLine: 'underline', fontWeight: '600' }}
+              onPress={() => void Linking.openURL('https://virasaat.app/privacy/')}
+            >
+              Privacy Policy
+            </Text>.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

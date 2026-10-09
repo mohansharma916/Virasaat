@@ -18,28 +18,43 @@ import WaitlistModal from './WaitlistModal';
 
 export default function ShowcaseApp() {
   const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [defaultEmail, setDefaultEmail] = useState('');
 
-  const openWaitlist = () => setWaitlistOpen(true);
-  const closeWaitlist = () => setWaitlistOpen(false);
+  const openWaitlist = (email?: string) => {
+    if (typeof email === 'string' && email.trim()) {
+      setDefaultEmail(email.trim());
+    } else {
+      setDefaultEmail('');
+    }
+    setWaitlistOpen(true);
+  };
+
+  const closeWaitlist = () => {
+    setWaitlistOpen(false);
+  };
 
   return (
     <>
-      <Navbar onOpenWaitlist={openWaitlist} />
+      <Navbar onOpenWaitlist={() => openWaitlist()} />
       <main>
         <Hero onOpenWaitlist={openWaitlist} />
         <CrisisStats />
-        <VaultPillars onOpenWaitlist={openWaitlist} />
-        <MobileAppShowcase onOpenWaitlist={openWaitlist} />
+        <VaultPillars onOpenWaitlist={() => openWaitlist()} />
+        <MobileAppShowcase onOpenWaitlist={() => openWaitlist()} />
         <HeartbeatProtocol />
-        <AssetCalculator onOpenWaitlist={openWaitlist} />
+        <AssetCalculator onOpenWaitlist={() => openWaitlist()} />
         <SecurityArchitecture />
-        <ComparisonMatrix onOpenWaitlist={openWaitlist} />
+        <ComparisonMatrix onOpenWaitlist={() => openWaitlist()} />
         <Testimonials />
-        <FaqSection onOpenWaitlist={openWaitlist} />
+        <FaqSection onOpenWaitlist={() => openWaitlist()} />
         <CtaBanner onOpenWaitlist={openWaitlist} />
       </main>
       <Footer />
-      <WaitlistModal isOpen={waitlistOpen} onClose={closeWaitlist} />
+      <WaitlistModal
+        isOpen={waitlistOpen}
+        onClose={closeWaitlist}
+        defaultEmail={defaultEmail}
+      />
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -305,11 +306,23 @@ export default function SignupScreen() {
 
               <Text style={styles.termsText}>
                 I agree to the{' '}
-                <Text style={styles.termsLink}>
+                <Text
+                  style={styles.termsLink}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    void Linking.openURL('https://virasaat.app/terms/');
+                  }}
+                >
                   Terms
                 </Text>{' '}
                 and{' '}
-                <Text style={styles.termsLink}>
+                <Text
+                  style={styles.termsLink}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    void Linking.openURL('https://virasaat.app/privacy/');
+                  }}
+                >
                   Privacy Policy
                 </Text>
               </Text>

@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -26,6 +27,7 @@ export class Waitlist {
   @Column({ type: 'varchar', length: 120, default: 'website' })
   source!: string;
 
+  @Index()
   @Column({ type: 'int' })
   queueNumber!: number;
 
