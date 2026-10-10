@@ -25,12 +25,12 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
     {
       id: 'financial',
       title: 'Bank Accounts & Investments',
-      badge: 'Never Lose a Rupee',
+      badge: 'Financial References',
       icon: TrendingUp,
       accent: '#ECC862',
       tagline: 'List your bank accounts, mutual funds, and policies so your family never has to guess.',
       description:
-        'Financial institutions will not call your family to inform them about accounts. In Virasaat, list all your bank accounts, mutual funds, demat portfolios, and insurance policies so your loved ones get a clear roadmap.',
+        'List your bank accounts, mutual fund references, investment portfolios and insurance details. These are records you enter; Virasaat does not connect to financial institutions or deliver them to family today.',
       features: [
         'Mutual Funds & Stocks: Zerodha, Groww, CAMS, and KFintech folios',
         'Life & Health Insurance: Policy numbers and claim advisor contacts',
@@ -46,7 +46,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
     {
       id: 'documents',
       title: 'Important Documents & Wills',
-      badge: 'Ready for Emergencies',
+      badge: 'Document Organization',
       icon: FileText,
       accent: '#35B86B',
       tagline: 'Keep your Will, property papers, and identity documents safe and easy to find.',
@@ -72,28 +72,28 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
       accent: '#F4A62A',
       tagline: 'Leave personal video messages and loving words for your children and spouse.',
       description:
-        'Record personal video notes and write letters for your children or partner. You can choose to have them delivered for special life moments—like an 18th birthday, graduation, or wedding.',
+        'Save supported video files and write personal messages. Milestone and emergency delivery are planned and currently unavailable.',
       features: [
-        'Record video notes directly on your phone camera',
+        'Save supported video files in your vault',
         'Write letters with personal advice, values, and blessings',
-        'Milestone delivery: Delivered on birthdays or weddings',
-        'Keep family stories, lessons, and memories alive forever',
+        'Milestone delivery is not currently available',
+        'Keep an independent copy of important family memories',
       ],
       sampleUI: {
         title: '"To My Little Girl On Your Wedding Day"',
         subtitle: 'Personal Video Capsule • 12:40 mins',
-        items: ['For: Meera (Daughter)', 'Trigger: Handover or Milestone Date'],
+        items: ['For: Meera (Daughter)', 'Example intended recipient; delivery unavailable'],
       },
     },
     {
       id: 'passkeys',
       title: 'Device & Password Instructions',
-      badge: 'Zero Lockout',
+      badge: 'Personal Instructions',
       icon: KeyRound,
       accent: '#3D68C5',
-      tagline: 'Make sure your family is not permanently locked out of family photos and accounts.',
+      tagline: 'Keep references to your independent account-access instructions.',
       description:
-        'Help your family access irreplaceable photos, documents, and key online accounts safely without exposing your passwords to anyone today.',
+        'Record where independent account-access instructions are kept. Virasaat does not unlock external accounts or act as a password manager.',
       features: [
         'Emergency instructions for Apple Keychain and password managers',
         'Simple steps for unlocking family laptops and devices in an emergency',
@@ -102,7 +102,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
       ],
       sampleUI: {
         title: 'Emergency Master Access Guide',
-        subtitle: 'Encrypted & Released Only on Verified Handover',
+        subtitle: 'Server-encrypted content; recipient access unavailable',
         items: ['Apple ID Legacy Contact Configured', 'Home Laptop Emergency Access Notes'],
       },
     },
@@ -130,7 +130,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
           </h2>
 
           <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)' }}>
-            Set it up once in 10 minutes. 100% private today—and automatically shared with your family only when you decide.
+            Organize important records and intended recipients. Vault descriptions and files are encrypted on the server. Automated sharing and family handover are not currently available.
           </p>
         </div>
 
@@ -278,7 +278,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
                     style={{ padding: '13px 26px', fontSize: '0.95rem' }}
                   >
                     <Sparkles size={16} />
-                    <span>Join Waitlist for Free Access</span>
+                    <span>Join for Launch Updates</span>
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -301,7 +301,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
                       </span>
                     </div>
                     <span className="glass-pill" style={{ padding: '3px 8px', fontSize: '0.72rem' }}>
-                      Family Handover Ready
+                      Illustrative Vault Records
                     </span>
                   </div>
 
@@ -353,7 +353,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
                       lineHeight: 1.4,
                     }}
                   >
-                    ✦ Private & Protected: Only you and your chosen family can unlock this.
+                    ✦ Descriptions and files use server-managed encryption. Family access is unavailable.
                   </div>
                 </div>
               </div>

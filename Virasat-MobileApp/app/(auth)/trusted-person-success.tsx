@@ -21,8 +21,6 @@ export default function TrustedPersonSuccessScreen() {
     name?: string;
   }>();
 
-  const isInformNow =
-    params.notificationMode === 'INFORM_NOW';
 
   const personName = params.name?.trim() || 'Your trusted person';
 
@@ -66,9 +64,7 @@ export default function TrustedPersonSuccessScreen() {
 
           <View style={styles.statusCard}>
             <Text style={styles.cardLabel}>
-              {isInformNow
-                ? 'INVITATION'
-                : 'NOTIFICATION'}
+              PRIVATE CONTACT
             </Text>
 
             <View style={styles.statusRow}>
@@ -80,15 +76,11 @@ export default function TrustedPersonSuccessScreen() {
 
               <View style={styles.statusContent}>
                 <Text style={styles.statusTitle}>
-                  {isInformNow
-                    ? 'Invitation initiated'
-                    : 'Inform later'}
+                  Saved privately
                 </Text>
 
                 <Text style={styles.statusText}>
-                  {isInformNow
-                    ? `An invitation is ready for ${personName}. Delivery will begin when notifications are enabled.`
-                    : `No invitation has been sent to ${personName}. You can choose to inform them later.`}
+                  No invitation has been sent to {personName}. Invitations and recipient acceptance are not available yet.
                 </Text>
               </View>
             </View>

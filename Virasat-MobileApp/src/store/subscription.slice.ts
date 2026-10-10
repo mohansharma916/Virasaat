@@ -18,6 +18,8 @@ import { PurchaseService } from '../services/purchase.service';
 import { useAppDispatch, useAppSelector } from './hooks';
 
 export interface SubscriptionState {
+  effectivePlanCode: PlanCode;
+  purchaseVerification: EntitlementsPayload['purchaseVerification'];
   plan: PlanInfo | null;
   subscription: SubscriptionInfo | null;
   entitlements: Record<Feature, boolean>;
@@ -25,6 +27,7 @@ export interface SubscriptionState {
   availablePlans: PlanComparisonItem[];
   status: 'idle' | 'loading' | 'ready' | 'error';
   error: string | null;
+  requestId?: string;
 }
 
 const defaultEntitlements: Record<Feature, boolean> = {
@@ -48,6 +51,8 @@ const defaultLimits: Record<PlanLimit, number | null> = {
 };
 
 const initialState: SubscriptionState = {
+  effectivePlanCode: PlanCode.STARTER,
+  purchaseVerification: 'NOT_REQUIRED',
   plan: null,
   subscription: null,
   entitlements: defaultEntitlements,
@@ -90,6 +95,8 @@ const subscriptionSlice = createSlice({
   initialState,
   reducers: {
     setSubscriptionData(state, action: PayloadAction<EntitlementsPayload>) {
+      state.effectivePlanCode = action.payload.effectivePlanCode ?? PlanCode.STARTER;
+      state.purchaseVerification = action.payload.purchaseVerification ?? 'UNVERIFIED';
       state.plan = action.payload.plan;
       state.subscription = action.payload.subscription;
       state.entitlements = {
@@ -104,6 +111,9 @@ const subscriptionSlice = createSlice({
       state.error = null;
     },
     clearSubscription(state) {
+      state.requestId = undefined;
+      state.effectivePlanCode = PlanCode.STARTER;
+      state.purchaseVerification = 'NOT_REQUIRED';
       state.plan = null;
       state.subscription = null;
       state.entitlements = defaultEntitlements;
@@ -115,12 +125,16 @@ const subscriptionSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch subscription
-      .addCase(fetchSubscription.pending, (state) => {
+      .addCase(fetchSubscription.pending, (state, action) => {
+        state.requestId = action.meta.requestId;
         state.status = 'loading';
         state.error = null;
       })
       .addCase(fetchSubscription.fulfilled, (state, action) => {
-        state.plan = action.payload.plan;
+        if (state.requestId !== action.meta.requestId) return;
+        state.effectivePlanCode = action.payload.effectivePlanCode ?? PlanCode.STARTER;
+      state.purchaseVerification = action.payload.purchaseVerification ?? 'UNVERIFIED';
+      state.plan = action.payload.plan;
         state.subscription = action.payload.subscription;
         state.entitlements = {
           ...defaultEntitlements,
@@ -134,6 +148,7 @@ const subscriptionSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchSubscription.rejected, (state, action) => {
+        if (state.requestId !== action.meta.requestId) return;
         state.status = 'error';
         state.error = action.error.message ?? 'Failed to load subscription';
       })
@@ -144,12 +159,16 @@ const subscriptionSlice = createSlice({
       })
 
       // Execute purchase
-      .addCase(executePurchase.pending, (state) => {
+      .addCase(executePurchase.pending, (state, action) => {
+        state.requestId = action.meta.requestId;
         state.status = 'loading';
         state.error = null;
       })
       .addCase(executePurchase.fulfilled, (state, action) => {
-        state.plan = action.payload.plan;
+        if (state.requestId !== action.meta.requestId) return;
+        state.effectivePlanCode = action.payload.effectivePlanCode ?? PlanCode.STARTER;
+      state.purchaseVerification = action.payload.purchaseVerification ?? 'UNVERIFIED';
+      state.plan = action.payload.plan;
         state.subscription = action.payload.subscription;
         state.entitlements = {
           ...defaultEntitlements,
@@ -163,16 +182,21 @@ const subscriptionSlice = createSlice({
         state.error = null;
       })
       .addCase(executePurchase.rejected, (state, action) => {
+        if (state.requestId !== action.meta.requestId) return;
         state.status = 'error';
         state.error = action.error.message ?? 'Purchase failed';
       })
 
       // Execute restore
-      .addCase(executeRestore.pending, (state) => {
+      .addCase(executeRestore.pending, (state, action) => {
+        state.requestId = action.meta.requestId;
         state.status = 'loading';
       })
       .addCase(executeRestore.fulfilled, (state, action) => {
-        state.plan = action.payload.plan;
+        if (state.requestId !== action.meta.requestId) return;
+        state.effectivePlanCode = action.payload.effectivePlanCode ?? PlanCode.STARTER;
+      state.purchaseVerification = action.payload.purchaseVerification ?? 'UNVERIFIED';
+      state.plan = action.payload.plan;
         state.subscription = action.payload.subscription;
         state.entitlements = {
           ...defaultEntitlements,
@@ -185,6 +209,7 @@ const subscriptionSlice = createSlice({
         state.status = 'ready';
       })
       .addCase(executeRestore.rejected, (state, action) => {
+        if (state.requestId !== action.meta.requestId) return;
         state.status = 'error';
         state.error = action.error.message ?? 'Restore failed';
       });
@@ -232,6 +257,8 @@ export function useSubscription() {
 
   return {
     currentPlan: subState.plan,
+    effectivePlanCode: subState.effectivePlanCode,
+    purchaseVerification: subState.purchaseVerification,
     subscriptionStatus: subState.subscription?.status ?? SubscriptionStatus.ACTIVE,
     subscription: subState.subscription,
     entitlements: subState.entitlements,

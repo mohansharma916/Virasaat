@@ -10,13 +10,13 @@ interface ComparisonMatrixProps {
 export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixProps) {
   const comparisonData = [
     {
-      feature: 'Automatic Monthly Safety Check',
-      virasaat: true,
+      feature: 'Automated Reminder & Family Workflow',
+      virasaat: 'Planned',
       lawyer: false,
       google: 'Only for Gmail',
       cloud: false,
       pwManager: false,
-      note: 'Checks in with you quietly and safely notifies family if you stop responding.',
+      note: 'Check-in recording is available; automated notification and family handover are planned.',
     },
     {
       feature: 'Complete Bank & Investment List',
@@ -34,34 +34,34 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
       google: false,
       cloud: 'No delivery triggers',
       pwManager: false,
-      note: 'Heartfelt personal messages delivered on birthdays or emergencies.',
+      note: 'Save personal messages and supported files. Milestone and emergency delivery are unavailable.',
     },
     {
-      feature: '100% Private & Device Encrypted',
-      virasaat: true,
+      feature: 'Encryption Model',
+      virasaat: 'Server-managed',
       lawyer: false,
       google: false,
       cloud: false,
       pwManager: true,
-      note: 'Encrypted on your smartphone. Even our team cannot see your data.',
+      note: 'The server encrypts descriptions and files and manages their decryption keys.',
     },
     {
-      feature: 'Step-by-Step Claim Guides for Family',
-      virasaat: true,
+      feature: 'Personal Claim Instructions',
+      virasaat: 'User-written notes',
       lawyer: 'Extra legal fees',
       google: false,
       cloud: false,
       pwManager: false,
-      note: 'Simple instructions for claiming mutual funds, banks, and term insurance.',
+      note: 'Record your own instructions; Virasaat does not claim assets or provide automatic claim guides.',
     },
     {
-      feature: '14-Day Safety Buffer (No False Alarms)',
-      virasaat: true,
+      feature: 'Verified Family Handover',
+      virasaat: 'Unavailable',
       lawyer: false,
       google: false,
       cloud: false,
       pwManager: false,
-      note: 'Zero risk of accidental handover while traveling or on vacation.',
+      note: 'Release and recipient access are disabled while verified controls are developed.',
     },
     {
       feature: 'Time to Set Up',
@@ -74,12 +74,12 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
     },
     {
       feature: 'Cost',
-      virasaat: 'Free Waitlist Tier',
+      virasaat: 'Free signup; app plans vary',
       lawyer: '₹25,000 - ₹50,000+',
       google: 'Free (Account only)',
       cloud: '$10 - $20 / month',
       pwManager: '$36 - $60 / year',
-      note: 'Free core access for early waitlist members.',
+      note: 'Joining the waitlist does not activate a subscription or lifetime entitlement.',
     },
   ];
 
@@ -100,12 +100,12 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
               marginBottom: '16px',
             }}
           >
-            Why Other Options <br />
-            <span className="text-gradient-gold">Leave Your Family In The Dark</span>
+            Choose the Tools <br />
+            <span className="text-gradient-gold">That Fit Your Plans</span>
           </h2>
 
           <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)' }}>
-            Paper wills get locked in courts for months. Cloud drives are messy and unorganized. Password managers don't tell your spouse how to claim insurance. Here is how Virasaat solves every problem.
+            Virasaat helps organize your records alongside your other estate planning tools. Planned features are marked below; it does not replace a will or an emergency plan.
           </p>
         </div>
 
@@ -248,7 +248,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
                 Join the Founding Waitlist Today
               </div>
               <div style={{ color: 'var(--sage)', fontSize: '0.85rem' }}>
-                Early members get lifetime access to the core vault completely free.
+                Join for launch updates. See the app for plan limits and purchase availability.
               </div>
             </div>
 

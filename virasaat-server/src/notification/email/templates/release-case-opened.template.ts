@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,8 +15,7 @@ import {
 export function renderReleaseCaseOpenedTemplate(
   data: ReleaseCaseOpenedEmailData,
 ): RenderedEmail {
-  const verificationUrl =
-    data.verificationUrl || `https://virasaat.com/cases/${data.caseId}`;
+  const verificationUrl = data.verificationUrl || getEmailAppLink('home');
   const subject = `Confidential: Verification Case #${data.caseId} opened for ${data.ownerName}`;
 
   const contentHtml = `
@@ -98,7 +98,7 @@ export function renderReleaseCaseOpenedTemplate(
         <td align="center">
           ${renderCtaButton({
             url: verificationUrl,
-            label: 'Access Secure Verification Portal',
+            label: 'Open Virasaat App',
             variant: 'gold',
           })}
         </td>
@@ -108,7 +108,7 @@ export function renderReleaseCaseOpenedTemplate(
       <tr>
         <td style="padding-top: 10px;">
           <p style="font-family: 'Inter', sans-serif; font-size: 11px; color: ${BRAND_COLORS.textMuted}; line-height: 16px; text-align: center;">
-            This action is strictly logged in the Virasaat cryptographic audit ledger. Two-factor identity confirmation will be required upon portal entry.
+            Recipient verification, an audit viewer, and two-factor release confirmation are not available yet.
           </p>
         </td>
       </tr>
@@ -118,7 +118,9 @@ export function renderReleaseCaseOpenedTemplate(
   const html = wrapInEmailLayout({
     preheader: `Confidential: Verification case #${data.caseId} opened for ${data.ownerName}. Input needed by ${data.verificationDeadline}.`,
     title: subject,
-    contentHtml,
+    contentHtml:
+      `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
+      contentHtml,
     securityNotice:
       'This high-security legal verification notice was delivered under the owner’s pre-configured release rules.',
   });
@@ -146,12 +148,14 @@ Please complete your review before ${data.verificationDeadline}.
 
   const text = wrapInPlainTextLayout({
     title: 'Verification Review Notice',
-    bodyText,
+    bodyText:
+      'Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.\n\n' +
+      bodyText,
   });
 
   return {
     templateType: EmailTemplateType.RELEASE_CASE_OPENED,
-    subject,
+    subject: '[Illustrative sample — workflow unavailable] ' + subject,
     html,
     text,
   };

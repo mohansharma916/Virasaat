@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,7 +14,7 @@ import { router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { updateReleasePolicy } from '@/src/api/release.api';
+import { getReleasePolicy, updateReleasePolicy, type ReleasePolicy } from '@/src/api/release.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
@@ -21,19 +22,44 @@ import { refreshVaultData } from '@/src/store/vault.slice';
 export default function ReleaseRulesScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const [initialPolicy, setInitialPolicy] = useState<ReleasePolicy | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [verificationRequired, setVerificationRequired] = useState(true);
 
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadFailed(false);
+    setError('');
+    void getReleasePolicy().then((policy) => {
+      if (!active) return;
+      setInitialPolicy(policy);
+      setVerificationRequired(policy?.verificationRequired ?? true);
+    }).catch((reason) => {
+      if (!active) return;
+      if (isAxiosError(reason) && reason.response?.status === 404) setInitialPolicy(null);
+      else {
+        setLoadFailed(true);
+        setError(getApiErrorMessage(reason, 'Could not load your saved policy. Retry before editing.'));
+      }
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [retry]);
+
   const handleContinue = async () => {
+    if (loading || loadFailed || saving) return;
     try {
       setSaving(true);
       setError('');
       await updateReleasePolicy({
-        trigger: 'CHECK_IN_ESCALATION',
+        trigger: initialPolicy?.trigger ?? 'CHECK_IN_ESCALATION',
         verificationRequired,
-        verificationLevel: 'STANDARD',
-        escalationConfig: {
+        verificationLevel: initialPolicy?.verificationLevel ?? 'STANDARD',
+        escalationConfig: initialPolicy?.escalationConfig ?? {
           missedCheckInsBeforeReview: 3,
           manualReviewRequired: true,
         },
@@ -88,13 +114,11 @@ export default function ReleaseRulesScreen() {
           </Text>
 
           <Text style={styles.title}>
-            Decide when Virasat should start
-            looking for you.
+            Save your release preferences.
           </Text>
 
           <Text style={styles.subtitle}>
-            Your information will never be released
-            simply because you missed a check-in.
+            These preferences guide future release workflows. Automatic escalation, recipient verification, and inheritance release are not available yet.
           </Text>
         </View>
 
@@ -103,7 +127,7 @@ export default function ReleaseRulesScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>
-              MONTHLY CHECK-IN
+              CHECK-IN PREFERENCES
             </Text>
 
             <Pressable
@@ -128,12 +152,11 @@ export default function ReleaseRulesScreen() {
 
             <View style={styles.checkInContent}>
               <Text style={styles.checkInTitle}>
-                Every month
+                View your saved schedule
               </Text>
 
               <Text style={styles.checkInText}>
-                Virasat will send you a check-in
-                notification.
+                You can confirm activity in the app. Automated notifications are unavailable.
               </Text>
             </View>
           </View>
@@ -148,28 +171,28 @@ export default function ReleaseRulesScreen() {
         {/* Missed Check-ins */}
 
         <Text style={styles.sectionTitle}>
-          MISSED CHECK-INS
+          PLANNED MISSED CHECK-IN PROCESS
         </Text>
 
         <View style={styles.timeline}>
           <TimelineItem
             number="1"
             title="1st missed check-in"
-            description="Reminder"
+            description="Planned reminder · unavailable"
             last={false}
           />
 
           <TimelineItem
             number="2"
             title="2nd missed check-in"
-            description="Urgent reminder"
+            description="Planned urgent reminder · unavailable"
             last={false}
           />
 
           <TimelineItem
             number="3"
             title="3rd missed check-in"
-            description="Verification begins"
+            description="Planned verification · unavailable"
             last
           />
         </View>
@@ -177,7 +200,7 @@ export default function ReleaseRulesScreen() {
         {/* Verification */}
 
         <Text style={styles.sectionTitle}>
-          AFTER 3 MISSED CHECK-INS
+          FUTURE RELEASE WORKFLOW
         </Text>
 
         <View style={styles.processCard}>
@@ -221,9 +244,7 @@ export default function ReleaseRulesScreen() {
             </Text>
 
             <Text style={styles.securityText}>
-              Your legacy information will only
-              become accessible after the required
-              verification process is completed.
+              Your records remain private. Saving these preferences does not activate reminders, notify recipients, or release any content.
             </Text>
           </View>
         </View>
@@ -231,14 +252,16 @@ export default function ReleaseRulesScreen() {
 
       {/* Sticky Bottom Bar */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {loading && <ActivityIndicator />}
+        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+        {loadFailed && <Pressable onPress={() => setRetry((value) => value + 1)}><Text style={styles.edit}>Retry loading policy</Text></Pressable>}
 
         <Pressable
-          disabled={saving}
+          disabled={saving || loading || loadFailed}
           onPress={handleContinue}
           style={({ pressed }) => [
             styles.button,
-            saving && styles.buttonDisabled,
+            (saving || loading || loadFailed) && styles.buttonDisabled,
             pressed && !saving && styles.buttonPressed,
           ]}
         >

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calculator, ShieldAlert, CheckCircle, ArrowRight, Sparkles, DollarSign, Clock, FileCheck } from 'lucide-react';
+import { Calculator, ShieldAlert, CheckCircle, ArrowRight, Sparkles, Clock, FileCheck } from 'lucide-react';
 
 interface AssetCalculatorProps {
   onOpenWaitlist: () => void;
@@ -76,7 +76,7 @@ export default function AssetCalculator({ onOpenWaitlist }: AssetCalculatorProps
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
               gap: '40px',
               alignItems: 'center',
             }}
@@ -301,7 +301,7 @@ export default function AssetCalculator({ onOpenWaitlist }: AssetCalculatorProps
                     Personal Videos:
                   </span>
                   <span style={{ fontSize: '0.84rem', color: '#ECC862', fontWeight: 700 }}>
-                    Preserved for life milestones
+                    Milestone delivery is planned
                   </span>
                 </div>
               </div>

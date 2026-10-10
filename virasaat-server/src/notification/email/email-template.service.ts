@@ -1,3 +1,4 @@
+import { getEmailAppLink } from './email-links';
 import { Injectable, Logger } from '@nestjs/common';
 import {
   CheckInConfirmedEmailData,
@@ -48,9 +49,7 @@ export class EmailTemplateService {
         return renderWelcomeTemplate(data as WelcomeEmailData);
 
       case EmailTemplateType.CHECK_IN_REMINDER:
-        return renderCheckInReminderTemplate(
-          data as CheckInReminderEmailData,
-        );
+        return renderCheckInReminderTemplate(data as CheckInReminderEmailData);
 
       case EmailTemplateType.CHECK_IN_MISSED:
         return renderCheckInMissedTemplate(data as CheckInMissedEmailData);
@@ -174,7 +173,7 @@ export class EmailTemplateService {
         return {
           recipientName: 'Mohan Sharma',
           userEmail: 'mohansharma916@example.com',
-          dashboardUrl: 'https://virasaat.com/dashboard',
+          dashboardUrl: getEmailAppLink('home'),
           vaultId: 'vlt_892019402',
         } satisfies WelcomeEmailData;
 
@@ -185,7 +184,7 @@ export class EmailTemplateService {
           dueDate: 'October 5, 2026',
           preferredTime: '10:00 AM',
           cadence: 'Monthly',
-          checkInUrl: 'https://virasaat.com/check-in/confirm?token=demo_token',
+          checkInUrl: getEmailAppLink('home'),
         } satisfies CheckInReminderEmailData;
 
       case EmailTemplateType.CHECK_IN_MISSED:
@@ -195,7 +194,7 @@ export class EmailTemplateService {
           gracePeriodDays: 7,
           gracePeriodEndDate: 'October 9, 2026',
           trustedContactsCount: 2,
-          checkInUrl: 'https://virasaat.com/check-in/recover?token=demo_token',
+          checkInUrl: getEmailAppLink('home'),
         } satisfies CheckInMissedEmailData;
 
       case EmailTemplateType.CHECK_IN_CONFIRMED:
@@ -204,7 +203,7 @@ export class EmailTemplateService {
           confirmedAt: 'October 2, 2026, 9:24 PM',
           nextCheckInDate: 'November 2, 2026',
           cadence: 'Monthly',
-          dashboardUrl: 'https://virasaat.com/dashboard',
+          dashboardUrl: getEmailAppLink('home'),
         } satisfies CheckInConfirmedEmailData;
 
       case EmailTemplateType.TRUSTED_PERSON_INVITATION:
@@ -212,7 +211,7 @@ export class EmailTemplateService {
           recipientName: 'Ananya Sharma',
           ownerName: 'Mohan Sharma',
           relationship: 'Spouse & Primary Nominee',
-          invitationUrl: 'https://virasaat.com/nominee/accept?invite=inv_98471',
+          invitationUrl: getEmailAppLink('home'),
           expiryDate: 'November 1, 2026',
         } satisfies TrustedPersonInvitationEmailData;
 
@@ -225,7 +224,7 @@ export class EmailTemplateService {
             'Three consecutive missed check-in cycles and elapsed 7-day grace period',
           openedAt: 'October 2, 2026',
           verificationDeadline: 'October 16, 2026 at 6:00 PM',
-          verificationUrl: 'https://virasaat.com/cases/VRS-CASE-2026-9041',
+          verificationUrl: getEmailAppLink('home'),
         } satisfies ReleaseCaseOpenedEmailData;
 
       case EmailTemplateType.RELEASE_AUTHORIZED:
@@ -233,7 +232,7 @@ export class EmailTemplateService {
           recipientName: 'Ananya Sharma',
           ownerName: 'Mohan Sharma',
           releaseId: 'REL-2026-0042',
-          accessUrl: 'https://virasaat.com/release/REL-2026-0042',
+          accessUrl: getEmailAppLink('home'),
           accessExpiryDays: 30,
           itemCountSummary:
             '4 legal documents, 2 financial account folios, and 1 personal video memory',
@@ -243,7 +242,10 @@ export class EmailTemplateService {
         return {
           recipientName: 'Mohan Sharma',
           resetCode: '592814',
-          resetUrl: 'https://virasaat.com/auth/reset-password?code=592814',
+          resetUrl: getEmailAppLink('recovery', {
+            email: 'mohansharma916@example.com',
+            mode: 'reset',
+          }),
           expiryMinutes: 15,
           requestDevice: 'Safari on macOS (Apple Silicon)',
           requestIp: '122.161.49.201',
@@ -260,14 +262,14 @@ export class EmailTemplateService {
           ipAddress: '157.240.239.35',
           deviceInfo: 'Chrome 128 on Windows 11',
           location: 'Bengaluru, Karnataka, India',
-          lockVaultUrl: 'https://virasaat.com/security/lock-vault',
-          reviewActivityUrl: 'https://virasaat.com/security/audit',
+          lockVaultUrl: getEmailAppLink('security'),
+          reviewActivityUrl: getEmailAppLink('security'),
         } satisfies SecurityAlertEmailData;
 
       case EmailTemplateType.SUBSCRIPTION_RECEIPT:
         return {
           recipientName: 'Mohan Sharma',
-          planName: 'Virasaat Pro Heritage',
+          planName: 'Family (illustrative)',
           amountPaid: '₹2,499',
           billingInterval: 'Annual',
           invoiceNumber: 'INV-2026-0924',
@@ -275,13 +277,13 @@ export class EmailTemplateService {
           nextRenewalDate: 'October 2, 2027',
           features: [
             'Unlimited encrypted legacy items & documents',
-            'Up to 10 designated Trusted Contacts & Nominees',
-            'Custom weekly, bi-weekly & monthly check-in cadence',
+            'Up to 8 saved trusted person records (planned tier)',
+            'Weekly and monthly check-in preferences (planned tier)',
             'HD video & audio legacy message vault',
-            'Dual-approval release policy with step-up verification',
-            'Priority concierge & estate guidance',
+            'Inheritance release is unavailable',
+            'Paid checkout is unavailable',
           ],
-          manageUrl: 'https://virasaat.com/account/subscription',
+          manageUrl: getEmailAppLink('home'),
         } satisfies SubscriptionReceiptEmailData;
 
       default:

@@ -1,593 +1,165 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Sparkles,
-  ShieldCheck,
-  CheckCircle2,
-  Copy,
-  Check,
-  ArrowRight,
-  Lock,
-  User,
-  Mail,
-  Loader2,
-} from 'lucide-react';
-import { COUNTRIES, fetchCountryFromIp } from '@/data/countries';
+import { useEffect, useRef, useState } from 'react';
+import { X, ShieldCheck, CheckCircle2, Copy, Check, ArrowRight, Lock, Loader2 } from 'lucide-react';
+import { COUNTRIES, detectCountryFromTimeZone } from '@/data/countries';
+import { submitWaitlist, type WaitlistRegistration } from '@/lib/waitlist';
 
 interface WaitlistModalProps {
-  isOpen: boolean;
   onClose: () => void;
   defaultEmail?: string;
+  onJoined: (registration: WaitlistRegistration) => void;
 }
 
-export default function WaitlistModal({ isOpen, onClose, defaultEmail = '' }: WaitlistModalProps) {
+export default function WaitlistModal({ onClose, defaultEmail = '', onJoined }: WaitlistModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const successRef = useRef<HTMLHeadingElement>(null);
+  const pendingRef = useRef(false);
+  const activeRef = useRef(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(defaultEmail);
   const [country, setCountry] = useState('India');
   const [platform, setPlatform] = useState('Apple iPhone (iOS)');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [registration, setRegistration] = useState<WaitlistRegistration | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [copied, setCopied] = useState(false);
-  const [queueNumber, setQueueNumber] = useState(72);
+  const [copyError, setCopyError] = useState('');
+  const shareUrl = 'https://virasaat.app/';
 
-  // Fetch country from IP
   useEffect(() => {
-    let active = true;
-    fetchCountryFromIp()
-      .then((detected) => {
-        if (active && detected) {
-          setCountry(detected);
-        }
-      })
-      .catch(() => {
-        // default remains India
-      });
-
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    activeRef.current = true;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = 'hidden';
+    emailRef.current?.focus();
     return () => {
-      active = false;
+      activeRef.current = false;
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (opener?.isConnected) opener.focus();
     };
   }, []);
 
-  // Update email if passed from Hero / CTA
   useEffect(() => {
-    if (defaultEmail) {
-      setEmail(defaultEmail);
-    }
-  }, [defaultEmail]);
+    if (registration) successRef.current?.focus();
+  }, [registration]);
 
-  // Check saved registration or fetch live next queue number
-  useEffect(() => {
-    const savedQueue = localStorage.getItem('virasaat_queue_num');
-    const savedEmail = localStorage.getItem('virasaat_user_email');
-    const savedName = localStorage.getItem('virasaat_user_name');
-    if (savedQueue && savedEmail) {
-      setQueueNumber(parseInt(savedQueue, 10));
-      setEmail(savedEmail);
-      if (savedName) setFullName(savedName);
-      setIsSubmitted(true);
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pendingRef.current) return;
+    if (!email.trim() || !fullName.trim()) {
+      setErrorMessage('Please enter your name and a valid email address.');
       return;
     }
-
-    // Attempt to query live next queue number from backend stats
-    const backendUrl =
-      process.env.NEXT_PUBLIC_WAITLIST_API_URL ||
-      (process.env.NEXT_PUBLIC_API_URL
-        ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/waitlist`
-        : 'http://localhost:3000/waitlist');
-
-    fetch(backendUrl)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data.nextQueueNumber === 'number') {
-          setQueueNumber(data.nextQueueNumber);
-        }
-      })
-      .catch(() => {
-        // Fallback remains base 72
-      });
-  }, []);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !fullName) {
-      setErrorMessage('Please fill in your name and a valid email address.');
-      return;
-    }
-
+    pendingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage('');
-
-    let assignedNumber = queueNumber || 72;
-    const backendUrl =
-      process.env.NEXT_PUBLIC_WAITLIST_API_URL ||
-      (process.env.NEXT_PUBLIC_API_URL
-        ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/waitlist`
-        : 'http://localhost:3000/waitlist');
-    const webhookUrl = process.env.NEXT_PUBLIC_WAITLIST_WEBHOOK_URL;
-
-    // 1. Submit to virasaat-server backend endpoint
-    if (backendUrl) {
-      try {
-        const res = await fetch(backendUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim().toLowerCase(),
-            fullName: fullName.trim(),
-            country: country.trim(),
-            platform: platform.trim(),
-            source: 'modal_waitlist',
-          }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.queueNumber) {
-            assignedNumber = data.queueNumber;
-            setQueueNumber(data.queueNumber);
-          }
-        }
-      } catch (err) {
-        console.warn('Backend virasaat-server submission failed, falling back to client persistence:', err);
-      }
-    }
-
-    // 2. If an optional webhook URL is configured, ping it
-    if (webhookUrl) {
-      try {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            fullName,
-            country,
-            platform,
-            queueNumber: assignedNumber,
-            timestamp: new Date().toISOString(),
-          }),
-        });
-      } catch {}
-    }
-
-    // 3. Save locally in user's browser so they never lose their spot
     try {
-      localStorage.setItem('virasaat_queue_num', assignedNumber.toString());
-      localStorage.setItem('virasaat_user_email', email);
-      localStorage.setItem('virasaat_user_name', fullName);
-
-      const existingSignups = JSON.parse(localStorage.getItem('virasaat_signups') || '[]');
-      existingSignups.push({
-        email,
-        fullName,
-        country,
-        platform,
-        queueNumber: assignedNumber,
-        createdAt: new Date().toISOString(),
-      });
-      localStorage.setItem('virasaat_signups', JSON.stringify(existingSignups));
-    } catch {}
-
-    setQueueNumber(assignedNumber);
-    setIsSubmitted(true);
-    setIsSubmitting(false);
+      const saved = await submitWaitlist({ email, fullName, country, platform });
+      // Parent keeps only this acknowledged reservation for the current visit.
+      onJoined(saved);
+      if (activeRef.current) setRegistration(saved);
+    } catch (error) {
+      if (activeRef.current) {
+        setErrorMessage(error instanceof Error ? error.message : 'Signup failed. Please retry.');
+      }
+    } finally {
+      pendingRef.current = false;
+      if (activeRef.current) setIsSubmitting(false);
+    }
   };
 
-  const handleCopy = () => {
-    const inviteLink = `https://virasaat.app/waitlist?ref=FOUNDER-${queueNumber}`;
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      if (activeRef.current) {
+        setCopied(true);
+        setCopyError('');
+      }
+    } catch {
+      if (activeRef.current) setCopyError('Copy is unavailable. Select the link below to share it.');
+    }
   };
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 300,
-        background: 'rgba(2, 23, 19, 0.88)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
+    <dialog
+      ref={dialogRef}
+      className="waitlist-dialog"
+      aria-labelledby="waitlist-title"
+      aria-describedby="waitlist-description"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="glass-card-gold"
-        style={{
-          maxWidth: '520px',
-          width: '100%',
-          background: 'rgba(5, 34, 28, 0.98)',
-          border: '1px solid var(--border-gold)',
-          borderRadius: '24px',
-          padding: '36px 30px',
-          position: 'relative',
-          boxShadow: '0 25px 80px rgba(0, 0, 0, 0.75)',
-        }}
-      >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            background: 'rgba(220, 235, 229, 0.08)',
-            border: '1px solid var(--border-subtle)',
-            color: 'var(--warm-ivory)',
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
-          aria-label="Close"
-        >
+      <div className="waitlist-content">
+        <button type="button" onClick={onClose} className="waitlist-close" aria-label="Close waitlist">
           <X size={18} />
         </button>
-
-        {!isSubmitted ? (
-          <div>
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div
-                style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #0B5D4B 0%, #063F34 100%)',
-                  border: '1px solid var(--border-gold)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 14px',
-                  boxShadow: '0 0 25px rgba(212, 175, 55, 0.35)',
-                }}
-              >
-                <Sparkles size={24} color="#D4AF37" />
-              </div>
-
-              <div
-                style={{
-                  display: 'inline-block',
-                  background: 'rgba(212, 175, 55, 0.15)',
-                  border: '1px solid rgba(212, 175, 55, 0.4)',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '0.75rem',
-                  color: '#ECC862',
-                  fontWeight: 700,
-                  marginBottom: '10px',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                COMING SOON • FREE EARLY ACCESS
-              </div>
-
-              <h3
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '1.75rem',
-                  color: 'var(--warm-ivory)',
-                  marginBottom: '8px',
-                }}
-              >
-                Join the Waitlist
-              </h3>
-
-              <p style={{ fontSize: '0.92rem', color: 'var(--sage)', lineHeight: 1.5, margin: 0 }}>
-                Be the first to protect your family's accounts and memories. Founding members get free lifetime core vault access.
-              </p>
+        {registration ? (
+          <div style={{ textAlign: 'center' }}>
+            <CheckCircle2 size={52} color="#35B86B" style={{ margin: '0 auto 20px' }} />
+            <div className="glass-pill" style={{ marginBottom: '18px' }}>
+              <ShieldCheck size={14} color="#35B86B" />
+              <span>Signup confirmed</span>
             </div>
-
-            {/* Error banner */}
-            {errorMessage && (
-              <div
-                style={{
-                  background: 'rgba(217, 74, 74, 0.18)',
-                  border: '1px solid rgba(217, 74, 74, 0.5)',
-                  color: '#FFBABA',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  fontSize: '0.85rem',
-                  marginBottom: '16px',
-                  textAlign: 'center',
-                }}
-              >
-                {errorMessage}
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>
-                  Email Address <span style={{ color: '#ECC862' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Mail size={16} color="var(--sage)" style={{ position: 'absolute', left: '14px', top: '14px' }} />
-                  <input
-                    type="email"
-                    required
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(6, 40, 33, 0.85)',
-                      border: '1px solid rgba(220, 235, 229, 0.22)',
-                      borderRadius: '12px',
-                      padding: '12px 14px 12px 42px',
-                      color: '#FFF',
-                      fontSize: '0.92rem',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>
-                  Your Full Name <span style={{ color: '#ECC862' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <User size={16} color="var(--sage)" style={{ position: 'absolute', left: '14px', top: '14px' }} />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Vikram Sharma"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(6, 40, 33, 0.85)',
-                      border: '1px solid rgba(220, 235, 229, 0.22)',
-                      borderRadius: '12px',
-                      padding: '12px 14px 12px 42px',
-                      color: '#FFF',
-                      fontSize: '0.92rem',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>
-                    Preferred Device
-                  </label>
-                  <select
-                    value={platform}
-                    onChange={(e) => setPlatform(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(6, 40, 33, 0.85)',
-                      border: '1px solid rgba(220, 235, 229, 0.22)',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      color: '#FFF',
-                      fontSize: '0.86rem',
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="Apple iPhone (iOS)">Apple iPhone (iOS)</option>
-                    <option value="Google Android">Android</option>
-                    <option value="Both iOS & Android">Both</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>
-                    Country <span style={{ color: '#ECC862' }}>*</span>
-                  </label>
-                  <select
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(6, 40, 33, 0.85)',
-                      border: '1px solid rgba(220, 235, 229, 0.22)',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      color: '#FFF',
-                      fontSize: '0.86rem',
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {COUNTRIES.map((c) => (
-                      <option
-                        key={c.code}
-                        value={c.name}
-                        style={{ background: '#062821', color: '#FFF' }}
-                      >
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  marginTop: '2px',
-                }}
-              >
-                <Lock size={13} color="#D4AF37" />
-                <span>Zero Spam Guarantee. We will only email you your invite.</span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn btn-gold"
-                style={{
-                  width: '100%',
-                  marginTop: '6px',
-                  padding: '14px',
-                  fontSize: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  opacity: isSubmitting ? 0.75 : 1,
-                }}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>Saving your spot...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={18} />
-                    <span>Join Waitlist (Free)</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </form>
+            <h2 id="waitlist-title" ref={successRef} tabIndex={-1}>You are on the waitlist</h2>
+            <p id="waitlist-description" style={{ color: 'var(--sage)', margin: '16px 0' }}>
+              Your signup for <strong>{registration.email}</strong> was saved. A confirmation email may arrive shortly; email delivery is not guaranteed.
+            </p>
+            <div className="glass-card" style={{ padding: '22px', margin: '22px 0' }}>
+              <div style={{ color: 'var(--gold-light)' }}>Your waitlist number</div>
+              <div style={{ fontSize: '2.6rem', color: 'var(--warm-ivory)', fontFamily: 'var(--font-display)' }}>#{registration.queueNumber}</div>
+              <p style={{ color: 'var(--text-secondary)' }}>Preferred device: {registration.platform}</p>
+            </div>
+            <p style={{ color: 'var(--sage)', marginBottom: '12px' }}>Share Virasaat with family or friends:</p>
+            <a href={shareUrl} style={{ color: 'var(--gold-light)', overflowWrap: 'anywhere' }}>{shareUrl}</a>
+            <button type="button" onClick={handleCopy} className="btn btn-secondary" style={{ margin: '14px auto' }}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'Link copied' : 'Copy homepage link'}
+            </button>
+            <p role="status" style={{ color: 'var(--text-secondary)' }}>{copyError}</p>
+            <button type="button" onClick={onClose} className="btn btn-gold" style={{ width: '100%', marginTop: '16px' }}>Back to website</button>
           </div>
         ) : (
-          /* Confirmation Screen */
-          <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'rgba(53, 184, 107, 0.2)',
-                border: '2px solid #35B86B',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 18px',
-                boxShadow: '0 0 30px rgba(53, 184, 107, 0.4)',
-              }}
-            >
-              <CheckCircle2 size={36} color="#35B86B" />
-            </div>
-
-            <div className="glass-pill" style={{ borderColor: '#35B86B', marginBottom: '14px' }}>
-              <ShieldCheck size={14} color="#35B86B" />
-              <span style={{ color: '#35B86B', fontWeight: 700 }}>YOU ARE ON THE WAITLIST</span>
-            </div>
-
-            <h3
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '1.85rem',
-                color: 'var(--warm-ivory)',
-                marginBottom: '10px',
-              }}
-            >
-              Spot Secured, {fullName ? fullName.split(' ')[0] : 'Friend'}!
-            </h3>
-
-            <p style={{ fontSize: '0.94rem', color: 'var(--sage)', lineHeight: 1.6, marginBottom: '22px' }}>
-              We sent a confirmation email to <strong>{email}</strong>. You'll be among the very first to get an invite when we launch.
+          <>
+            <div className="glass-pill" style={{ marginBottom: '18px' }}>Coming soon · Early access updates</div>
+            <h2 id="waitlist-title">Join the waitlist</h2>
+            <p id="waitlist-description" style={{ color: 'var(--sage)', margin: '12px 0 24px' }}>
+              Get launch updates for the family vault. Joining the waitlist does not activate a subscription or automated family handover.
             </p>
-
-            {/* Queue Badge */}
-            <div
-              style={{
-                background: 'rgba(8, 48, 40, 0.85)',
-                border: '1px solid var(--border-gold)',
-                borderRadius: '16px',
-                padding: '20px',
-                marginBottom: '22px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: '0.78rem', color: '#ECC862', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Your Founding Member Spot
-              </div>
-              <div
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '2.6rem',
-                  fontWeight: 800,
-                  color: '#FFF',
-                  lineHeight: 1.1,
-                  margin: '6px 0',
-                }}
-              >
-                #{queueNumber}
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Early Access reserved for {platform} • Free Lifetime Core Vault
-              </div>
-            </div>
-
-            {/* Invite Referral */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '0.82rem', color: 'var(--sage)', marginBottom: '8px' }}>
-                Share your invite link with family or friends:
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'rgba(6, 40, 33, 0.8)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '12px',
-                  padding: '6px 8px 6px 14px',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  https://virasaat.app/waitlist?ref=FOUNDER-{queueNumber}
-                </span>
-                <button
-                  onClick={handleCopy}
-                  className="btn btn-secondary"
-                  style={{ padding: '8px 14px', fontSize: '0.78rem', borderRadius: '8px' }}
-                >
-                  {copied ? <Check size={14} color="#35B86B" /> : <Copy size={14} />}
-                  <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={onClose}
-              className="btn btn-gold"
-              style={{ width: '100%', padding: '14px' }}
-            >
-              Back to Website
-            </button>
-          </div>
+            {errorMessage && <p role="alert" className="waitlist-error">{errorMessage}</p>}
+            <form onSubmit={handleSubmit} aria-busy={isSubmitting} className="waitlist-form">
+              <label htmlFor="waitlist-email">Email address</label>
+              <input ref={emailRef} id="waitlist-email" type="email" required maxLength={254} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
+              <label htmlFor="waitlist-name">Your full name</label>
+              <input id="waitlist-name" type="text" required maxLength={200} autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your name" />
+              <label htmlFor="waitlist-platform">Preferred device</label>
+              <select id="waitlist-platform" value={platform} onChange={(event) => setPlatform(event.target.value)}>
+                <option value="Apple iPhone (iOS)">Apple iPhone (iOS)</option>
+                <option value="Google Android">Android</option>
+                <option value="Both iOS & Android">Both</option>
+              </select>
+              <label htmlFor="waitlist-country">Country</label>
+              <select id="waitlist-country" autoComplete="country-name" value={country} onChange={(event) => setCountry(event.target.value)}>
+                {COUNTRIES.map((item) => <option key={item.code} value={item.name}>{item.name}</option>)}
+              </select>
+              <button type="button" className="btn btn-secondary" onClick={() => setCountry(detectCountryFromTimeZone() || 'India')} style={{ justifyContent: 'center' }}>Use my timezone to suggest a country</button>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                <Lock size={13} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                We use these details for waitlist and launch updates. Read our <a href="/privacy/">privacy policy</a> and <a href="/terms/">terms</a>.
+              </p>
+              <button type="submit" disabled={isSubmitting} className="btn btn-gold" style={{ width: '100%', justifyContent: 'center' }}>
+                {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
+                {isSubmitting ? 'Confirming your signup…' : 'Join the waitlist'}
+              </button>
+            </form>
+          </>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }

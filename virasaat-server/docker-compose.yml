@@ -5,10 +5,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD before starting PostgreSQL}
       POSTGRES_DB: ${DB_DATABASE:-virasaat}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,7 +32,8 @@ services:
       - NODE_ENV=production
       - DB_HOST=postgres
       - PORT=${PORT:-3000}
-      - DB_SYNCHRONIZE=${DB_SYNCHRONIZE:-true}
+      - DB_PORT=5432
+      - DB_SYNCHRONIZE=false
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
 

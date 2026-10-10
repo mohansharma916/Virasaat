@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,10 +15,9 @@ import {
 export function renderSecurityAlertTemplate(
   data: SecurityAlertEmailData,
 ): RenderedEmail {
-  const lockVaultUrl =
-    data.lockVaultUrl || 'https://virasaat.com/security/lock';
+  const lockVaultUrl = data.lockVaultUrl || getEmailAppLink('security');
   const reviewActivityUrl =
-    data.reviewActivityUrl || 'https://virasaat.com/security/audit';
+    data.reviewActivityUrl || getEmailAppLink('security');
   const subject = `Security Alert: ${data.alertTitle} on your Virasaat account`;
 
   const contentHtml = `
@@ -89,7 +89,7 @@ export function renderSecurityAlertTemplate(
         <td align="center">
           ${renderCtaButton({
             url: lockVaultUrl,
-            label: 'Lock Vault & Terminate Sessions',
+            label: 'Open Security Settings',
             variant: 'danger',
           })}
         </td>
@@ -98,7 +98,7 @@ export function renderSecurityAlertTemplate(
       <tr>
         <td align="center" style="padding-top: 4px;">
           <p style="font-family: 'Inter', sans-serif; font-size: 13px; color: ${BRAND_COLORS.textSecondary};">
-            If this was you, you can safely disregard this alert or <a href="${reviewActivityUrl}" style="color: ${BRAND_COLORS.primaryForest}; font-weight: 600; text-decoration: underline;">Review Audit Log</a>.
+            If this was you, you can safely disregard this alert or <a href="${reviewActivityUrl}" style="color: ${BRAND_COLORS.primaryForest}; font-weight: 600; text-decoration: underline;">Review Security Settings</a>.
           </p>
         </td>
       </tr>
@@ -110,7 +110,7 @@ export function renderSecurityAlertTemplate(
     title: subject,
     contentHtml,
     securityNotice:
-      'This critical security notification was generated automatically by Virasaat sentinel guards.',
+      'This notification was generated for a security-related account event.',
   });
 
   const bodyText = `
@@ -128,10 +128,10 @@ EVENT DETAILS:
 - Location: ${data.location || 'Unknown'}
 
 WAS THIS NOT YOU?
-Immediately lock your vault and revoke all active sessions:
+Open the app security settings. Reset your password if you believe it is compromised; recovery revokes prior sessions:
 ${lockVaultUrl}
 
-If this was you, no action is needed. Review audit logs:
+If this was you, no action is needed. Open security settings:
 ${reviewActivityUrl}
 `;
 

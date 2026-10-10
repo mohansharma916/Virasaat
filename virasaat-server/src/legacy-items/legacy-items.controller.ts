@@ -22,6 +22,7 @@ import { memoryStorage } from 'multer';
 import { LegacyItemsService } from './legacy-items.service';
 
 import { CreateLegacyItemDto } from './dto/create-legacy-item.dto';
+import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -53,6 +54,7 @@ export class LegacyItemsController {
       | {
           buffer: Buffer;
           mimetype: string;
+          originalname?: string;
         }
       | undefined,
     @Body(
@@ -108,6 +110,10 @@ export class LegacyItemsController {
       }
     }
 
+    if (resolvedFile && !resolvedFile.originalname && dto.fileName) {
+      resolvedFile.originalname = dto.fileName;
+    }
+
     return this.safeItem(
       await this.legacyItemsService.createEncryptedUpload(
         req.user.id,
@@ -133,7 +139,6 @@ export class LegacyItemsController {
       type,
       category,
       title,
-      description,
       status,
       createdAt,
       updatedAt,
@@ -145,7 +150,7 @@ export class LegacyItemsController {
       type,
       category,
       title,
-      description,
+      description: null,
       status,
       createdAt,
       updatedAt,
@@ -196,10 +201,12 @@ export class LegacyItemsController {
     res.setHeader('Content-Type', fileResult.mimeType);
     res.setHeader(
       'Content-Disposition',
-      `inline; filename="${encodeURIComponent(fileResult.filename)}"`,
+      `attachment; filename="${encodeURIComponent(fileResult.filename)}"; filename*=UTF-8''${encodeURIComponent(fileResult.filename)}`,
     );
     res.setHeader('Content-Length', fileResult.sizeBytes);
     res.setHeader('X-Storage-Type', fileResult.storageType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-store');
     res.end(fileResult.buffer);
   }
 
@@ -213,8 +220,15 @@ export class LegacyItemsController {
 
   @Get(':id')
   async findOne(@Req() req: any, @Param('id') id: string) {
-    return this.safeItem(
-      await this.legacyItemsService.findOne(req.user.id, id),
-    );
+    return this.legacyItemsService.findOne(req.user.id, id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Req() req: { user: { id: string } },
+    @Param('id') id: string,
+    @Body() dto: UpdateLegacyItemDto,
+  ) {
+    return this.legacyItemsService.update(req.user.id, id, dto);
   }
 }

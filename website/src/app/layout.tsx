@@ -11,7 +11,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Virasaat (विरासत) — Keep Your Family’s Money & Memories Safe | Coming Soon',
   description:
-    'Keep all your bank accounts, investments, insurance policies, and personal video messages safe in one place. Virasaat automatically shares them with your family if anything ever happens to you. Join the waitlist today for free lifetime access.',
+    'Organize financial records, important documents and personal messages with Virasaat. Server-encrypted vault content and check-in tools; automated family handover is planned. Join for launch updates.',
   keywords: [
     'Virasaat',
     'family vault',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     url: 'https://virasaat.app',
     title: 'Virasaat (विरासत) — Keep Your Family’s Money & Memories Safe',
     description:
-      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Join the waitlist for free early access.',
+      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Join the free waitlist for launch updates.',
     siteName: 'Virasaat',
     images: [
       {
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Virasaat — Keep Your Family’s Money & Memories Safe',
     description:
-      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Join the waitlist for free early access.',
+      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Join the free waitlist for launch updates.',
     images: ['/images/hero-vault.jpg'],
     creator: '@VirasaatApp',
   },
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/images/vault-security.jpg',
     apple: '/images/vault-security.jpg',
   },
 };
@@ -80,14 +80,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400;1,600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+
       <body>{children}</body>
     </html>
   );

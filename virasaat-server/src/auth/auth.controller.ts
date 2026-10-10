@@ -16,8 +16,10 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 
 @Controller('auth')
+@UseGuards(AuthRateLimitGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -94,8 +96,13 @@ export class AuthController {
    */
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async me(@Req() req: any) {
+  me(@Req() req: { user: { id: string; email: string; name: string } }) {
     return req.user;
   }
-}
 
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@Req() req: { user: { id: string } }) {
+    return this.authService.logout(req.user.id);
+  }
+}

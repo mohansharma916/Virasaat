@@ -49,6 +49,10 @@ export class Subscription {
   @Column({ type: 'text', nullable: true, select: false })
   providerPurchaseToken!: string | null;
 
+  /** Only a trusted server-side store verifier may set this field. */
+  @Column({ type: 'timestamp with time zone', nullable: true })
+  providerVerifiedAt!: Date | null;
+
   @Column({ default: true })
   autoRenew!: boolean;
 

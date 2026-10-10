@@ -1,4 +1,4 @@
-import { create, isAxiosError } from 'axios';
+import { CanceledError, create, isAxiosError } from 'axios';
 import { Platform } from 'react-native';
 import { getAccessToken } from '../storage/auth.storage';
 
@@ -65,9 +65,19 @@ export function onSessionExpired(listener: () => void) {
   expirationListeners.add(listener);
   return () => { expirationListeners.delete(listener); };
 }
-api.interceptors.response.use((response) => response, (error: unknown) => {
+api.interceptors.response.use(async (response) => {
+  const authorization = response.config.headers.Authorization;
+  if (authorization && authorization !== `Bearer ${await getAccessToken()}`) {
+    throw new CanceledError('This request belongs to a previous session.');
+  }
+  return response;
+}, async (error: unknown) => {
   if (isAxiosError(error) && error.response?.status === 401 && error.config?.headers.Authorization) {
-    for (const listener of expirationListeners) listener();
+    // A late response from a signed-out account must not expire its replacement.
+    const currentToken = await getAccessToken();
+    if (currentToken && error.config.headers.Authorization === `Bearer ${currentToken}`) {
+      for (const listener of expirationListeners) listener();
+    }
   }
   return Promise.reject(error);
 });

@@ -30,6 +30,7 @@ import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { clearSession, setSessionUser } from '@/src/store/session.slice';
 import { clearVaultData } from '@/src/store/vault.slice';
 import { removeAccessToken } from '@/src/storage/auth.storage';
+import { logout } from '@/src/api/auth.api';
 import { useSubscription } from '@/src/store/subscription.slice';
 import { FileText, Lock, LogOut, Shield } from 'lucide-react-native';
 import { BottomNavBar } from '@/src/components/BottomNavBar';
@@ -194,6 +195,11 @@ export default function ProfileScreen() {
   const executeSignOut = async () => {
     try {
       setSigningOut(true);
+      try {
+        await logout();
+      } catch {
+        // Local sign-out remains available offline. Recovery revokes sessions on the server.
+      }
       await removeAccessToken();
       dispatch(clearSession());
       dispatch(clearVaultData());
@@ -201,7 +207,7 @@ export default function ProfileScreen() {
       router.replace('/(auth)/welcome' as never);
     } catch {
       setSignOutModalVisible(false);
-      router.replace('/(auth)/welcome' as never);
+      setSubmitError('Unable to clear secure storage. Please retry signing out.');
     } finally {
       setSigningOut(false);
     }
@@ -450,7 +456,7 @@ export default function ProfileScreen() {
                 <View style={styles.planActionContent}>
                   <Text style={styles.planActionTitle}>Privacy Policy</Text>
                   <Text style={styles.planActionSubtitle}>
-                    DPDP Act 2023 · Zero-knowledge encryption rights
+              Privacy policy · Server-managed encryption
                   </Text>
                 </View>
                 <Text style={styles.planActionChevron}>›</Text>

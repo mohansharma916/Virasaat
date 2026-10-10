@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,7 +15,7 @@ import {
 export function renderCheckInMissedTemplate(
   data: CheckInMissedEmailData,
 ): RenderedEmail {
-  const checkInUrl = data.checkInUrl || 'https://virasaat.com/check-in';
+  const checkInUrl = data.checkInUrl || getEmailAppLink('home');
   const subject = `URGENT: Missed Check-in on Virasaat — Grace Period Active`;
 
   const contentHtml = `
@@ -42,7 +43,7 @@ export function renderCheckInMissedTemplate(
                   &#9888; Grace Period Active Until: ${escapeHtml(data.gracePeriodEndDate)}
                 </div>
                 <div style="font-family: 'Inter', sans-serif; font-size: 13px; color: ${BRAND_COLORS.textPrimary}; line-height: 20px;">
-                  <strong>Your vault remains 100% confidential and locked.</strong> No materials have been released. However, if no check-in is received before the grace period expires, the escalation workflow will be initiated to reach out to your designated trusted contacts.
+                  <strong>No vault items are released by a missed check-in.</strong> No materials have been released. Scheduled reminders and escalation are not currently available.
                 </div>
               </td>
             </tr>
@@ -55,7 +56,7 @@ export function renderCheckInMissedTemplate(
         <td align="center">
           ${renderCtaButton({
             url: checkInUrl,
-            label: 'Confirm Safety & Reset Schedule',
+            label: 'Open Virasaat App',
             variant: 'warning',
           })}
         </td>
@@ -111,7 +112,9 @@ export function renderCheckInMissedTemplate(
   const html = wrapInEmailLayout({
     preheader: `URGENT: Missed Virasaat check-in. Grace period ends on ${data.gracePeriodEndDate}. Confirm safety now.`,
     title: subject,
-    contentHtml,
+    contentHtml:
+      `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
+      contentHtml,
     securityNotice:
       'This urgent notice was triggered by a missed check-in interval according to your vault safety rules.',
   });
@@ -137,12 +140,14 @@ ${checkInUrl}
 
   const text = wrapInPlainTextLayout({
     title: 'Urgent: Missed Check-In Alert',
-    bodyText,
+    bodyText:
+      'Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.\n\n' +
+      bodyText,
   });
 
   return {
     templateType: EmailTemplateType.CHECK_IN_MISSED,
-    subject,
+    subject: '[Illustrative sample — workflow unavailable] ' + subject,
     html,
     text,
   };

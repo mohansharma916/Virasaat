@@ -94,7 +94,7 @@ export default function LegacyMessageScreen() {
         requestKey: requestKey.current,
         type: 'TEXT',
         category: 'MESSAGES',
-        title: 'Personal message',
+        title: title.trim(),
         description: `Title: ${title.trim()}\nRecipient preference: ${recipient ?? 'Not assigned'}\n\n${message.trim()}`,
       });
       dispatch(addLegacyItem(item));

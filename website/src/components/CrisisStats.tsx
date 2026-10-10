@@ -159,7 +159,7 @@ export default function CrisisStats() {
               One Simple List. Total Peace of Mind.
             </h3>
             <p style={{ fontSize: '0.94rem', color: 'var(--sage)', lineHeight: 1.6, margin: 0 }}>
-              Virasaat brings all your accounts, policies, and personal messages together in 10 minutes. 100% private today, and automatically shared with your family when needed.
+              Virasaat helps you organize account references, policies and personal messages. Automated family sharing is planned and currently unavailable.
             </p>
           </div>
 

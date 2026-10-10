@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PlanEntitlementService } from './plan-entitlement.service';
 import { PurchaseDto } from './dto/purchase.dto';
 import { RestorePurchaseDto } from './dto/restore-purchase.dto';
-import { PlanCode } from './subscription.constants';
+import { DowngradeDto } from './dto/downgrade.dto';
 
 @Controller()
 export class SubscriptionsController {
@@ -53,10 +53,7 @@ export class SubscriptionsController {
     @Req() req: { user: { id: string } },
     @Body() dto: PurchaseDto,
   ) {
-    const sub = await this.entitlementService.verifyAndProcessPurchase(
-      req.user.id,
-      dto,
-    );
+    await this.entitlementService.verifyAndProcessPurchase(req.user.id, dto);
     return this.entitlementService.getUserEntitlementsPayload(req.user.id);
   }
 
@@ -80,7 +77,7 @@ export class SubscriptionsController {
   @UseGuards(JwtAuthGuard)
   async downgrade(
     @Req() req: { user: { id: string } },
-    @Body() body: { planCode: PlanCode },
+    @Body() body: DowngradeDto,
   ) {
     await this.entitlementService.downgradeSubscription(
       req.user.id,

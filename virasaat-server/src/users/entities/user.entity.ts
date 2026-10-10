@@ -51,6 +51,10 @@ export class User {
   @Column({ nullable: true, type: 'text', select: false })
   passwordHash!: string | null;
 
+  /** Increment on logout/recovery to revoke previously issued bearer tokens. */
+  @Column({ type: 'integer', default: 0 })
+  sessionVersion!: number;
+
   /**
    * TRUE only after:
    *

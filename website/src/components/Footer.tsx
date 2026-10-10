@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Shield, Lock, Heart, ArrowUp, FileText, Scale } from 'lucide-react';
+import { Shield, ArrowUp } from 'lucide-react';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -73,7 +73,7 @@ export default function Footer() {
             </p>
 
             <div style={{ fontSize: '0.78rem', color: '#ECC862', fontFamily: 'monospace' }}>
-              // 100% PRIVATE & DEVICE ENCRYPTED
+              SERVER-MANAGED VAULT ENCRYPTION
             </div>
           </div>
 
@@ -129,7 +129,7 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <li>
                 <Link href="/privacy" style={{ color: '#ECC862', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>Privacy Policy (DPDP Act)</span>
+                  <span>Privacy Policy</span>
                 </Link>
               </li>
               <li>
@@ -138,13 +138,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <span style={{ color: 'var(--sage)' }}>Hardware Secure Enclave Auth</span>
+                <span style={{ color: 'var(--sage)' }}>Biometric App Access on Supported Devices</span>
               </li>
               <li>
                 <span style={{ color: 'var(--sage)' }}>Zero Third-Party Ad Tracking</span>
               </li>
               <li>
-                <span style={{ color: 'var(--sage)' }}>Client-Side Key Generation</span>
+                <span style={{ color: 'var(--sage)' }}>Server-Managed Encryption Keys</span>
               </li>
               <li>
                 <a href="#faq" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
@@ -177,12 +177,12 @@ export default function Footer() {
               </li>
               <li>
                 <span style={{ color: 'var(--sage)', fontSize: '0.82rem' }}>
-                  Face ID & Hardware Enclave
+                  Supported Device Biometrics
                 </span>
               </li>
               <li>
                 <span style={{ color: 'var(--sage)', fontSize: '0.82rem' }}>
-                  1-Tap Push Heartbeat Verification
+                  In-App Check-In Activity
                 </span>
               </li>
             </ul>
@@ -202,7 +202,7 @@ export default function Footer() {
                 marginBottom: '14px',
               }}
             >
-              "विरासत केवल धन नहीं, बल्कि प्रेम, संस्कार और सुरक्षा की अखंड डोर है।"
+              &quot;विरासत केवल धन नहीं, बल्कि प्रेम, संस्कार और सुरक्षा की अखंड डोर है।&quot;
             </p>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Legacy is not merely financial balance sheets—it is the unbroken thread of love, guidance, and generational security.
@@ -221,7 +221,7 @@ export default function Footer() {
             lineHeight: 1.6,
           }}
         >
-          <strong style={{ color: 'var(--sage)' }}>Legal & Regulatory Disclaimer:</strong> Virasaat is a technological platform providing zero-knowledge encrypted digital storage, organizational tools, and automated heartbeat-triggered asset handover workflows. Virasaat does not act as a law firm, investment advisor, or substitute for formal probate court certification. Users are encouraged to execute their formal legal testamentary wills in accordance with local state and national statutes.
+          <strong style={{ color: 'var(--sage)' }}>Legal & Regulatory Disclaimer:</strong> Virasaat provides record organization and server-encrypted vault content. Automated handover, recipient access and scheduled notifications are planned and currently unavailable. Virasaat does not act as a law firm, investment advisor, or substitute for formal probate court certification. Users are encouraged to execute their formal legal testamentary wills in accordance with local state and national statutes.
         </div>
 
         {/* Bottom Bar */}

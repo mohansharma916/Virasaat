@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { isAxiosError } from 'axios';
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +16,7 @@ import { router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { updateCheckInSettings } from '@/src/api/check-in.api';
+import { getCheckInStatus, updateCheckInSettings, type CheckInPolicy } from '@/src/api/check-in.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
@@ -29,11 +30,37 @@ export default function CheckInPreferencesScreen() {
   const email = useAppSelector((state) => state.session.user?.email);
   const { canUseFeature } = useSubscription();
   const hasCustomCheckIn = canUseFeature(Feature.CUSTOM_CHECK_IN);
+  const [initialPolicy, setInitialPolicy] = useState<CheckInPolicy | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [preferredTime, setPreferredTime] = useState('10:00');
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<'MONTHLY' | 'WEEKLY'>('MONTHLY');
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadFailed(false);
+    setError('');
+    void getCheckInStatus().then(({ policy }) => {
+      if (!active) return;
+      setInitialPolicy(policy);
+      setPreferredTime(policy.preferredTime);
+      setSelectedSchedule(policy.cadence);
+    }).catch((reason) => {
+      if (!active) return;
+      if (isAxiosError(reason) && reason.response?.status === 404) {
+        setInitialPolicy(null);
+      } else {
+        setLoadFailed(true);
+        setError(getApiErrorMessage(reason, 'Could not load your saved settings. Retry before editing.'));
+      }
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [retry]);
 
   const selectPreferredTime = () => {
     Alert.alert('Preferred time', 'Choose when to receive your check-in reminder.', [
@@ -45,18 +72,19 @@ export default function CheckInPreferencesScreen() {
   };
 
   const handleContinue = async () => {
+    if (loading || loadFailed || saving) return;
     try {
       setSaving(true);
       setError('');
       await updateCheckInSettings({
-        cadence: hasCustomCheckIn && selectedSchedule === 'WEEKLY' ? 'WEEKLY' : 'MONTHLY',
+        cadence: initialPolicy?.cadence === selectedSchedule ? undefined : selectedSchedule,
         preferredTime,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
+        timezone: initialPolicy?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
         reminderConfig: {
           channels: ['EMAIL'],
-          reminderDaysBefore: [7, 3, 1],
+          reminderDaysBefore: initialPolicy?.cadence === selectedSchedule ? initialPolicy.reminderConfig.reminderDaysBefore : selectedSchedule === 'WEEKLY' ? [3, 1] : [7, 3, 1],
         },
-        escalationEnabled: true,
+        escalationEnabled: initialPolicy?.escalationEnabled ?? false,
       });
       await dispatch(refreshVaultData()).unwrap();
       router.push('/(auth)/release-rules');
@@ -103,8 +131,7 @@ export default function CheckInPreferencesScreen() {
           </Text>
 
           <Text style={styles.subtitle}>
-            We'll periodically check that you're safe
-            and your account is still active.
+            Save your check-in preferences and confirm activity in the app. Automatic email reminders and escalation are not available yet.
           </Text>
         </View>
 
@@ -164,7 +191,7 @@ export default function CheckInPreferencesScreen() {
             </View>
 
             <Text style={styles.optionSubtitle}>
-              {hasCustomCheckIn ? 'Weekly or customized check-in cadence' : 'Choose custom intervals and grace periods'}
+              {hasCustomCheckIn ? 'Weekly check-in cadence' : 'Weekly cadence requires Secure or Family'}
             </Text>
           </View>
         </Pressable>
@@ -178,7 +205,7 @@ export default function CheckInPreferencesScreen() {
         <View style={styles.selectCard}>
           <View>
             <Text style={styles.selectValue}>
-              Monthly check-in
+              {selectedSchedule === 'WEEKLY' ? 'Weekly check-in' : 'Monthly check-in'}
             </Text>
           </View>
         </View>
@@ -224,7 +251,7 @@ export default function CheckInPreferencesScreen() {
 
         <View style={styles.selectCard}>
           <Text style={styles.selectValue}>
-            Email reminders 7, 3 and 1 days before
+            {selectedSchedule === 'WEEKLY' ? '3 and 1 days before (planned)' : '7, 3 and 1 days before (planned)'}
           </Text>
         </View>
 
@@ -238,24 +265,23 @@ export default function CheckInPreferencesScreen() {
           </View>
 
           <Text style={styles.infoDescription}>
-            Missing a check-in does not
-            automatically release your information.
-            Virasat follows a separate verification
-            process.
+            These preferences are saved for future reminders. Missing a check-in does not release your information. Automated reminders, escalation, and inheritance release are unavailable.
           </Text>
         </View>
       </ScrollView>
 
       {/* Sticky Bottom Bar */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {loading && <ActivityIndicator />}
+        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+        {loadFailed && <Pressable onPress={() => setRetry((value) => value + 1)}><Text style={{ color: colors.primary.forest, paddingVertical: 12 }}>Retry loading settings</Text></Pressable>}
 
         <Pressable
-          disabled={saving}
+          disabled={saving || loading || loadFailed}
           onPress={handleContinue}
           style={({ pressed }) => [
             styles.button,
-            saving && styles.buttonDisabled,
+            (saving || loading || loadFailed) && styles.buttonDisabled,
             pressed && !saving && styles.buttonPressed,
           ]}
         >

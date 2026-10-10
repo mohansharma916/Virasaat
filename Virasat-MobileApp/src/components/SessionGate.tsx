@@ -1,7 +1,8 @@
 import { authenticateWithBiometric } from '@/src/services/biometric';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Pressable,
   StyleSheet,
   Text,
@@ -18,6 +19,7 @@ import {
   getBiometricUnlockEnabled,
 } from '@/src/storage/auth.storage';
 import { onSessionExpired } from '@/src/api/client';
+import { clearTemporaryVaultExports } from '@/src/storage/vault-export.storage';
 import { Button } from './Button';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -39,8 +41,34 @@ export function SessionGate({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [validated, setValidated] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState !== 'background');
+  const [needsUnlock, setNeedsUnlock] = useState(false);
+  const authenticating = useRef(false);
+  const contentOpened = useRef(false);
   const normalizedPath = pathname.replace(/^\/\(auth\)/, '') || '/';
   const isPublic = publicRoutes.has(pathname) || publicRoutes.has(normalizedPath);
+
+  useEffect(() => {
+    // Remove decrypted exports left by a force-closed sharing session.
+    try { clearTemporaryVaultExports(); } catch { setError('Unable to clear temporary exports. Please restart the app.'); }
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (authenticating.current) return;
+      const active = state === 'active';
+      setForeground(active);
+      if (!active && userId) {
+        setValidated(false);
+        setNeedsUnlock(true);
+      }
+    });
+    return () => subscription.remove();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) contentOpened.current = false;
+  }, [userId]);
 
   useEffect(
     () =>
@@ -55,7 +83,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (isPublic) return;
+    if (isPublic || !foreground) return;
     let active = true;
     setError('');
 
@@ -73,22 +101,31 @@ export function SessionGate({ children }: { children: ReactNode }) {
       }
 
       // Existing authenticated UI may be reused. Direct cold deep links must validate first.
-      if (userId) {
+      if (userId && !needsUnlock) {
         setValidated(true);
         return;
       }
 
       try {
         if (await getBiometricUnlockEnabled()) {
-          const result = await authenticateWithBiometric();
+          authenticating.current = true;
+          let result;
+          try {
+            result = await authenticateWithBiometric('Unlock your Virasat vault');
+          } finally {
+            authenticating.current = false;
+          }
           if (!result.success) {
             if (active) setError('Unlock was not completed. Retry to continue.');
             return;
           }
         }
 
-        await dispatch(hydrateSession()).unwrap();
-        if (active) setValidated(true);
+        if (!userId || needsUnlock) await dispatch(hydrateSession()).unwrap();
+        if (active) {
+          setNeedsUnlock(false);
+          setValidated(true);
+        }
       } catch (reason: any) {
         if (!active) return;
 
@@ -129,11 +166,21 @@ export function SessionGate({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [isPublic, userId, dispatch, retry]);
+  }, [isPublic, userId, dispatch, retry, foreground, needsUnlock]);
 
-  if (isPublic || (validated && userId)) return children;
+  if (isPublic) return children;
+  const unlocked = validated && Boolean(userId) && foreground;
+  if (unlocked) contentOpened.current = true;
 
   return (
+    <View style={{ flex: 1 }}>
+      {contentOpened.current && userId ? (
+        <View style={{ flex: 1, opacity: unlocked ? 1 : 0 }} pointerEvents={unlocked ? 'auto' : 'none'}
+          accessibilityElementsHidden={!unlocked} importantForAccessibility={unlocked ? 'auto' : 'no-hide-descendants'}>
+          {children}
+        </View>
+      ) : null}
+      {!unlocked && (
     <View style={styles.gateContainer}>
       {error ? (
         <View style={styles.errorBox}>
@@ -170,11 +217,18 @@ export function SessionGate({ children }: { children: ReactNode }) {
         </View>
       )}
     </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   gateContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

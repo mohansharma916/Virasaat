@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -6,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Waitlist } from './entities/waitlist.entity';
 import { CreateWaitlistDto } from './dto/create-waitlist.dto';
 import { MailService } from '../notification/email/mail.service';
+import { escapeHtml } from '../notification/email/email-layout';
 
 @Injectable()
 export class WaitlistService {
@@ -25,56 +30,81 @@ export class WaitlistService {
     const platform = (dto.platform || 'Both iOS & Android').trim();
     const source = (dto.source || 'website').trim();
 
-    // 1. Check if already registered
-    const existing = await this.waitlistRepo.findOne({ where: { email } });
-    if (existing) {
-      this.logger.log(`User already on waitlist: ${email} (#${existing.queueNumber})`);
+    // Allocate positions and check duplicates under the same database lock.
+    // The transaction commits before either notification is dispatched.
+    const registration = await this.waitlistRepo.manager.transaction(
+      async (manager) => {
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          'waitlist:registration',
+        ]);
+        const repository = manager.getRepository(Waitlist);
+        const existing = await repository.findOne({ where: { email } });
+        if (existing)
+          return { record: existing, alreadyRegistered: true, totalCount: 0 };
+
+        const baseStart = this.baseStart();
+        const [currentCount, maxRecord] = await Promise.all([
+          repository.count(),
+          repository
+            .createQueryBuilder('waitlist')
+            .select('MAX(waitlist.queueNumber)', 'max')
+            .getRawOne<{ max: number | string | null }>(),
+        ]);
+        const currentMax = maxRecord?.max == null ? 0 : Number(maxRecord.max);
+        const queueNumber = Math.max(baseStart, currentMax + 1);
+        if (!Number.isSafeInteger(queueNumber) || queueNumber > 2147483647) {
+          throw new ServiceUnavailableException(
+            'Waitlist registration is temporarily unavailable.',
+          );
+        }
+        const record = repository.create({
+          email,
+          fullName: fullName || null,
+          country,
+          platform,
+          source,
+          queueNumber,
+          emailSentToAdmin: false,
+          emailSentToUser: false,
+        });
+        return {
+          record: await repository.save(record),
+          alreadyRegistered: false,
+          totalCount: currentCount + 1,
+        };
+      },
+    );
+    const savedRecord = registration.record;
+    const queueNumber = savedRecord.queueNumber;
+    if (registration.alreadyRegistered) {
+      this.logger.log(`User already on waitlist: ${email} (#${queueNumber})`);
       return {
         success: true,
         alreadyRegistered: true,
-        queueNumber: existing.queueNumber,
-        message: "You're already on the waitlist! We'll notify you as soon as early access begins.",
+        queueNumber,
+        message:
+          "You're already on the waitlist! We'll notify you as soon as early access begins.",
       };
     }
 
-    // 2. Calculate next queue number (start at 72, increment by 1, maintained in DB)
-    const baseStart =
-      parseInt(this.configService.get<string>('WAITLIST_START_NUMBER') || '72', 10) || 72;
+    this.logger.log(
+      `New waitlist entry created in DB: ${email} (#${queueNumber})`,
+    );
 
-    const [currentCount, maxRecord] = await Promise.all([
-      this.waitlistRepo.count(),
-      this.waitlistRepo
-        .createQueryBuilder('waitlist')
-        .select('MAX(waitlist.queueNumber)', 'max')
-        .getRawOne(),
-    ]);
-
-    const currentMax =
-      maxRecord?.max != null && !isNaN(parseInt(maxRecord.max, 10))
-        ? parseInt(maxRecord.max, 10)
-        : null;
-
-    const queueNumber =
-      currentMax !== null && currentMax >= baseStart ? currentMax + 1 : baseStart;
-
-    // 3. Save new record to DB
-    const record = this.waitlistRepo.create({
-      email,
-      fullName: fullName || null,
-      country,
-      platform,
-      source,
-      queueNumber,
-      emailSentToAdmin: false,
-      emailSentToUser: false,
-    });
-
-    const savedRecord = await this.waitlistRepo.save(record);
-    this.logger.log(`New waitlist entry created in DB: ${email} (#${queueNumber})`);
+    const htmlEmail = escapeHtml(email);
+    const mailtoHref = escapeHtml(`mailto:${email}`);
+    const htmlName = escapeHtml(fullName || 'Not provided');
+    const htmlCountry = escapeHtml(country);
+    const htmlPlatform = escapeHtml(platform);
+    const htmlSource = escapeHtml(source);
+    const htmlGreeting = escapeHtml(
+      fullName ? fullName.split(' ')[0] : 'friend',
+    );
 
     // 4. Dispatch Email Notifications
     const adminEmail =
-      this.configService.get<string>('ADMIN_EMAIL') || 'mohansharma916@gmail.com';
+      this.configService.get<string>('ADMIN_EMAIL') ||
+      'mohansharma916@gmail.com';
 
     // 4a. Notification to Admin
     const adminMailPromise = this.mailService
@@ -93,28 +123,28 @@ export class WaitlistService {
                 <tr style="border-bottom: 1px solid #f0f0f0;">
                   <td style="padding: 10px 0; font-weight: bold; color: #555; width: 140px;">Email:</td>
                   <td style="padding: 10px 0; color: #111;">
-                    <a href="mailto:${email}" style="color: #0B5D4B; font-weight: bold;">${email}</a>
+                    <a href="${mailtoHref}" style="color: #0B5D4B; font-weight: bold;">${htmlEmail}</a>
                   </td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f0f0f0;">
                   <td style="padding: 10px 0; font-weight: bold; color: #555;">Name:</td>
-                  <td style="padding: 10px 0; color: #111;">${fullName || 'Not provided'}</td>
+                  <td style="padding: 10px 0; color: #111;">${htmlName}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f0f0f0;">
                   <td style="padding: 10px 0; font-weight: bold; color: #555;">Country:</td>
-                  <td style="padding: 10px 0; color: #111;">${country}</td>
+                  <td style="padding: 10px 0; color: #111;">${htmlCountry}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f0f0f0;">
                   <td style="padding: 10px 0; font-weight: bold; color: #555;">Preferred App:</td>
-                  <td style="padding: 10px 0; color: #111;">${platform}</td>
+                  <td style="padding: 10px 0; color: #111;">${htmlPlatform}</td>
                 </tr>
                 <tr style="border-bottom: 1px solid #f0f0f0;">
                   <td style="padding: 10px 0; font-weight: bold; color: #555;">Signed Up Via:</td>
-                  <td style="padding: 10px 0; color: #111;">${source}</td>
+                  <td style="padding: 10px 0; color: #111;">${htmlSource}</td>
                 </tr>
                 <tr>
                   <td style="padding: 10px 0; font-weight: bold; color: #555;">Total Signups:</td>
-                  <td style="padding: 10px 0; color: #0B5D4B; font-weight: bold;">${currentCount + 1} members</td>
+                  <td style="padding: 10px 0; color: #0B5D4B; font-weight: bold;">${registration.totalCount} members</td>
                 </tr>
               </table>
             </div>
@@ -126,10 +156,12 @@ export class WaitlistService {
         `,
       })
       .then((res) => {
-        if (res.success) savedRecord.emailSentToAdmin = true;
+        if (res.success && !res.mock) savedRecord.emailSentToAdmin = true;
       })
-      .catch((err) => {
-        this.logger.error(`Failed to send waitlist admin email: ${err.message}`);
+      .catch((err: unknown) => {
+        this.logger.error(
+          `Failed to send waitlist admin email: ${err instanceof Error ? err.message : String(err)}`,
+        );
       });
 
     // 4b. Confirmation to User
@@ -145,7 +177,7 @@ export class WaitlistService {
               </div>
               <h1 style="color: #063F34; margin: 16px 0 6px; font-size: 26px;">You're on the waitlist!</h1>
               <p style="color: #4a5568; font-size: 16px; margin: 0;">
-                Welcome, ${fullName ? fullName.split(' ')[0] : 'friend'}. Your spot is secured.
+                Welcome, ${htmlGreeting}. Your waitlist registration is confirmed.
               </p>
             </div>
 
@@ -157,7 +189,7 @@ export class WaitlistService {
                 #${queueNumber}
               </div>
               <div style="font-size: 13px; color: #4a5568;">
-                Priority Early Access for ${platform} • Free Lifetime Core Vault
+                Launch updates for ${htmlPlatform}. Waitlist signup does not activate a subscription or a lifetime entitlement.
               </div>
             </div>
 
@@ -167,13 +199,13 @@ export class WaitlistService {
 
             <ul style="color: #2d3748; line-height: 1.7; font-size: 14px; padding-left: 20px;">
               <li><strong>One clear list:</strong> Your bank accounts, investments, and policies in one place.</li>
-              <li><strong>Automatic safety check-ins:</strong> If you stop responding, your trusted family gets access.</li>
+              <li><strong>Check-in preferences:</strong> Record activity in the app. Scheduled reminders, escalation, and inheritance release are not available yet.</li>
               <li><strong>Personal video messages:</strong> Notes and videos saved for special milestones.</li>
-              <li><strong>100% Private:</strong> Everything is encrypted on your phone. Even we can't see your data.</li>
+              <li><strong>Server-managed encryption:</strong> Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content; titles and categories are stored as metadata.</li>
             </ul>
 
             <p style="color: #2d3748; line-height: 1.65; font-size: 15px; margin-top: 20px;">
-              We're currently putting the finishing touches on our mobile app. You will receive an exclusive download link as soon as early invites open.
+              Joining the waitlist registers you for launch updates. Paid checkout, recipient invitations, and automatic message delivery are not currently available. We will share availability updates when ready.
             </p>
 
             <div style="border-top: 1px solid #edf2f7; margin-top: 28px; padding-top: 18px; text-align: center; color: #718096; font-size: 13px;">
@@ -184,10 +216,12 @@ export class WaitlistService {
         `,
       })
       .then((res) => {
-        if (res.success) savedRecord.emailSentToUser = true;
+        if (res.success && !res.mock) savedRecord.emailSentToUser = true;
       })
-      .catch((err) => {
-        this.logger.error(`Failed to send waitlist user confirmation email: ${err.message}`);
+      .catch((err: unknown) => {
+        this.logger.error(
+          `Failed to send waitlist user confirmation email: ${err instanceof Error ? err.message : String(err)}`,
+        );
       });
 
     // Await both email sends asynchronously without failing the request
@@ -202,23 +236,31 @@ export class WaitlistService {
     };
   }
 
+  private baseStart(): number {
+    const value = Number(
+      this.configService.get<string>('WAITLIST_START_NUMBER'),
+    );
+    return Number.isSafeInteger(value) && value > 0 ? value : 72;
+  }
+
   async getStats() {
-    const baseStart =
-      parseInt(this.configService.get<string>('WAITLIST_START_NUMBER') || '72', 10) || 72;
+    const baseStart = this.baseStart();
     const count = await this.waitlistRepo.count();
 
     const maxRecord = await this.waitlistRepo
       .createQueryBuilder('waitlist')
       .select('MAX(waitlist.queueNumber)', 'max')
-      .getRawOne();
+      .getRawOne<{ max: number | string | null }>();
 
     const currentMax =
-      maxRecord?.max != null && !isNaN(parseInt(maxRecord.max, 10))
-        ? parseInt(maxRecord.max, 10)
+      maxRecord?.max != null && Number.isFinite(Number(maxRecord.max))
+        ? Number(maxRecord.max)
         : null;
 
     const nextQueueNumber =
-      currentMax !== null && currentMax >= baseStart ? currentMax + 1 : baseStart;
+      currentMax !== null && currentMax >= baseStart
+        ? currentMax + 1
+        : baseStart;
 
     return {
       success: true,

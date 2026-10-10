@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,7 +29,7 @@ jobs:
           cache-dependency-path: virasaat-server/package-lock.json
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm ci
 
       - name: Type check
         run: npx tsc --noEmit
@@ -55,13 +59,47 @@ jobs:
           cache-dependency-path: Virasat-MobileApp/package-lock.json
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm ci
 
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Security regression tests
+        run: npm run test:security
+
+      - name: Release configuration
+        run: npm run release:check
+
+  test-website:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+
   deploy:
-    needs: [test, test-mobile]
+    needs: [test, test-mobile, test-website]
     runs-on: ubuntu-latest
 
     steps:
@@ -87,9 +125,9 @@ jobs:
 
               cd /opt/VirasaatServer/Virasaat
 
-              echo "Pulling latest code..."
+              echo "Checking out tested code..."
               git fetch origin
-              git reset --hard origin/main
+              git reset --hard "${{ github.sha }}"
 
               cd virasaat-server
 
@@ -100,8 +138,10 @@ jobs:
               docker compose up -d postgres
 
               echo "Running migrations..."
-              docker compose run --rm api npm run db:migrate:prd21 || true
-              docker compose run --rm api npm run db:migrate:subscriptions || true
+              docker compose run --rm api npm run db:migrate:prd21
+              docker compose run --rm api npm run db:migrate:subscriptions
+              docker compose run --rm api npm run db:migrate:auth-security
+              docker compose run --rm api npm run db:migrate:vault-check-in
 
               echo "Deploying API..."
               docker compose up -d
@@ -112,8 +152,7 @@ jobs:
               echo "Checking health..."
               sleep 5
 
-              curl --fail \
-                http://localhost:3000/health
+              docker compose exec -T api node -e 'fetch("http://127.0.0.1:" + (process.env.PORT || "3000") + "/health", { signal: AbortSignal.timeout(5000) }).then(response => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));'
 
               echo "Deployment successful"
 

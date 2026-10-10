@@ -1,5 +1,5 @@
-import { ConfigService } from '@nestjs/config';
-import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import type { ConfigService } from '@nestjs/config';
+import type { TypeOrmModuleOptions } from '@nestjs/typeorm';
 
 export const databaseConfig = (
   config: ConfigService,
@@ -16,7 +16,6 @@ export const databaseConfig = (
   autoLoadEntities: true,
 
   synchronize:
-    config.get<string>('DB_SYNCHRONIZE') === 'true' ||
-    (config.get<string>('NODE_ENV') !== 'production' &&
-      config.get<string>('DB_SYNCHRONIZE') !== 'false'),
+    config.get<string>('NODE_ENV') !== 'production' &&
+    config.get<string>('DB_SYNCHRONIZE') !== 'false',
 });

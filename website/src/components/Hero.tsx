@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import type { WaitlistRegistration } from '@/lib/waitlist';
 import {
   ShieldCheck,
   Sparkles,
@@ -20,29 +21,16 @@ import {
 
 interface HeroProps {
   onOpenWaitlist: (email?: string) => void;
+  registration?: WaitlistRegistration | null;
 }
 
-export default function Hero({ onOpenWaitlist }: HeroProps) {
+export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
   const [activeTab, setActiveTab] = useState<'financial' | 'memories' | 'documents' | 'heartbeat'>('financial');
   const [isPlayingVideoModal, setIsPlayingVideoModal] = useState(false);
 
   // Quick waitlist state
   const [emailInput, setEmailInput] = useState('');
-  const [submittedQueue, setSubmittedQueue] = useState<number | null>(null);
-
-  // Load existing reservation if already signed up
-  React.useEffect(() => {
-    try {
-      const savedQueue = localStorage.getItem('virasaat_queue_num');
-      const savedEmail = localStorage.getItem('virasaat_user_email');
-      if (savedQueue) {
-        setSubmittedQueue(parseInt(savedQueue, 10));
-      }
-      if (savedEmail) {
-        setEmailInput(savedEmail);
-      }
-    } catch {}
-  }, []);
+  const submittedQueue = registration?.queueNumber ?? null;
 
   const handleHeroSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +103,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
             />
             <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>COMING SOON ON iOS & ANDROID</span>
             <span style={{ opacity: 0.5 }}>|</span>
-            <span style={{ color: 'var(--sage)' }}>Join the Waitlist for Free Lifetime Access</span>
+            <span style={{ color: 'var(--sage)' }}>Join the Free Waitlist for Launch Updates</span>
           </div>
         </div>
 
@@ -144,7 +132,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
               fontWeight: 400,
             }}
           >
-            Over <strong style={{ color: '#ECC862' }}>₹1.5 Lakh Crore</strong> sits forgotten in Indian banks and insurance companies because families didn't even know it existed. <strong style={{ color: '#FFF' }}>Virasaat</strong> keeps all your bank accounts, investments, policies, and personal video notes in one safe place—and automatically shares them with your loved ones if anything ever happens to you.
+            <strong style={{ color: '#FFF' }}>Virasaat</strong> helps you organize financial references, important documents and personal messages in one place. Descriptions and files use server-managed encryption. Family handover is planned and currently unavailable; keep an independent estate and emergency plan.
           </p>
 
           {/* INLINE COMING SOON WAITLIST BOX */}
@@ -231,10 +219,10 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                   </div>
                   <div style={{ textAlign: 'left', lineHeight: 1.3 }}>
                     <div style={{ color: '#35B86B', fontWeight: 700, fontSize: '0.92rem' }}>
-                      Spot #{submittedQueue} Secured! Confirmation email sent.
+                      Spot #{submittedQueue} Secured! Signup confirmed.
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>
-                      We will notify {emailInput} the moment the app is ready.
+                      Launch updates will go to {registration?.email}.
                     </div>
                   </div>
                 </div>
@@ -310,19 +298,19 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Lock size={15} color="#D4AF37" />
-              <span>100% Private & Encrypted</span>
+              <span>Server-Encrypted Vault Content</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Activity size={15} color="#35B86B" />
-              <span>Gentle Monthly Safety Check</span>
+              <span>Check-In Activity Tools</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ShieldCheck size={15} color="#ECC862" />
-              <span>Zero False Alarms Guarantee</span>
+              <span>Family Handover Is Planned</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Sparkles size={15} color="#35B86B" />
-              <span>Free for Early Waitlist Members</span>
+              <span>Free Waitlist Signup</span>
             </div>
           </div>
         </div>
@@ -527,7 +515,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Claim Steps:</span>
-                      <span style={{ color: '#35B86B' }}>Simple 1-Page Guide Ready</span>
+                      <span style={{ color: '#35B86B' }}>Example personal instructions</span>
                     </div>
                   </div>
                 </div>
@@ -617,7 +605,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Access:</span>
-                      <span style={{ color: 'var(--mint)' }}>Only shared on handover</span>
+                      <span style={{ color: 'var(--mint)' }}>Recipient access unavailable</span>
                     </div>
                   </div>
                 </div>
@@ -732,7 +720,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                       marginBottom: '10px',
                     }}
                   >
-                    "The Values That Built Our Family"
+                    &quot;The Values That Built Our Family&quot;
                   </h3>
                   <p
                     className="font-handwriting"
@@ -744,7 +732,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                       marginBottom: '16px',
                     }}
                   >
-                    "My dearest Aarav, if you are reading this, know that you were my greatest joy. Always remember that wealth is not just money, but the kindness and dignity you share with everyone around you..."
+                    &quot;My dearest Aarav, if you are reading this, know that you were my greatest joy. Always remember that wealth is not just money, but the kindness and dignity you share with everyone around you...&quot;
                   </p>
                   <div
                     style={{
@@ -758,7 +746,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                     }}
                   >
                     <span>For: Aarav Sharma (Son)</span>
-                    <span style={{ color: '#35B86B' }}>Delivered on special milestone</span>
+                    <span style={{ color: '#35B86B' }}>Milestone delivery unavailable</span>
                   </div>
                 </div>
               </div>
@@ -783,7 +771,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <FileText size={20} color="#D4AF37" />
-                    <span style={{ fontSize: '0.75rem', color: '#35B86B', fontWeight: 600 }}>Verified Safe</span>
+                    <span style={{ fontSize: '0.75rem', color: '#35B86B', fontWeight: 600 }}>Example record</span>
                   </div>
                   <h4 style={{ fontSize: '1.05rem', color: 'var(--warm-ivory)', marginBottom: '4px' }}>
                     Registered Last Will
@@ -806,7 +794,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <FileText size={20} color="#D4AF37" />
-                    <span style={{ fontSize: '0.75rem', color: '#35B86B', fontWeight: 600 }}>Emergency Ready</span>
+                    <span style={{ fontSize: '0.75rem', color: '#35B86B', fontWeight: 600 }}>Document reference</span>
                   </div>
                   <h4 style={{ fontSize: '1.05rem', color: 'var(--warm-ivory)', marginBottom: '4px' }}>
                     Healthcare Proxy & Living Will
@@ -882,17 +870,17 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                     </div>
                     <div>
                       <h4 style={{ fontSize: '1.1rem', color: '#F8F5EA', margin: 0 }}>
-                        Automatic Safety Check: All Good
+                        Demo: Check-In Activity
                       </h4>
                       <p style={{ fontSize: '0.82rem', color: 'var(--sage)', margin: 0 }}>
-                        Checked once a month • Next reminder in 18 days
+                        Illustration only • No reminder scheduled
                       </p>
                     </div>
                   </div>
 
                   <div className="glass-pill" style={{ borderColor: '#35B86B' }}>
                     <CheckCircle2 size={15} color="#35B86B" />
-                    <span style={{ color: '#35B86B' }}>Confirmed via Face ID</span>
+                    <span style={{ color: '#35B86B' }}>Demo check-in activity</span>
                   </div>
                 </div>
 
@@ -913,9 +901,9 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                       borderLeft: '3px solid #35B86B',
                     }}
                   >
-                    <div style={{ fontSize: '0.74rem', color: '#35B86B', fontWeight: 700 }}>STEP 1 (NORMAL)</div>
-                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>1-Tap Monthly Check</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>A quick 2-second tap on phone</div>
+                    <div style={{ fontSize: '0.74rem', color: '#35B86B', fontWeight: 700 }}>STEP 1 (CHECK-IN)</div>
+                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>In-App Check-In</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Records activity in the app</div>
                   </div>
 
                   <div
@@ -926,9 +914,9 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                       borderLeft: '3px solid #F4A62A',
                     }}
                   >
-                    <div style={{ fontSize: '0.74rem', color: '#F4A62A', fontWeight: 700 }}>STEP 2 (IF MISSED)</div>
+                    <div style={{ fontSize: '0.74rem', color: '#F4A62A', fontWeight: 700 }}>STEP 2 (PLANNED)</div>
                     <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Gentle Reminders</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Email & SMS over 3 weeks</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Reminder delivery planned</div>
                   </div>
 
                   <div
@@ -939,9 +927,9 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                       borderLeft: '3px solid #D4AF37',
                     }}
                   >
-                    <div style={{ fontSize: '0.74rem', color: '#D4AF37', fontWeight: 700 }}>STEP 3 (SAFETY BUFFER)</div>
-                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>14-Day Grace Window</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Plenty of time to respond</div>
+                    <div style={{ fontSize: '0.74rem', color: '#D4AF37', fontWeight: 700 }}>STEP 3 (PLANNED)</div>
+                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Safety Review Is Planned</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>No release countdown is active</div>
                   </div>
 
                   <div
@@ -952,9 +940,9 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                       borderLeft: '3px solid #3D68C5',
                     }}
                   >
-                    <div style={{ fontSize: '0.74rem', color: '#3D68C5', fontWeight: 700 }}>STEP 4 (HANDOVER)</div>
-                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Family Gets Access</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Only after verified confirmation</div>
+                    <div style={{ fontSize: '0.74rem', color: '#3D68C5', fontWeight: 700 }}>STEP 4 (PLANNED)</div>
+                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Family Access Is Planned</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Recipient access unavailable</div>
                   </div>
                 </div>
               </div>
@@ -991,7 +979,7 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                   gap: '4px',
                 }}
               >
-                <span>Join Waitlist for Free Early Access</span>
+                <span>Join for Launch Updates</span>
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -1074,10 +1062,10 @@ export default function Hero({ onOpenWaitlist }: HeroProps) {
                   <Play size={26} color="#041B16" style={{ marginLeft: '4px' }} />
                 </div>
                 <div style={{ color: '#FFF', fontWeight: 700, fontSize: '1.1rem' }}>
-                  "To My Son on Your Wedding Day"
+                  &quot;To My Son on Your Wedding Day&quot;
                 </div>
                 <div style={{ color: 'var(--sage)', fontSize: '0.85rem', marginTop: '6px' }}>
-                  Encrypted on device. Delivered only on the milestone date.
+                  Example message. Content is encrypted on the server; milestone delivery is unavailable.
                 </div>
               </div>
             </div>

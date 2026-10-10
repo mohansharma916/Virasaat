@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -15,7 +16,8 @@ export function renderPasswordResetTemplate(
   data: PasswordResetEmailData,
 ): RenderedEmail {
   const expiryMinutes = data.expiryMinutes || 15;
-  const resetUrl = data.resetUrl || 'https://virasaat.com/auth/reset-password';
+  const resetUrl =
+    data.resetUrl || getEmailAppLink('recovery', { mode: 'reset' });
   const subject = `Reset your Virasaat account password`;
 
   const contentHtml = `
@@ -28,7 +30,7 @@ export function renderPasswordResetTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Hello ${escapeHtml(data.recipientName || 'there')},<br />
-            We received a request to reset the master password associated with your Virasaat digital vault account.
+            We received a request to reset the password associated with your Virasaat account.
           </p>
         </td>
       </tr>
@@ -89,7 +91,7 @@ export function renderPasswordResetTemplate(
             <tr>
               <td style="padding: 12px 14px;">
                 <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.error}; line-height: 18px;">
-                  <strong>Didn't make this request?</strong> If you didn't ask to reset your password, please ignore this email or contact <a href="mailto:security@virasaat.com" style="color: ${BRAND_COLORS.error}; text-decoration: underline;">security@virasaat.com</a> immediately.
+                  <strong>Didn't make this request?</strong> If you didn't ask to reset your password, please ignore this email or open your app security settings to review account access.
                 </div>
               </td>
             </tr>
@@ -121,7 +123,7 @@ REQUEST DETAILS:
 - Device: ${data.requestDevice || 'Unknown'}
 - IP: ${data.requestIp || 'Not recorded'}
 
-If you did not request this, please disregard this email or email security@virasaat.com.
+If you did not request this, please disregard this email or open your app security settings.
 `;
 
   const text = wrapInPlainTextLayout({

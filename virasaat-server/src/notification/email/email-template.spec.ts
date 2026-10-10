@@ -38,7 +38,13 @@ describe('EmailTemplateService', () => {
       expect(rendered.html).toContain('654321');
       expect(rendered.html).toContain('Aarav Patel');
       expect(rendered.html).toContain('10 minutes');
-      expect(rendered.html).toContain('Zero-Knowledge Encrypted Protection');
+      expect(rendered.html).toContain('Server-Managed Encryption');
+      expect(rendered.html).toContain(
+        'Authorized server processes can decrypt content',
+      );
+      expect(rendered.html).not.toContain(
+        'Zero-Knowledge Encrypted Protection',
+      );
       expect(rendered.text).toContain('654321');
     });
   });
@@ -54,7 +60,9 @@ describe('EmailTemplateService', () => {
 
       expect(rendered.subject).toContain('Welcome to Virasaat');
       expect(rendered.html).toContain('Aarav Patel');
-      expect(rendered.html).toContain('Three Steps to Complete Your Vault Setup');
+      expect(rendered.html).toContain(
+        'Three Steps to Complete Your Vault Setup',
+      );
       expect(rendered.html).toContain('Open My Vault &amp; Complete Setup');
       expect(rendered.text).toContain('THREE STEPS TO COMPLETE YOUR SETUP');
     });
@@ -73,7 +81,7 @@ describe('EmailTemplateService', () => {
       expect(rendered.subject).toContain('due in 3 days');
       expect(rendered.html).toContain('Aarav Patel');
       expect(rendered.html).toContain('October 10, 2026');
-      expect(rendered.html).toContain('Confirm I Am Safe &amp; Well');
+      expect(rendered.html).toContain('Open Virasaat App');
       expect(rendered.text).toContain('Monthly');
     });
 
@@ -101,7 +109,7 @@ describe('EmailTemplateService', () => {
       expect(rendered.subject).toContain('URGENT: Missed Check-in');
       expect(rendered.html).toContain('7-day grace period');
       expect(rendered.html).toContain('October 8, 2026');
-      expect(rendered.html).toContain('Confirm Safety &amp; Reset Schedule');
+      expect(rendered.html).toContain('Open Virasaat App');
       expect(rendered.text).toContain('URGENT: MISSED CHECK-IN NOTICE');
     });
   });
@@ -133,11 +141,72 @@ describe('EmailTemplateService', () => {
       expect(rendered.subject).toContain('Aarav Patel has designated you');
       expect(rendered.html).toContain('Sister');
       expect(rendered.html).toContain('Zero Immediate Access');
-      expect(rendered.html).toContain('Acknowledge Designation &amp; Verify Details');
+      expect(rendered.html).toContain('Open Virasaat App');
     });
   });
 
   describe('All Templates Sample Render', () => {
+    it('uses implemented destinations and accurate encryption claims in every sample', () => {
+      for (const type of service.getAllTemplateTypes()) {
+        const rendered = service.renderSample(type);
+        expect(rendered.html).not.toContain('https://virasaat.com');
+        expect(rendered.text).not.toContain('https://virasaat.com');
+        expect(rendered.html).not.toMatch(
+          /client-side encryption|Zero-Knowledge Encrypted/,
+        );
+        expect(rendered.text).not.toContain('client-side encryption');
+        expect(rendered.text).toContain(
+          'Authorized server processes can decrypt content',
+        );
+      }
+    });
+
+    it('marks unavailable workflow previews as illustrative in subject, HTML and text', () => {
+      for (const type of [
+        EmailTemplateType.CHECK_IN_REMINDER,
+        EmailTemplateType.CHECK_IN_MISSED,
+        EmailTemplateType.TRUSTED_PERSON_INVITATION,
+        EmailTemplateType.RELEASE_CASE_OPENED,
+        EmailTemplateType.RELEASE_AUTHORIZED,
+        EmailTemplateType.SUBSCRIPTION_RECEIPT,
+      ]) {
+        const rendered = service.renderSample(type);
+        expect(rendered.subject).toContain(
+          'Illustrative sample — workflow unavailable',
+        );
+        expect(rendered.html).toContain(
+          'This message performs no account action.',
+        );
+        expect(rendered.text).toContain(
+          'This message performs no account action.',
+        );
+        expect(rendered.html).toContain('Open Virasaat App');
+      }
+    });
+
+    it('opens the reset form with the recipient email and keeps the OTP out of the URL', () => {
+      const rendered = service.renderSample(EmailTemplateType.PASSWORD_RESET);
+      const href = rendered.html.match(
+        /href="(virasat:\/\/forgot-password[^" ]*)"/,
+      )?.[1];
+      expect(href).toBeDefined();
+      const url = new URL(href!.replace(/&amp;/g, '&'));
+      expect(url.searchParams.get('email')).toBe('mohansharma916@example.com');
+      expect(url.searchParams.get('mode')).toBe('reset');
+      expect(url.searchParams.has('code')).toBe(false);
+      expect(url.toString()).not.toContain('592814');
+    });
+
+    it('offers implemented security settings without promising a lock action or audit viewer', () => {
+      const rendered = service.renderSample(EmailTemplateType.SECURITY_ALERT);
+      expect(rendered.html).toContain('Open Security Settings');
+      expect(rendered.html).toContain('href="virasat://security"');
+      expect(rendered.html).not.toMatch(
+        /Lock Vault|Terminate Sessions|Review Audit Log|security\/audit|security\/lock/,
+      );
+      expect(rendered.text).not.toContain('Immediately lock your vault');
+    });
+
     it('should render all 11 template types from sample data without error', () => {
       const types = service.getAllTemplateTypes();
       for (const type of types) {

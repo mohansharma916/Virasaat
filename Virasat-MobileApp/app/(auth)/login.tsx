@@ -22,6 +22,8 @@ import {
   getLastEmail,
   saveBiometricSession,
   getBiometricSession,
+  getBiometricUnlockEnabled,
+  clearBiometricSession,
 } from '@/src/storage/auth.storage';
 import { googleLogin, login } from '@/src/api/auth.api';
 import { signInWithGoogle } from '@/src/utils/google-auth';
@@ -57,12 +59,12 @@ export default function LoginScreen() {
 
     void (async () => {
       try {
-        const [available, bioType, lastEmail, bioSession, existingToken] = await Promise.all([
+        const [available, bioType, lastEmail, bioSession, enabled] = await Promise.all([
           isBiometricAvailable(),
           getBiometricType(),
           getLastEmail(),
           getBiometricSession(),
-          getAccessToken(),
+          getBiometricUnlockEnabled(),
         ]);
 
         if (!active) return;
@@ -70,13 +72,9 @@ export default function LoginScreen() {
         setBiometricAvailable(available);
         setBiometricType(bioType);
 
-        if (lastEmail && !email) {
-          setEmail(lastEmail);
-        }
+        if (lastEmail) setEmail((current) => current || lastEmail);
 
-        if (bioSession?.token || existingToken) {
-          setHasSavedSession(true);
-        }
+        setHasSavedSession(enabled && available && Boolean(bioSession?.token));
       } catch {
         // Fallback gracefully
       }
@@ -96,11 +94,13 @@ export default function LoginScreen() {
     await saveAccessToken(result.accessToken);
     if (finalEmail) {
       await saveLastEmail(finalEmail);
-      await saveBiometricSession({
-        email: finalEmail,
-        token: result.accessToken,
-        user: result.user,
-      });
+      const existingBiometricSession = await getBiometricSession();
+      if (await getBiometricUnlockEnabled() && existingBiometricSession?.email === finalEmail
+          && await isBiometricAvailable()) {
+        await saveBiometricSession({ email: finalEmail, token: result.accessToken });
+      } else {
+        await clearBiometricSession();
+      }
     }
 
     dispatch(setSessionUser(result.user));
@@ -114,6 +114,10 @@ export default function LoginScreen() {
     setBiometricLoading(true);
 
     try {
+      if (!await getBiometricUnlockEnabled()) {
+        setHasSavedSession(false);
+        return;
+      }
       const bioResult = await authenticateWithBiometric(
         `Sign in to Virasat with ${biometricType}`
       );
@@ -178,7 +182,7 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!canContinue || loading || biometricLoading) return;
+    if (!canContinue || loading || googleLoading || biometricLoading) return;
     setLoading(true);
     setError('');
 

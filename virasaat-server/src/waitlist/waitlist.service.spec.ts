@@ -19,11 +19,23 @@ describe('WaitlistService', () => {
       count: jest.fn(),
       createQueryBuilder: jest.fn(),
       create: jest.fn().mockImplementation((dto) => dto),
-      save: jest.fn().mockImplementation(async (record) => ({ id: 'mock-uuid', ...record })),
+      save: jest
+        .fn()
+        .mockImplementation(async (record) => ({ id: 'mock-uuid', ...record })),
+      manager: {
+        transaction: jest.fn((run: any) =>
+          run({
+            query: jest.fn().mockResolvedValue([]),
+            getRepository: () => mockWaitlistRepo,
+          }),
+        ),
+      },
     };
 
     mockMailService = {
-      sendMail: jest.fn().mockResolvedValue({ success: true, messageId: 'test-id' }),
+      sendMail: jest
+        .fn()
+        .mockResolvedValue({ success: true, messageId: 'test-id' }),
     };
 
     mockConfigService = {

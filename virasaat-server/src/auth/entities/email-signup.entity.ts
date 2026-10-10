@@ -33,6 +33,9 @@ export class EmailSignup {
   @Column()
   otpExpiresAt!: Date;
 
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  lastSentAt!: Date;
+
   @Column({ default: 0 })
   attempts!: number;
 

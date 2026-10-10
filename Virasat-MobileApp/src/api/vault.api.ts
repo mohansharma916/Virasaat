@@ -34,6 +34,13 @@ export interface Vault {
   updatedAt: string;
 }
 
+export interface LegacyItemDetail extends LegacyItem {
+  hasFile: boolean;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+}
+
 // A correlation key, not an authentication secret. Keep it stable across retries.
 export function createItemRequestKey() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
@@ -66,8 +73,20 @@ export async function listLegacyItems(): Promise<LegacyItem[]> {
   return response.data;
 }
 
-export async function getLegacyItem(id: string): Promise<LegacyItem> {
-  const response = await api.get<LegacyItem>(`/vault/items/${id}`);
+export async function getLegacyItem(id: string, signal?: AbortSignal): Promise<LegacyItemDetail> {
+  const response = await api.get<LegacyItemDetail>(`/vault/items/${id}`, { signal });
+  return response.data;
+}
+
+export async function updateLegacyItem(id: string, data: { title?: string; description?: string }, signal?: AbortSignal): Promise<LegacyItemDetail> {
+  const response = await api.patch<LegacyItemDetail>(`/vault/items/${id}`, data, { signal });
+  return response.data;
+}
+
+export async function downloadLegacyItem(id: string, signal?: AbortSignal): Promise<ArrayBuffer> {
+  const response = await api.get<ArrayBuffer>(`/vault/items/${id}/file`, {
+    responseType: 'arraybuffer', timeout: 120_000, signal,
+  });
   return response.data;
 }
 

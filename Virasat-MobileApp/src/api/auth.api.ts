@@ -96,6 +96,10 @@ export async function getCurrentUser(): Promise<AuthenticatedUser> {
   return response.data;
 }
 
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout');
+}
+
 export interface ForgotPasswordResponse {
   status: 'OTP_SENT' | 'GOOGLE_ACCOUNT' | 'NOT_FOUND';
   authMethod?: 'PASSWORD' | 'GOOGLE';

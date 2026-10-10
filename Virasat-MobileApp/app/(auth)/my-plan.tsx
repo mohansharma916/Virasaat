@@ -13,19 +13,18 @@ import { router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { PlanCode, SubscriptionStatus } from '@/src/types/subscription.types';
+import { Feature, PlanCode, PlanLimit, SubscriptionStatus } from '@/src/types/subscription.types';
 import { useSubscription } from '@/src/store/subscription.slice';
 import { PurchaseService } from '@/src/services/purchase.service';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 
 export default function MyPlanScreen() {
   const insets = useSafeAreaInsets();
-  const { currentPlan, subscription, subscriptionStatus, restorePurchases, refreshSubscription } =
+  const { currentPlan, subscription, subscriptionStatus, effectivePlanCode, purchaseVerification, getLimit, canUseFeature, restorePurchases, refreshSubscription } =
     useSubscription();
   const [restoring, setRestoring] = useState(false);
 
   const isStarter = !currentPlan || currentPlan.code === PlanCode.STARTER;
-  const isSecure = currentPlan?.code === PlanCode.SECURE;
   const isFamily = currentPlan?.code === PlanCode.FAMILY;
 
   const handleManage = async () => {
@@ -44,7 +43,7 @@ export default function MyPlanScreen() {
       setRestoring(true);
       await restorePurchases();
       await refreshSubscription();
-      Alert.alert('Purchases Restored', 'Your latest subscription status is refreshed.');
+      Alert.alert('Subscription Refreshed', 'Your saved account subscription was refreshed. Store purchase restoration is not available yet.');
     } catch (error) {
       Alert.alert('Restore Failed', getApiErrorMessage(error));
     } finally {
@@ -140,39 +139,15 @@ export default function MyPlanScreen() {
 
           <View style={styles.divider} />
 
-          <Text style={styles.benefitsTitle}>ACTIVE ENTITLEMENTS</Text>
+          <Text style={styles.benefitsTitle}>CURRENT ACCESS: {effectivePlanCode}</Text>
+          {purchaseVerification === 'UNVERIFIED' && <Text style={styles.subtitle}>This saved paid plan has no verified store purchase. Starter access applies until billing verification is available.</Text>}
           <View style={styles.benefitsList}>
-            {isStarter ? (
-              <>
-                <BenefitRow text="1 Trusted Person" />
-                <BenefitRow text="Standard monthly life check-in" />
-                <BenefitRow text="Standard release policy" />
-                <BenefitRow text="Up to 3 written messages & 1 video message" />
-                <BenefitRow text="Basic activity history" />
-              </>
-            ) : isSecure ? (
-              <>
-                <BenefitRow text="Up to 3 Trusted Persons" />
-                <BenefitRow text="Custom check-in frequency & schedules" />
-                <BenefitRow text="Customizable grace period" />
-                <BenefitRow text="Recipient verification options" />
-                <BenefitRow text="Full item-level recipient assignment" />
-                <BenefitRow text="Unlimited personal written messages" />
-                <BenefitRow text="Up to 10 personal video messages" />
-                <BenefitRow text="Full activity history" />
-              </>
-            ) : (
-              <>
-                <BenefitRow text="Up to 8 Trusted Persons" />
-                <BenefitRow text="Advanced release policies" />
-                <BenefitRow text="Multiple independent verifiers" />
-                <BenefitRow text="Multi-person verification workflow" />
-                <BenefitRow text="Advanced escalation rules" />
-                <BenefitRow text="Family & emergency instructions" />
-                <BenefitRow text="Up to 50 personal video messages" />
-                <BenefitRow text="Priority support" />
-              </>
-            )}
+            <BenefitRow text={`${getLimit(PlanLimit.TRUSTED_PERSONS) ?? 'Unlimited'} trusted person(s)`} />
+            <BenefitRow text={`${getLimit(PlanLimit.PERSONAL_MESSAGES) ?? 'Unlimited'} written messages`} />
+            <BenefitRow text={`${getLimit(PlanLimit.VIDEO_MESSAGES) ?? 'Unlimited'} video messages`} />
+            <BenefitRow text={canUseFeature(Feature.CUSTOM_CHECK_IN) ? 'Monthly or weekly schedule preferences' : 'Monthly schedule preferences'} />
+            <BenefitRow text="Private item storage and recipient assignment preferences" />
+            <Text style={styles.subtitle}>Limits reflect your effective account access. Automatic reminders, recipient invitations, inheritance release, and paid checkout are not available yet.</Text>
           </View>
         </View>
 
@@ -188,13 +163,13 @@ export default function MyPlanScreen() {
               ]}
             >
               <Text style={styles.primaryActionText}>
-                {isStarter ? 'Upgrade to Secure or Family' : 'Upgrade to Family'}
+                View planned paid tiers
               </Text>
               <Text style={styles.actionArrow}>→</Text>
             </Pressable>
           )}
 
-          {!isStarter && (
+          {!isStarter && purchaseVerification === 'VERIFIED' && (
             <Pressable
               accessibilityRole="button"
               onPress={handleManage}
@@ -221,7 +196,7 @@ export default function MyPlanScreen() {
             {restoring ? (
               <ActivityIndicator size="small" color={colors.primary.deepForest} />
             ) : (
-              <Text style={styles.restoreActionText}>Restore Purchases</Text>
+              <Text style={styles.restoreActionText}>Refresh Account Subscription</Text>
             )}
           </Pressable>
         </View>

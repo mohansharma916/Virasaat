@@ -17,79 +17,39 @@ export default function HeartbeatProtocol() {
 
   const steps = [
     {
-      step: '01',
-      title: '1-Tap Monthly Check-In',
-      subtitle: 'Takes 2 seconds on your phone',
-      badge: 'Normal State',
-      badgeColor: '#35B86B',
-      icon: Activity,
-      desc: 'Once a month, Virasaat sends a simple notification. A quick tap with Face ID or fingerprint confirms you are safe and healthy.',
-      details: [
-        'Takes only 2 seconds once a month',
-        'Works smoothly across timezones when you travel',
-        'Quiet and discrete: No annoying popups',
-      ],
-      systemLog: 'CHECK_IN_STATUS::OK -> Next monthly check scheduled in 30 days.',
+      step: '01', title: 'Record a Check-In', subtitle: 'Current app capability',
+      badge: 'Check-In', badgeColor: '#35B86B', icon: Activity,
+      desc: 'The app lets you configure a check-in schedule and record a check-in. This records account activity; it is not proof of health or an emergency response service.',
+      details: ['Choose available schedule settings in the app', 'Confirm a check-in from your account', 'Review the recorded date and next due date'],
+      systemLog: 'DEMO::Check-in recorded. No emergency release authorized.',
     },
     {
-      step: '02',
-      title: 'Gentle Reminders',
-      subtitle: 'Zero false alarms when traveling',
-      badge: 'Reminder Window',
-      badgeColor: '#F4A62A',
-      icon: Bell,
-      desc: 'If you are on vacation, out of cell service, or simply busy, nothing triggers. Virasaat sends gentle reminders via Email, App, and SMS over several weeks.',
-      details: [
-        'Multi-channel: Sent via Email, Push, and SMS',
-        'Vacation Mode: Pause check-ins for up to 60 days',
-        'Completely private: Reminders never mention vault contents',
-      ],
-      systemLog: 'REMINDER::Gentle check-in reminder sent via Email & SMS.',
+      step: '02', title: 'Reminder Delivery', subtitle: 'Planned capability',
+      badge: 'Planned', badgeColor: '#F4A62A', icon: Bell,
+      desc: 'Reliable scheduled reminders are still being developed. SMS and push delivery are not currently available. Keep a separate reminder for important tasks.',
+      details: ['Email transport is used for account messages', 'Scheduled reminder delivery is not guaranteed', 'Vacation pause is not currently available'],
+      systemLog: 'DEMO::Scheduled reminder workflow is planned.',
     },
     {
-      step: '03',
-      title: '14-Day Safety Buffer',
-      subtitle: 'Plenty of time to respond',
-      badge: 'Safety Buffer',
-      badgeColor: '#D4AF37',
-      icon: Clock,
-      desc: 'Even if scheduled check-ins are missed, there is a full 14-day safety window before anything happens. This ensures lost phones or hospital stays never cause accidental disclosure.',
-      details: [
-        '14 full days to log in from any phone or computer',
-        'Backup ping sent to your alternate email or phone',
-        'All your vault data remains 100% locked and encrypted',
-      ],
-      systemLog: 'SAFETY_WINDOW::14-day grace buffer active. Secondary backup ping sent.',
+      step: '03', title: 'Safety Review', subtitle: 'Planned capability',
+      badge: 'Planned', badgeColor: '#D4AF37', icon: Clock,
+      desc: 'A future release workflow will need explicit policies, a verified review process and a tested waiting period. The current app does not start a 14-day release countdown.',
+      details: ['Missed check-ins do not authorize release', 'No guarantee of emergency detection', 'Keep independent emergency arrangements'],
+      systemLog: 'DEMO::Release workflow unavailable.',
     },
     {
-      step: '04',
-      title: 'Family Confirmation',
-      subtitle: 'Human verification before anything opens',
-      badge: 'Verification',
-      badgeColor: '#3D68C5',
-      icon: UserCheck,
-      desc: 'Only after the 14-day safety buffer expires does Virasaat reach out to your designated trusted person (e.g., spouse or elder sibling). They must verify their identity.',
-      details: [
-        'You choose who your trusted contact is in advance',
-        'Option to require 2 family members to agree',
-        'Prevents foul play: Nobody can force an early handover',
-      ],
-      systemLog: 'FAMILY_VERIFICATION::Verification link sent to designated contact.',
+      step: '04', title: 'Trusted People', subtitle: 'Save details now; invitations planned',
+      badge: 'Saved Contacts', badgeColor: '#3D68C5', icon: UserCheck,
+      desc: 'You can organize trusted person details and intended assignments. Invitation delivery, acceptance and recipient identity verification are not currently available.',
+      details: ['Get permission before recording contact details', 'Saving a person does not send an invitation', 'Saving an assignment does not grant access'],
+      systemLog: 'DEMO::Contact saved. No invitation or access granted.',
     },
     {
-      step: '05',
-      title: 'Safe Handover to Family',
-      subtitle: 'Clear steps without confusion or stress',
-      badge: 'Handover',
-      badgeColor: '#ECC862',
-      icon: KeyRound,
-      desc: 'Once verified, your loved ones get clear, simple instructions: bank and investment folios to your spouse, legal documents to your executor, and personal videos to your kids.',
-      details: [
-        'Clear step-by-step claiming guide for banks, funds, and insurance',
-        'Each person only receives what you designated for them',
-        'Personal videos and letters preserved forever',
-      ],
-      systemLog: 'HANDOVER_COMPLETE::Encrypted vault items safely delivered to family.',
+      step: '05', title: 'Family Handover', subtitle: 'Not currently available',
+      badge: 'Planned', badgeColor: '#ECC862', icon: KeyRound,
+      desc: 'Automated family handover and recipient access are disabled while verified release controls are developed. Do not rely on the app to deliver accounts, documents or personal messages in an emergency.',
+      details: ['No automatic release of vault items', 'No milestone delivery of personal messages', 'Maintain your own estate and emergency plan'],
+      systemLog: 'DEMO::Handover disabled. Vault items have not been delivered.',
     },
   ];
 
@@ -120,12 +80,12 @@ export default function HeartbeatProtocol() {
               marginBottom: '16px',
             }}
           >
-            How the Automatic <br />
-            <span className="text-gradient-gold">Safety Check-In Works</span>
+            Check-Ins Today. <br />
+            <span className="text-gradient-gold">Family Handover Is Planned</span>
           </h2>
 
           <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-            Simple monthly check-ins that protect your family if you ever stop responding. 100% private today, with guaranteed zero false alarms.
+            Explore the current check-in tools and the planned family workflow. This interactive illustration does not send notifications or release any data.
           </p>
         </div>
 

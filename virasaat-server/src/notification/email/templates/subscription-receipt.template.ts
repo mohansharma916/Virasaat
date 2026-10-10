@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,8 +15,7 @@ import {
 export function renderSubscriptionReceiptTemplate(
   data: SubscriptionReceiptEmailData,
 ): RenderedEmail {
-  const manageUrl =
-    data.manageUrl || 'https://virasaat.com/account/subscription';
+  const manageUrl = data.manageUrl || getEmailAppLink('home');
   const features = data.features || [
     'Unlimited encrypted legacy items & documents',
     'Up to 10 designated Trusted Contacts & Verifiers',
@@ -36,7 +36,7 @@ export function renderSubscriptionReceiptTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 22px;">
             Hello ${escapeHtml(data.recipientName)},<br />
-            Your upgrade to <strong>${escapeHtml(data.planName)}</strong> is active. You have unlocked our comprehensive legacy protection suite, ensuring your loved ones have unconditional security and clarity.
+            This illustrative receipt shows <strong>${escapeHtml(data.planName)}</strong>. Paid checkout is unavailable, and this sample does not activate a subscription.
           </p>
         </td>
       </tr>
@@ -116,7 +116,7 @@ export function renderSubscriptionReceiptTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: manageUrl, label: 'Manage Subscription & Vault' })}
+          ${renderCtaButton({ url: manageUrl, label: 'Open Virasaat App' })}
         </td>
       </tr>
     </table>
@@ -125,7 +125,9 @@ export function renderSubscriptionReceiptTemplate(
   const html = wrapInEmailLayout({
     preheader: `Thank you for subscribing to ${data.planName}. Your receipt #${data.invoiceNumber} is inside.`,
     title: subject,
-    contentHtml,
+    contentHtml:
+      `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
+      contentHtml,
     securityNotice:
       'This payment confirmation receipt was issued for your Virasaat subscription purchase.',
   });
@@ -151,12 +153,14 @@ ${manageUrl}
 
   const text = wrapInPlainTextLayout({
     title: 'Subscription Confirmation',
-    bodyText,
+    bodyText:
+      'Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.\n\n' +
+      bodyText,
   });
 
   return {
     templateType: EmailTemplateType.SUBSCRIPTION_RECEIPT,
-    subject,
+    subject: '[Illustrative sample — workflow unavailable] ' + subject,
     html,
     text,
   };

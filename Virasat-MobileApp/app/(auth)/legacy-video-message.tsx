@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Pressable,
   ScrollView,
@@ -15,6 +16,7 @@ import {
   useCameraPermissions,
   useMicrophonePermissions,
 } from 'expo-camera';
+import { File } from 'expo-file-system';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -28,6 +30,13 @@ import { PlanLimit } from '@/src/types/subscription.types';
 import { UpgradeModal } from '@/src/components/UpgradeModal';
 
 const MAX_DURATION_SECONDS = 5 * 60;
+const MAX_RECORDING_BYTES = 24 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+function deleteRecording(uri: string | null) {
+  if (!uri) return;
+  try { const file = new File(uri); if (file.exists) file.delete(); } catch { /* Device cache may already be cleared. */ }
+}
 
 export default function LegacyVideoMessageScreen() {
   const insets = useSafeAreaInsets();
@@ -62,6 +71,22 @@ export default function LegacyVideoMessageScreen() {
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const requestKey = useRef(createItemRequestKey());
   const busy = useRef(false);
+  const alive = useRef(true);
+  const cachedRecording = useRef<string | null>(null);
+  const uploadController = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    alive.current = true;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') cameraRef.current?.stopRecording();
+    });
+    return () => {
+      alive.current = false;
+      subscription.remove();
+      uploadController.current?.abort();
+      deleteRecording(cachedRecording.current);
+    };
+  }, []);
 
   const videoLimit = getLimit(PlanLimit.VIDEO_MESSAGES);
   const currentVideoCount = items.filter((item) => item.type === 'VIDEO').length;
@@ -72,26 +97,31 @@ export default function LegacyVideoMessageScreen() {
       setUpgradeModalVisible(true);
       return;
     }
-    if (!cameraRef.current || recording) {
+    if (!cameraRef.current || recording || busy.current) {
       return;
     }
 
     setError('');
+    deleteRecording(cachedRecording.current);
+    cachedRecording.current = null;
     setRecordedUri(null);
     setRecording(true);
 
     try {
       const result = await cameraRef.current.recordAsync({
         maxDuration: MAX_DURATION_SECONDS,
+        maxFileSize: MAX_RECORDING_BYTES,
       });
 
       if (result?.uri) {
+        if (!alive.current) { deleteRecording(result.uri); return; }
+        cachedRecording.current = result.uri;
         setRecordedUri(result.uri);
       }
     } catch {
-      setError('We could not record the video. Please try again.');
+      if (alive.current) setError('We could not record the video. Please try again.');
     } finally {
-      setRecording(false);
+      if (alive.current) setRecording(false);
     }
   };
 
@@ -111,8 +141,16 @@ export default function LegacyVideoMessageScreen() {
 
     busy.current = true;
     setSaving(true);
+    setError('');
+    const controller = new AbortController();
+    uploadController.current = controller;
 
     try {
+      const recordingFile = new File(recordedUri);
+      if (!recordingFile.exists || !recordingFile.size || recordingFile.size > MAX_UPLOAD_BYTES) {
+        throw new Error('Videos must be no larger than 25 MB. Please record a shorter message.');
+      }
+      const isQuickTime = recordedUri.split('?')[0].toLowerCase().endsWith('.mov');
       const item = await uploadLegacyItem({
         requestKey: requestKey.current,
         type: 'VIDEO',
@@ -121,11 +159,14 @@ export default function LegacyVideoMessageScreen() {
         description: 'A video message was recorded on the owner’s device.',
         file: {
           uri: recordedUri,
-          name: `virasat-video-${Date.now()}.mp4`,
-          mimeType: 'video/mp4',
+          name: `virasat-video-${Date.now()}.${isQuickTime ? 'mov' : 'mp4'}`,
+          mimeType: isQuickTime ? 'video/quicktime' : 'video/mp4',
         },
-      }, { onProgress: setProgress });
+      }, { signal: controller.signal, onProgress: setProgress });
+      if (!alive.current) return;
       dispatch(addLegacyItem(item));
+      deleteRecording(cachedRecording.current);
+      cachedRecording.current = null;
       const category = parseLegacyCategories(params.category)[0];
 
       router.replace({
@@ -135,12 +176,13 @@ export default function LegacyVideoMessageScreen() {
         },
       });
     } catch (requestError) {
+      if (!alive.current || controller.signal.aborted) return;
       const msg = getApiErrorMessage(requestError, 'We could not save your video message. Please try again.');
       setError(msg);
-      Alert.alert('S3 Upload Failed', msg);
+      Alert.alert('Video save failed', msg);
     } finally {
       busy.current = false;
-      setSaving(false);
+      if (alive.current) setSaving(false);
     }
   };
 
@@ -148,6 +190,8 @@ export default function LegacyVideoMessageScreen() {
     if (busy.current) return;
     requestKey.current = createItemRequestKey();
     setError('');
+    deleteRecording(cachedRecording.current);
+    cachedRecording.current = null;
     setRecordedUri(null);
   };
 
@@ -264,6 +308,7 @@ export default function LegacyVideoMessageScreen() {
           <View style={styles.cameraCard}>
             <View style={styles.cameraFrame}>
               <CameraView
+                videoQuality="480p"
                 ref={cameraRef}
                 style={styles.camera}
                 facing="front"
@@ -329,8 +374,7 @@ export default function LegacyVideoMessageScreen() {
             </Text>
 
             <Text style={styles.previewText}>
-              Your message is ready. Preview/review controls
-              will be connected to encrypted vault storage next.
+              Your message is ready to save. Recording stops after five minutes or about 24 MB, whichever comes first.
             </Text>
 
             <View style={styles.fileCard}>
@@ -368,9 +412,7 @@ export default function LegacyVideoMessageScreen() {
             </Text>
 
             <Text style={styles.securityText}>
-              Your video is intended for your Virasat vault and
-              should remain private until your release conditions
-              are met.
+              Your saved video is encrypted in your private vault. Automatic inheritance release is not available yet.
             </Text>
           </View>
         </View>

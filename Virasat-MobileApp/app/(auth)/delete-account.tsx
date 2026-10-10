@@ -75,7 +75,7 @@ export default function DeleteAccountScreen() {
           <Text style={styles.eyebrow}>CRITICAL ACTION</Text>
           <Text style={styles.title}>Delete Account</Text>
           <Text style={styles.subtitle}>
-            Please review the security and vault retention implications below before continuing.
+            Account deletion is not available in this version. This screen reports availability and does not submit a deletion request.
           </Text>
         </View>
 
@@ -86,7 +86,7 @@ export default function DeleteAccountScreen() {
           <View style={styles.warningContent}>
             <Text style={styles.warningTitle}>Permanent Vault Deletion</Text>
             <Text style={styles.warningText}>
-              Account deletion permanently deletes your vault content, recipient assignments, invitations, check-ins, and active sessions.
+              A future deletion service must remove your vault content and account records according to its documented retention policy.
             </Text>
             <Text style={[styles.warningText, { marginTop: 6 }]}>
               Copies already downloaded or retrieved by authorized recipients cannot be remotely recalled.
@@ -97,7 +97,7 @@ export default function DeleteAccountScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Verification & Audit Requirements</Text>
           <Text style={styles.infoText}>
-            Before account deletion can be completed, Virasat checks for active custody cases, enforces audit-retention timelines, and requires two-factor identity verification.
+            A complete deletion workflow, including identity checks, retention rules, and removal of stored backups, still needs to be implemented. No deletion service is active.
           </Text>
         </View>
 
@@ -105,7 +105,7 @@ export default function DeleteAccountScreen() {
           <View style={styles.statusBox}>
             <ActivityIndicator color={colors.primary.deepForest} size="small" />
             <Text style={styles.statusText}>
-              Checking account deletion eligibility…
+              Checking deletion availability…
             </Text>
           </View>
         ) : null}
@@ -141,7 +141,7 @@ export default function DeleteAccountScreen() {
               pressed && styles.buttonPressed,
             ]}
           >
-            <Text style={styles.secondaryButtonText}>Check Eligibility Again</Text>
+            <Text style={styles.secondaryButtonText}>Check Availability Again</Text>
           </Pressable>
         )}
 

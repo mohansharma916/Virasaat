@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 
 export class VerifyEmailDto {
   @IsEmail()
@@ -7,5 +13,6 @@ export class VerifyEmailDto {
   @IsString()
   @IsNotEmpty()
   @Length(6, 6)
+  @Matches(/^\d{6}$/)
   otp!: string;
 }

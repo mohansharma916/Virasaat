@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,7 +21,11 @@ import {
 import {
   getBiometricUnlockEnabled,
   saveBiometricUnlockEnabled,
+  clearBiometricSession,
+  getAccessToken,
+  saveBiometricSession,
 } from '@/src/storage/auth.storage';
+import { getCurrentUser } from '@/src/api/auth.api';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -85,8 +88,12 @@ export default function SecurityScreen() {
     setError('');
 
     if (!value) {
-      setBiometricEnabled(false);
-      await saveBiometricUnlockEnabled(false);
+      try {
+        await clearBiometricSession();
+        setBiometricEnabled(false);
+      } catch {
+        setError('Unable to update secure storage. Please try again.');
+      }
       return;
     }
 
@@ -105,8 +112,11 @@ export default function SecurityScreen() {
       );
 
       if (result.success) {
-        setBiometricEnabled(true);
+        const [token, user] = await Promise.all([getAccessToken(), getCurrentUser()]);
+        if (!token) throw new Error('Sign in again before enabling biometric unlock.');
+        await saveBiometricSession({ email: user.email, token });
         await saveBiometricUnlockEnabled(true);
+        setBiometricEnabled(true);
       } else {
         setBiometricEnabled(false);
         setError(
@@ -127,11 +137,6 @@ export default function SecurityScreen() {
     await saveBiometricUnlockEnabled(biometricEnabled);
     router.replace('/(auth)/home');
   };
-
-  const biometricName =
-    Platform.OS === 'ios'
-      ? 'Face ID / Touch ID'
-      : 'Device biometrics';
 
   return (
     <SafeAreaView style={styles.safeArea}>

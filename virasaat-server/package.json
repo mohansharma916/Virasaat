@@ -8,6 +8,8 @@
   "scripts": {
     "db:migrate:prd21": "node scripts/migrate-prd21.cjs",
     "db:migrate:subscriptions": "node scripts/migrate-subscriptions.cjs",
+    "db:migrate:auth-security": "node scripts/migrate-auth-security.cjs",
+    "db:migrate:vault-check-in": "node scripts/migrate-vault-check-in.cjs",
     "email:previews": "npm run build && node scripts/generate-email-previews.cjs",
     "email:test": "node scripts/test-email.cjs",
     "build": "nest build",

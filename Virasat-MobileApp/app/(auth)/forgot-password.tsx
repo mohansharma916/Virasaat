@@ -46,10 +46,10 @@ const RESEND_COOLDOWN = 60;
 
 export default function ForgotPasswordScreen() {
   const dispatch = useAppDispatch();
-  const searchParams = useLocalSearchParams<{ email?: string }>();
+  const searchParams = useLocalSearchParams<{ email?: string; mode?: string }>();
 
   // State
-  const [step, setStep] = useState<Step>('EMAIL_INPUT');
+  const [step, setStep] = useState<Step>(searchParams.mode === 'reset' && searchParams.email ? 'RESET_FORM' : 'EMAIL_INPUT');
   const [email, setEmail] = useState((searchParams.email ?? '').trim().toLowerCase());
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [newPassword, setNewPassword] = useState('');
@@ -69,6 +69,15 @@ export default function ForgotPasswordScreen() {
 
   // OTP inputs ref
   const otpInputs = useRef<(TextInput | null)[]>([]);
+
+  useEffect(() => {
+    if (searchParams.mode === 'reset' && searchParams.email) {
+      setEmail(searchParams.email.trim().toLowerCase());
+      setStep('RESET_FORM');
+      setOtp(Array(OTP_LENGTH).fill(''));
+      setError('');
+    }
+  }, [searchParams.mode, searchParams.email]);
 
   // Countdown timer for resend
   useEffect(() => {

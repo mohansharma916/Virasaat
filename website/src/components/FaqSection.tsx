@@ -133,7 +133,7 @@ export default function FaqSection({ onOpenWaitlist }: FaqSectionProps) {
           }}
         >
           <p style={{ fontSize: '0.95rem', color: 'var(--sage)', marginBottom: '12px' }}>
-            Ready to secure your family's accounts and memories?
+            Ready to secure your family&apos;s accounts and memories?
           </p>
           <button
             onClick={onOpenWaitlist}

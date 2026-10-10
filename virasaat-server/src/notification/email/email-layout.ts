@@ -1,4 +1,5 @@
 import { EmailLayoutOptions } from './email-template.types';
+import { getEmailAppLink } from './email-links';
 
 export const BRAND_COLORS = {
   primaryForest: '#0B5D4B',
@@ -35,7 +36,7 @@ export function wrapInEmailLayout(options: EmailLayoutOptions): string {
     title,
     contentHtml,
     recipientEmail,
-    unsubscribeUrl = 'https://virasaat.com/account/notifications',
+    unsubscribeUrl,
     securityNotice = 'This is an automated communication regarding your Virasaat digital vault and security settings.',
   } = options;
 
@@ -190,10 +191,10 @@ export function wrapInEmailLayout(options: EmailLayoutOptions): string {
                         </td>
                         <td style="padding-left: 12px;">
                           <div style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: ${BRAND_COLORS.deepForest};">
-                            Zero-Knowledge Encrypted Protection
+                            Server-Managed Encryption
                           </div>
                           <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: ${BRAND_COLORS.textSecondary}; line-height: 15px; margin-top: 2px;">
-                            Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+                            Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
                           </div>
                         </td>
                       </tr>
@@ -231,20 +232,24 @@ export function wrapInEmailLayout(options: EmailLayoutOptions): string {
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center">
                       <tr>
                         <td style="padding: 0 10px;">
-                          <a href="https://virasaat.com/security" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Security Center</a>
+                          <a href="${escapeHtml(getEmailAppLink('security'))}" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Security Settings</a>
                         </td>
                         <td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
                         <td style="padding: 0 10px;">
-                          <a href="https://virasaat.com/privacy" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Privacy Policy</a>
+                          <a href="https://virasaat.app/privacy" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Privacy Policy</a>
                         </td>
                         <td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
                         <td style="padding: 0 10px;">
-                          <a href="https://virasaat.com/terms" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Terms of Service</a>
+                          <a href="https://virasaat.app/terms" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Terms of Service</a>
                         </td>
-                        <td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
+                        ${
+                          unsubscribeUrl
+                            ? `<td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
                         <td style="padding: 0 10px;">
-                          <a href="${unsubscribeUrl}" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.textMuted}; text-decoration: underline;">Preferences</a>
-                        </td>
+                          <a href="${escapeHtml(unsubscribeUrl)}" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.textMuted}; text-decoration: underline;">Preferences</a>
+                        </td>`
+                            : ''
+                        }
                       </tr>
                     </table>
                   </td>
@@ -279,8 +284,10 @@ export function wrapInPlainTextLayout(options: {
   bodyText: string;
   securityNotice?: string;
 }): string {
-  const divider = '============================================================';
-  const subDivider = '------------------------------------------------------------';
+  const divider =
+    '============================================================';
+  const subDivider =
+    '------------------------------------------------------------';
   const year = new Date().getFullYear();
 
   return `
@@ -295,13 +302,13 @@ ${options.bodyText}
 
 ${subDivider}
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
 ${options.securityNotice || 'This is an automated communication regarding your Virasaat digital vault and security settings.'}
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: ${getEmailAppLink('security')}
+Privacy Policy: https://virasaat.app/privacy
+Terms of Service: https://virasaat.app/terms
 
 (C) ${year} Virasaat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
@@ -320,7 +327,7 @@ export function renderCtaButton(options: {
   const { url, label, variant = 'primary' } = options;
 
   let bgColor = BRAND_COLORS.primaryForest;
-  let textColor = '#FFFFFF';
+  const textColor = '#FFFFFF';
   let shadow = 'rgba(11, 93, 75, 0.25)';
 
   if (variant === 'warning' || variant === 'danger') {
@@ -388,7 +395,7 @@ export function renderStatusBadge(options: {
   </div>`;
 }
 
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
   if (!str) return '';
   return str
     .replace(/&/g, '&amp;')

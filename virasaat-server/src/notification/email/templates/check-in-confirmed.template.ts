@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,7 +15,7 @@ import {
 export function renderCheckInConfirmedTemplate(
   data: CheckInConfirmedEmailData,
 ): RenderedEmail {
-  const dashboardUrl = data.dashboardUrl || 'https://virasaat.com/dashboard';
+  const dashboardUrl = data.dashboardUrl || getEmailAppLink('home');
   const cadence = data.cadence || 'Monthly';
   const subject = `Check-in Confirmed — Your Virasaat Vault is Secure`;
 
@@ -28,7 +29,7 @@ export function renderCheckInConfirmedTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Hello ${escapeHtml(data.recipientName)},<br />
-            Thank you for checking in. We have successfully registered your confirmation. All contingency protocols remain on standby, and your digital vault remains encrypted and protected.
+            Thank you for checking in. We have successfully registered your confirmation. Your activity has been recorded. Scheduled reminders, escalation, and inheritance release are not available yet.
           </p>
         </td>
       </tr>
@@ -86,7 +87,7 @@ export function renderCheckInConfirmedTemplate(
       <tr>
         <td style="padding-top: 10px;">
           <p style="font-family: 'Inter', sans-serif; font-size: 13px; color: ${BRAND_COLORS.textMuted}; line-height: 20px; text-align: center;">
-            Need to change your check-in frequency or preferred reminder hours? You can adjust these anytime in your <a href="${dashboardUrl}/check-in-settings" style="color: ${BRAND_COLORS.primaryForest};">Check-in Preferences</a>.
+            To change check-in preferences, open the app and select Check-in Preferences. Scheduled reminder delivery is not available yet.
           </p>
         </td>
       </tr>
@@ -111,7 +112,7 @@ CONFIRMATION DETAILS:
 - Frequency: ${cadence}
 - Next Scheduled Check-In: ${data.nextCheckInDate}
 
-Your digital vault remains encrypted and protected under your control.
+Your check-in activity has been recorded. Scheduled reminders, escalation, and inheritance release are not available yet.
 
 View your vault: ${dashboardUrl}
 `;

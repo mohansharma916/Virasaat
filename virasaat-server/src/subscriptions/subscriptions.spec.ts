@@ -1,456 +1,252 @@
-jest.mock('../auth/guards/jwt-auth.guard', () => ({ JwtAuthGuard: class {} }));
 jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
 
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { validate } from 'class-validator';
 import { PlanEntitlementService } from './plan-entitlement.service';
 import {
   DEFAULT_PLANS,
-  Feature,
   PlanCode,
-  PlanLimit,
   SubscriptionStatus,
 } from './subscription.constants';
-import { Plan } from './entities/plan.entity';
 import { Subscription } from './entities/subscription.entity';
-import { ReleasePolicySnapshot } from './entities/release-policy-snapshot.entity';
-import {
-  ReleasePolicy,
-  ReleaseTrigger,
-  VerificationLevel,
-} from '../release/entities/release-policy.entity';
-import { RecipientsService } from '../recipients/recipients.service';
-import { CheckInService } from '../check-in/check-in.service';
-import { CheckInCadence } from '../check-in/entities/check-in-policy.entity';
-import { ReleaseService } from '../release/release.service';
+import { DowngradeDto } from './dto/downgrade.dto';
 
-function createMockRepository<T = any>() {
-  const store = new Map<string, any>();
-  return {
-    store,
-    findOne: jest.fn(async (options: any) => {
-      if (options?.where?.code) {
-        const found = Array.from(store.values()).find(
-          (item: any) => item.code === options.where.code,
-        );
-        return found ?? null;
-      }
-      if (options?.where?.userId) {
-        const found = Array.from(store.values()).find(
-          (item: any) => item.userId === options.where.userId,
-        );
-        return found ?? null;
-      }
-      return null;
-    }),
-    find: jest.fn(async () => Array.from(store.values())),
-    count: jest.fn(async () => store.size),
-    create: jest.fn((dto: any) => ({
-      id: dto.id ?? `mock-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      ...dto,
+function fixture() {
+  const plans = DEFAULT_PLANS.map((plan) => ({ ...plan, id: plan.code }));
+  const subscriptions = new Map<string, any>();
+  const snapshots: any[] = [];
+  const policies = new Map<string, any>();
+  let nextId = 0;
+  const repository = {
+    findOne: jest.fn(async ({ where }: any) =>
+      structuredClone(subscriptions.get(where.userId) ?? null),
+    ),
+    create: jest.fn((value: any) => ({
+      id: `subscription-${++nextId}`,
+      ...value,
     })),
-    save: jest.fn(async (entity: any) => {
-      const id =
-        entity.id ?? `mock-${Math.random().toString(36).substring(2, 9)}`;
-      const saved = { ...entity, id };
-      store.set(id, saved);
-      return saved;
+    save: jest.fn(async (value: any) => {
+      subscriptions.set(value.userId, structuredClone(value));
+      return value;
     }),
-    createQueryBuilder: jest.fn(() => ({
-      addSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue(null),
-    })),
+    manager: {} as any,
   };
+  let tail = Promise.resolve();
+  repository.manager.transaction = async (run: any) => {
+    const previous = tail;
+    let release!: () => void;
+    tail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await run({
+        query: jest.fn(),
+        getRepository: (entity: unknown) => {
+          if (entity !== Subscription) throw new Error('Unexpected repository');
+          return repository;
+        },
+      });
+    } finally {
+      release();
+    }
+  };
+  const service = new PlanEntitlementService(
+    {
+      findOne: jest.fn(
+        async ({ where }: any) =>
+          plans.find((plan) => plan.code === where.code) ?? null,
+      ),
+    } as never,
+    repository as never,
+    {
+      create: (value: any) => value,
+      save: jest.fn(async (value: any) => {
+        snapshots.push(value);
+        return value;
+      }),
+    } as never,
+    {
+      findOne: jest.fn(
+        async ({ where }: any) => policies.get(where.userId) ?? null,
+      ),
+    } as never,
+  );
+  const seed = (
+    userId: string,
+    code: PlanCode,
+    overrides: Record<string, unknown> = {},
+  ) => {
+    const value = {
+      id: `subscription-${++nextId}`,
+      userId,
+      plan: plans.find((plan) => plan.code === code),
+      planId: code,
+      status: SubscriptionStatus.ACTIVE,
+      expiryDate: new Date(Date.now() + 86400000),
+      providerVerifiedAt: new Date(),
+      ...overrides,
+    };
+    subscriptions.set(userId, value);
+    return value;
+  };
+  return { service, repository, subscriptions, policies, snapshots, seed };
 }
 
-describe('Subscription and Entitlement System', () => {
-  let planRepo: ReturnType<typeof createMockRepository>;
-  let subRepo: ReturnType<typeof createMockRepository>;
-  let snapshotRepo: ReturnType<typeof createMockRepository>;
-  let policyRepo: ReturnType<typeof createMockRepository>;
-  let service: PlanEntitlementService;
-
-  beforeEach(async () => {
-    planRepo = createMockRepository();
-    subRepo = createMockRepository();
-    snapshotRepo = createMockRepository();
-    policyRepo = createMockRepository();
-
-    service = new PlanEntitlementService(
-      planRepo as any,
-      subRepo as any,
-      snapshotRepo as any,
-      policyRepo as any,
+describe('Subscription security and lifecycle', () => {
+  it('initializes exactly one Starter subscription under concurrent reads', async () => {
+    const { service, subscriptions } = fixture();
+    const result = await Promise.all(
+      Array.from({ length: 10 }, () => service.getUserSubscription('new-user')),
     );
-
-    // Pre-seed the default plans
-    for (const def of DEFAULT_PLANS) {
-      const plan = planRepo.create(def);
-      await planRepo.save(plan);
-    }
-  });
-
-  it('1. New user automatically receives STARTER subscription', async () => {
-    const sub = await service.getUserSubscription('new-user-123');
-    expect(sub).toBeDefined();
-    expect(sub.status).toBe(SubscriptionStatus.ACTIVE);
-    expect(sub.plan.code).toBe(PlanCode.STARTER);
-  });
-
-  it('2. STARTER cannot add a second Trusted Person (limit: 1)', async () => {
-    const recipientRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      count: jest.fn().mockResolvedValue(1), // already has 1
-      create: jest.fn((val: any) => val),
-      save: jest.fn((val: any) => Promise.resolve(val)),
-    };
-    const recipientsService = new RecipientsService(
-      recipientRepo as any,
-      service,
-    );
-
-    await expect(
-      recipientsService.create('starter-user', {
-        name: 'Person Two',
-        email: 'person2@test.com',
-      }),
-    ).rejects.toThrow(ForbiddenException);
-
-    try {
-      await recipientsService.create('starter-user', {
-        name: 'Person Two',
-        email: 'person2@test.com',
-      });
-    } catch (err: any) {
-      const response = err.getResponse();
-      expect(response).toMatchObject({
-        code: 'PLAN_LIMIT_REACHED',
-        feature: PlanLimit.TRUSTED_PERSONS,
-        current: 1,
-        limit: 1,
-        requiredPlan: PlanCode.SECURE,
-      });
-    }
-  });
-
-  it('3. SECURE can add up to 3 Trusted Persons', async () => {
-    // Upgrade user to SECURE
-    await service.verifyAndProcessPurchase('secure-user', {
-      planCode: PlanCode.SECURE,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'valid-secure-token-12345',
+    expect(new Set(result.map((sub) => sub.id)).size).toBe(1);
+    expect(subscriptions.size).toBe(1);
+    expect(result[0]).toMatchObject({
+      plan: { code: PlanCode.STARTER },
+      providerVerifiedAt: null,
     });
-
-    // 0 -> 1 allowed
-    await expect(
-      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 0),
-    ).resolves.not.toThrow();
-    // 1 -> 2 allowed
-    await expect(
-      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 1),
-    ).resolves.not.toThrow();
-    // 2 -> 3 allowed
-    await expect(
-      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 2),
-    ).resolves.not.toThrow();
-    // 3 -> 4 rejected
-    await expect(
-      service.assertWithinLimit('secure-user', PlanLimit.TRUSTED_PERSONS, 3),
-    ).rejects.toThrow(ForbiddenException);
   });
 
-  it('4. FAMILY can add up to 8 Trusted Persons', async () => {
-    await service.verifyAndProcessPurchase('family-user', {
-      planCode: PlanCode.FAMILY,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'valid-family-token-12345',
+  it.each(['abcdefgh', 'previously-accepted-token', ''])(
+    'rejects unverified purchase token %s without subscription writes',
+    async (purchaseToken) => {
+      const { service, repository } = fixture();
+      await expect(
+        service.verifyAndProcessPurchase('buyer', {
+          planCode: PlanCode.FAMILY,
+          provider: 'UNTRUSTED',
+          purchaseToken,
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(repository.save).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not grant premium access to an existing pre-fix fabricated subscription', async () => {
+    const { service, seed } = fixture();
+    seed('buyer', PlanCode.FAMILY, {
+      providerVerifiedAt: null,
+      expiryDate: null,
+      metadata: { verifiedAt: new Date().toISOString() },
     });
-
-    await expect(
-      service.assertWithinLimit('family-user', PlanLimit.TRUSTED_PERSONS, 7),
-    ).resolves.not.toThrow();
-    await expect(
-      service.assertWithinLimit('family-user', PlanLimit.TRUSTED_PERSONS, 8),
-    ).rejects.toThrow(ForbiddenException);
+    const payload = await service.getUserEntitlementsPayload('buyer');
+    expect(payload.plan.code).toBe(PlanCode.FAMILY);
+    expect(payload.effectivePlanCode).toBe(PlanCode.STARTER);
+    expect(payload.purchaseVerification).toBe('UNVERIFIED');
+    expect(payload.entitlements.CUSTOM_CHECK_IN).toBe(false);
+    expect(payload.billingAvailable).toBe(false);
   });
 
-  it('5. STARTER cannot use custom check-in', async () => {
-    const checkInRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((val: any) => val),
-      save: jest.fn((val: any) => Promise.resolve(val)),
-    };
-    const eventRepo = { findOne: jest.fn().mockResolvedValue(null) };
-    const checkInService = new CheckInService(
-      checkInRepo as any,
-      eventRepo as any,
-      service,
-    );
+  it.each([PlanCode.SECURE, PlanCode.FAMILY])(
+    'cannot upgrade Starter through downgrade to %s',
+    async (planCode) => {
+      const { service } = fixture();
+      await expect(
+        service.downgradeSubscription('starter', planCode),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect((await service.getUserSubscription('starter')).plan.code).toBe(
+        PlanCode.STARTER,
+      );
+    },
+  );
 
+  it('rejects same-tier changes and malformed downgrade DTOs', async () => {
+    const { service, seed } = fixture();
+    seed('buyer', PlanCode.SECURE);
     await expect(
-      checkInService.updatePolicy('starter-user', {
-        cadence: CheckInCadence.WEEKLY, // custom
-      }),
-    ).rejects.toThrow(ForbiddenException);
+      service.downgradeSubscription('buyer', PlanCode.SECURE),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(
+      await validate(Object.assign(new DowngradeDto(), { planCode: 'ADMIN' })),
+    ).not.toHaveLength(0);
+    expect(await validate(new DowngradeDto())).not.toHaveLength(0);
   });
 
-  it('6. SECURE can use custom check-in', async () => {
-    await service.verifyAndProcessPurchase('secure-user-2', {
-      planCode: PlanCode.SECURE,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'valid-token-weekly-123',
-    });
-
-    const checkInRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((val: any) => val),
-      save: jest.fn((val: any) => Promise.resolve(val)),
+  it('downgrades only to a lower tier and preserves the saved release policy', async () => {
+    const { service, seed, policies, snapshots } = fixture();
+    const original = seed('buyer', PlanCode.FAMILY);
+    const policy = {
+      id: 'policy',
+      userId: 'buyer',
+      version: 3,
+      verificationRequired: true,
+      escalationConfig: { requiredVerifiers: ['one', 'two'] },
     };
-    const eventRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((v: any) => v),
-      save: jest.fn((v: any) => Promise.resolve(v)),
-    };
-    const checkInService = new CheckInService(
-      checkInRepo as any,
-      eventRepo as any,
-      service,
-    );
-
-    await expect(
-      checkInService.updatePolicy('secure-user-2', {
-        cadence: CheckInCadence.WEEKLY,
-      }),
-    ).resolves.toBeDefined();
-  });
-
-  it('7. FAMILY can use advanced release policy', async () => {
-    await service.verifyAndProcessPurchase('family-user-2', {
-      planCode: PlanCode.FAMILY,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'valid-token-family-policy',
-    });
-
-    const mockReleasePolicyRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((val: any) => val),
-      save: jest.fn((val: any) => Promise.resolve(val)),
-    };
-    const releaseService = new ReleaseService(
-      mockReleasePolicyRepo as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      service,
-    );
-
-    await expect(
-      releaseService.updatePolicy('family-user-2', {
-        verificationLevel: VerificationLevel.HIGH,
-        escalationConfig: {
-          multipleVerifiers: true,
-          requiredVerifiers: ['p1', 'p2'],
-        },
-      }),
-    ).resolves.toBeDefined();
-  });
-
-  it('8. SECURE cannot use FAMILY-only advanced release policy', async () => {
-    await service.verifyAndProcessPurchase('secure-user-3', {
-      planCode: PlanCode.SECURE,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'valid-token-secure-3',
-    });
-
-    const mockReleasePolicyRepo = {
-      findOne: jest.fn().mockResolvedValue(null),
-      create: jest.fn((val: any) => val),
-      save: jest.fn((val: any) => Promise.resolve(val)),
-    };
-    const releaseService = new ReleaseService(
-      mockReleasePolicyRepo as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      service,
-    );
-
-    await expect(
-      releaseService.updatePolicy('secure-user-3', {
-        verificationLevel: VerificationLevel.HIGH,
-      }),
-    ).rejects.toThrow(ForbiddenException);
-  });
-
-  it('9. Downgrade does not delete existing trusted persons', async () => {
-    // User was FAMILY with 6 trusted persons
-    await service.verifyAndProcessPurchase('downgrade-user', {
-      planCode: PlanCode.FAMILY,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'token-for-downgrade-user',
-    });
-
-    const mockRecipients = [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
-      { id: '3', name: 'C' },
-      { id: '4', name: 'D' },
-      { id: '5', name: 'E' },
-      { id: '6', name: 'F' },
-    ];
-    const deleteMock = jest.fn();
-    const recipientRepo = {
-      find: jest.fn().mockResolvedValue(mockRecipients),
-      delete: deleteMock,
-      remove: deleteMock,
-    };
-
-    // Perform non-destructive downgrade to SECURE
-    const downgradedSub = await service.downgradeSubscription(
-      'downgrade-user',
+    policies.set('buyer', policy);
+    const downgraded = await service.downgradeSubscription(
+      'buyer',
       PlanCode.SECURE,
     );
-
-    expect(downgradedSub.plan.code).toBe(PlanCode.SECURE);
-    // Verified: No deletion methods called on recipient repo
-    expect(deleteMock).not.toHaveBeenCalled();
-    const preservedList = await recipientRepo.find();
-    expect(preservedList).toHaveLength(6);
+    expect(downgraded).toMatchObject({
+      id: original.id,
+      plan: { code: PlanCode.SECURE },
+      expiryDate: original.expiryDate,
+      providerVerifiedAt: original.providerVerifiedAt,
+    });
+    expect(snapshots[0]).toMatchObject({
+      policyVersion: 3,
+      escalationConfig: policy.escalationConfig,
+    });
+    expect(policies.get('buyer')).toEqual(policy);
   });
 
-  it('10. Expiry does not delete vault data', async () => {
-    const expiredSub = subRepo.create({
-      userId: 'expired-user',
-      plan: await service.getPlanByCode(PlanCode.SECURE),
-      planId: (await service.getPlanByCode(PlanCode.SECURE)).id,
-      status: SubscriptionStatus.ACTIVE,
-      expiryDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+  it('transitions grace to expired after fourteen days and falls back to Starter entitlements', async () => {
+    const { service, seed } = fixture();
+    seed('buyer', PlanCode.FAMILY, {
+      status: SubscriptionStatus.GRACE_PERIOD,
+      expiryDate: new Date(Date.now() - 15 * 86400000),
     });
-    await subRepo.save(expiredSub);
-
-    const vaultDeleteMock = jest.fn();
-    // Fetching subscription transitions to EXPIRED
-    const sub = await service.getUserSubscription('expired-user');
-    expect(sub.status).toBe(SubscriptionStatus.EXPIRED);
-    expect(vaultDeleteMock).not.toHaveBeenCalled();
-  });
-
-  it('11. Expiry does not silently modify an existing release policy', async () => {
-    // Configure family release policy
-    const policy = policyRepo.create({
-      id: 'family-policy-1',
-      userId: 'expiring-policy-user',
-      version: 3,
-      trigger: ReleaseTrigger.CHECK_IN_ESCALATION,
-      verificationLevel: VerificationLevel.HIGH,
-      verificationRequired: true,
-      escalationConfig: {
-        multipleVerifiers: true,
-        requiredVerifiers: ['a', 'b'],
-      },
-    });
-    await policyRepo.save(policy);
-
-    // Save snapshot
-    await service.preserveReleasePolicySnapshot(
-      'expiring-policy-user',
-      'EXPOSURE_PRESERVATION',
+    expect((await service.getUserSubscription('buyer')).status).toBe(
+      SubscriptionStatus.EXPIRED,
     );
+    expect((await service.getUserPlan('buyer')).code).toBe(PlanCode.STARTER);
+  });
 
-    // Verify snapshot exists and policy was not mutated
-    expect(snapshotRepo.save).toHaveBeenCalled();
-    const currentPolicy = await policyRepo.findOne({
-      where: { userId: 'expiring-policy-user' },
+  it('retains verified premium access during the defined grace period', async () => {
+    const { service, seed } = fixture();
+    seed('buyer', PlanCode.SECURE, {
+      expiryDate: new Date(Date.now() - 86400000),
     });
-    expect(currentPolicy.verificationLevel).toBe(VerificationLevel.HIGH);
-    expect(currentPolicy.version).toBe(3);
-  });
-
-  it('12. Backend rejects unauthorized premium-feature API calls', async () => {
-    await expect(
-      service.assertFeature('starter-user', Feature.PRIORITY_SUPPORT),
-    ).rejects.toThrow(ForbiddenException);
-
-    await expect(
-      service.assertFeature('starter-user', Feature.ADVANCED_ESCALATION),
-    ).rejects.toThrow(ForbiddenException);
-  });
-
-  it('13. Successful verified purchase updates entitlements', async () => {
-    await service.verifyAndProcessPurchase('buyer-user', {
-      planCode: PlanCode.SECURE,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'valid-purchase-token-xyz-123',
-    });
-
-    const entitlements = await service.getUserEntitlementsPayload('buyer-user');
-    expect(entitlements.plan.code).toBe(PlanCode.SECURE);
-    expect(entitlements.subscription.status).toBe(SubscriptionStatus.ACTIVE);
-    expect(entitlements.entitlements.CUSTOM_CHECK_IN).toBe(true);
-    expect(entitlements.limits.TRUSTED_PERSONS).toBe(3);
-  });
-
-  it('14. Failed purchase verification does not upgrade user', async () => {
-    await expect(
-      service.verifyAndProcessPurchase('fraud-user', {
-        planCode: PlanCode.FAMILY,
-        provider: 'GOOGLE_PLAY',
-        purchaseToken: 'bad', // invalid short token
-      }),
-    ).rejects.toThrow(BadRequestException);
-
-    const entitlements = await service.getUserEntitlementsPayload('fraud-user');
-    expect(entitlements.plan.code).toBe(PlanCode.STARTER);
-  });
-
-  it('15. Restore purchase refreshes backend subscription', async () => {
-    // Set up active purchase for user
-    await service.verifyAndProcessPurchase('restore-user', {
-      planCode: PlanCode.SECURE,
-      provider: 'GOOGLE_PLAY',
-      purchaseToken: 'token-for-restore-user-1234',
-    });
-
-    const restored = await service.restorePurchases('restore-user', {
-      provider: 'GOOGLE_PLAY',
-    });
-    expect(restored.plan.code).toBe(PlanCode.SECURE);
-    expect(restored.status).toBe(SubscriptionStatus.ACTIVE);
-  });
-
-  it('16. Duplicate purchase callbacks remain idempotent', async () => {
-    const token = 'idempotent-token-unique-999';
-
-    // Mock queryBuilder to simulate finding same token on duplicate call
-    subRepo.createQueryBuilder = jest.fn(() => ({
-      addSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue({
-        id: 'sub-existing',
-        userId: 'idempotent-user',
-        providerPurchaseToken: token,
-        status: SubscriptionStatus.ACTIVE,
-        plan: DEFAULT_PLANS[1],
-      }),
-    })) as any;
-
-    const firstResult = await service.verifyAndProcessPurchase(
-      'idempotent-user',
-      {
-        planCode: PlanCode.SECURE,
-        provider: 'GOOGLE_PLAY',
-        purchaseToken: token,
-      },
+    expect((await service.getUserSubscription('buyer')).status).toBe(
+      SubscriptionStatus.GRACE_PERIOD,
     );
+    expect((await service.getUserPlan('buyer')).code).toBe(PlanCode.SECURE);
+  });
 
-    expect(firstResult.id).toBe('sub-existing');
+  it.each([
+    SubscriptionStatus.PENDING,
+    SubscriptionStatus.PAYMENT_FAILED,
+    SubscriptionStatus.CANCELLED,
+  ])('denies paid access in %s state', async (status) => {
+    const { service, seed } = fixture();
+    seed('buyer', PlanCode.FAMILY, { status });
+    expect((await service.getUserPlan('buyer')).code).toBe(PlanCode.STARTER);
+  });
+
+  it('refreshes state without claiming store restoration and refuses supplied store credentials', async () => {
+    const { service, repository } = fixture();
+    expect(
+      (await service.restorePurchases('starter', { provider: 'GOOGLE_PLAY' }))
+        .plan.code,
+    ).toBe(PlanCode.STARTER);
+    repository.save.mockClear();
+    await expect(
+      service.restorePurchases('starter', {
+        provider: 'GOOGLE_PLAY',
+        purchaseToken: 'abcdefgh',
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    await expect(
+      service.restorePurchases('starter', {
+        provider: 'APPLE',
+        originalTransactionId: 'fake',
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(repository.save).not.toHaveBeenCalled();
   });
 });

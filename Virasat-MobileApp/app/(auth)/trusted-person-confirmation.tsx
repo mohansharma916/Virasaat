@@ -18,7 +18,7 @@ import {
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { createRecipient, updateRecipient, inviteRecipient } from '@/src/api/recipients.api';
+import { createRecipient, updateRecipient } from '@/src/api/recipients.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { addRecipient, refreshVaultData } from '@/src/store/vault.slice';
@@ -36,8 +36,6 @@ export default function TrustedPersonConfirmationScreen() {
     verificationRequired?: string;
   }>();
 
-  const isInformNow =
-    params.notificationMode === 'INFORM_NOW';
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const busy = useRef(false);
@@ -62,16 +60,16 @@ export default function TrustedPersonConfirmationScreen() {
         ? await updateRecipient(savedId.current, {
             name,
             verificationRequired: params.verificationRequired !== 'false',
-            phone: params.phone?.trim() || undefined,
-            relationship: params.relationship?.trim() || undefined,
+            phone: params.phone?.trim() ?? '',
+            relationship: params.relationship?.trim() ?? '',
           })
         : await createRecipient({
             requestKey: requestKey.current,
             name,
             verificationRequired: params.verificationRequired !== 'false',
             email,
-            phone: params.phone?.trim() || undefined,
-            relationship: params.relationship?.trim() || undefined,
+            phone: params.phone?.trim() ?? '',
+            relationship: params.relationship?.trim() ?? '',
           });
       savedId.current = recipient.id;
       if (params.recipientId) {
@@ -80,12 +78,11 @@ export default function TrustedPersonConfirmationScreen() {
         dispatch(addRecipient(recipient));
       }
 
-      if (isInformNow) await inviteRecipient(recipient.id);
 
       router.replace({
         pathname: '/(auth)/trusted-person-success',
         params: {
-          notificationMode: params.notificationMode ?? '',
+          notificationMode: 'INFORM_ON_ACTIVATION',
           name: recipient.name,
         },
       });
@@ -221,15 +218,11 @@ export default function TrustedPersonConfirmationScreen() {
 
           <View style={styles.notificationContent}>
             <Text style={styles.notificationTitle}>
-              {isInformNow
-                ? 'Inform Person Now'
-                : 'Inform Person Later'}
+              Keep details private
             </Text>
 
             <Text style={styles.notificationText}>
-              {isInformNow
-                ? 'An invitation will be sent after you confirm.'
-                : 'No invitation will be sent. Saving this person does not grant access to any item.'}
+              No invitation will be sent. Invitations are unavailable. Saving this person does not grant access to any item.
             </Text>
           </View>
         </View>

@@ -11,7 +11,6 @@ import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { hydrateSession } from '@/src/store/session.slice';
 import { refreshVaultData } from '@/src/store/vault.slice';
 import { fetchSubscription } from '@/src/store/subscription.slice';
-import { LEGACY_CATEGORY_KEYS } from '@/src/utils/legacy-flow';
 import { BottomNavBar } from '@/src/components/BottomNavBar';
 
 const emptySummary = { documents: 0, investments: 0, messages: 0, videos: 0 };
@@ -23,7 +22,7 @@ export default function HomeScreen() {
   const recipients = useAppSelector((state) => state.vault.recipients);
   const checkInStatus = useAppSelector((state) => state.vault.checkIn);
   const issues = useAppSelector((state) => state.vault.issues);
-  const currentPlan = useAppSelector((state) => state.subscription.plan);
+  const effectivePlanCode = useAppSelector((state) => state.subscription.effectivePlanCode);
   const failed = useAppSelector((state) => state.vault.status === 'error');
   const loading = useAppSelector((state) => state.vault.status === 'loading');
   const [confirmingCheckIn, setConfirmingCheckIn] = useState(false);
@@ -75,8 +74,8 @@ export default function HomeScreen() {
 
   const openLegacy = (category?: string) => {
     router.push({
-      pathname: '/(auth)/legacy-category',
-      params: { categories: category ?? LEGACY_CATEGORY_KEYS.join(',') },
+      pathname: '/(auth)/saved-items',
+      params: { category: category ?? '' },
     } as never);
   };
 
@@ -107,7 +106,7 @@ export default function HomeScreen() {
               style={styles.planBadge}
             >
               <Text style={styles.planBadgeText}>
-                {currentPlan?.code ?? 'STARTER'}
+                {effectivePlanCode}
               </Text>
             </Pressable>
           </View>
@@ -210,7 +209,7 @@ export default function HomeScreen() {
                 {
                   done: !!trustedPerson,
                   title: 'Add a trusted person',
-                  subtitle: trustedPerson ? trustedPerson.name : 'Informing them now is optional',
+                  subtitle: trustedPerson ? trustedPerson.name : 'Save their details privately',
                   route: '/(auth)/people',
                 },
                 {
@@ -222,7 +221,7 @@ export default function HomeScreen() {
                 {
                   done: !!checkInStatus,
                   title: 'Configure check-ins',
-                  subtitle: checkInStatus ? 'Schedule active' : 'Set your preferred cadence',
+                  subtitle: checkInStatus ? 'Schedule saved · reminders unavailable' : 'Set your preferred cadence',
                   route: '/(auth)/check-in-preferences',
                 },
               ].map((action, idx) => (
@@ -338,7 +337,7 @@ export default function HomeScreen() {
         <View style={styles.securityNote}>
           <Text style={styles.securityIcon}>🔒</Text>
           <Text style={styles.securityText}>
-            Your legacy remains private until your release conditions are satisfied.
+            Your records remain private. Automatic reminders and inheritance release are not available yet.
           </Text>
         </View>
       </ScrollView>

@@ -75,6 +75,9 @@ export class LegacyItem {
   })
   encryptionKeyVersion!: string | null;
 
+  @Column({ type: 'text', nullable: true, select: false })
+  payloadStorageType!: 'INLINE_DB' | 'S3' | 'LOCAL' | null;
+
   @Column({
     type: 'enum',
     enum: LegacyItemStatus,

@@ -52,6 +52,7 @@ export function UpgradeModal({
           <Text style={styles.title}>{title}</Text>
 
           {message ? <Text style={styles.message}>{message}</Text> : null}
+          <Text style={styles.message}>Paid upgrades are not available yet. The benefits below describe planned tiers.</Text>
 
           {benefits.length > 0 && (
             <View style={styles.benefitsContainer}>

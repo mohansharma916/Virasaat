@@ -73,6 +73,7 @@ export default function LegacyCategoryScreen() {
   const savedItems = useAppSelector((state) => state.vault.items);
   const params = useLocalSearchParams<{
     categories?: string | string[];
+    add?: string;
   }>();
 
   const selectedCategories = useMemo(
@@ -111,7 +112,7 @@ export default function LegacyCategoryScreen() {
 
   const openCategory = (category: CategoryConfig) => {
     router.push({
-      pathname: category.route,
+      pathname: completedCategories.includes(category.id) && params.add !== 'true' ? '/(auth)/saved-items' : category.route,
       params: {
         category: category.id,
         categories: selectedCategories.join(','),

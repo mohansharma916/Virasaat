@@ -8,14 +8,18 @@ import {
   Param,
   Post,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { EmailTemplateService } from './email-template.service';
 import { EmailTemplateType } from './email-template.types';
 import { MailService } from './mail.service';
 import { SendTestEmailDto } from '../dto/send-test-email.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { EmailDiagnosticsGuard } from './email-diagnostics.guard';
 
 @Controller('notifications/email-templates')
+@UseGuards(EmailDiagnosticsGuard, JwtAuthGuard)
 export class EmailPreviewController {
   constructor(
     private readonly emailTemplateService: EmailTemplateService,
@@ -30,7 +34,9 @@ export class EmailPreviewController {
   getStatus() {
     return {
       service: 'Virasaat Email Notification Engine',
-      smtp: this.mailService ? this.mailService.getStatus() : { configured: false, mock: true },
+      smtp: this.mailService
+        ? this.mailService.getStatus()
+        : { configured: false, mock: true },
       supportedTemplates: this.emailTemplateService.getAllTemplateTypes(),
     };
   }
@@ -51,7 +57,9 @@ export class EmailPreviewController {
       text = rendered.text;
     } else {
       subject = dto.subject || '🎉 Virasaat Demo Email Test';
-      const sample = this.emailTemplateService.renderSample(EmailTemplateType.WELCOME);
+      const sample = this.emailTemplateService.renderSample(
+        EmailTemplateType.WELCOME,
+      );
       html = sample.html;
       text = dto.message || sample.text;
     }
@@ -134,4 +142,3 @@ export class EmailPreviewController {
     return res.send(rendered.text);
   }
 }
-

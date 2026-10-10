@@ -11,7 +11,6 @@ import {
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { LEGACY_CATEGORY_KEYS } from '@/src/utils/legacy-flow';
 
 export type TabName = 'home' | 'vault' | 'people' | 'profile';
 
@@ -43,10 +42,7 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
         router.replace('/(auth)/home');
         break;
       case 'vault':
-        router.replace({
-          pathname: '/(auth)/legacy-category',
-          params: { categories: LEGACY_CATEGORY_KEYS.join(',') },
-        } as never);
+        router.replace('/(auth)/saved-items' as never);
         break;
       case 'people':
         router.replace('/(auth)/people' as never);

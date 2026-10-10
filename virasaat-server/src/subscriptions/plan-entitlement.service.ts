@@ -5,9 +5,10 @@ import {
   Logger,
   NotFoundException,
   OnModuleInit,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
 import { Subscription } from './entities/subscription.entity';
 import { ReleasePolicySnapshot } from './entities/release-policy-snapshot.entity';
@@ -105,47 +106,81 @@ export class PlanEntitlementService implements OnModuleInit {
    * they automatically receive an ACTIVE subscription on STARTER.
    */
   async getUserSubscription(userId: string): Promise<Subscription> {
-    let sub = await this.subscriptionRepository.findOne({
+    return this.withSubscriptionLock(userId, (manager) =>
+      this.getOrCreateUserSubscription(
+        userId,
+        manager.getRepository(Subscription),
+      ),
+    );
+  }
+
+  private async getOrCreateUserSubscription(
+    userId: string,
+    repository: Repository<Subscription>,
+  ): Promise<Subscription> {
+    let sub = await repository.findOne({
       where: { userId },
       relations: { plan: true },
       order: { createdAt: 'DESC' },
     });
-
     if (!sub) {
       const starterPlan = await this.getPlanByCode(PlanCode.STARTER);
-      sub = this.subscriptionRepository.create({
-        userId,
-        planId: starterPlan.id,
-        plan: starterPlan,
-        status: SubscriptionStatus.ACTIVE,
-        provider: 'INTERNAL',
-        autoRenew: false,
-        cancelAtPeriodEnd: false,
-        startDate: new Date(),
-        expiryDate: null,
-      });
-      sub = await this.subscriptionRepository.save(sub);
-      this.logger.log(`Initialized STARTER subscription for user ${userId}`);
-    } else {
-      // Check expiry & grace period
-      if (
-        sub.expiryDate &&
-        sub.status === SubscriptionStatus.ACTIVE &&
-        new Date() > new Date(sub.expiryDate)
-      ) {
-        const msSinceExpiry = Date.now() - new Date(sub.expiryDate).getTime();
-        const daysSinceExpiry = msSinceExpiry / (1000 * 60 * 60 * 24);
-
-        if (daysSinceExpiry <= 14) {
-          sub.status = SubscriptionStatus.GRACE_PERIOD;
-        } else {
-          sub.status = SubscriptionStatus.EXPIRED;
-        }
-        sub = await this.subscriptionRepository.save(sub);
+      sub = await repository.save(
+        repository.create({
+          userId,
+          planId: starterPlan.id,
+          plan: starterPlan,
+          status: SubscriptionStatus.ACTIVE,
+          provider: 'INTERNAL',
+          autoRenew: false,
+          cancelAtPeriodEnd: false,
+          startDate: new Date(),
+          expiryDate: null,
+          providerVerifiedAt: null,
+        }),
+      );
+    } else if (
+      sub.expiryDate &&
+      [SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD].includes(
+        sub.status,
+      )
+    ) {
+      const daysSinceExpiry =
+        (Date.now() - new Date(sub.expiryDate).getTime()) / 86400000;
+      const nextStatus =
+        daysSinceExpiry > 14
+          ? SubscriptionStatus.EXPIRED
+          : daysSinceExpiry > 0
+            ? SubscriptionStatus.GRACE_PERIOD
+            : SubscriptionStatus.ACTIVE;
+      if (nextStatus !== sub.status) {
+        sub.status = nextStatus;
+        sub = await repository.save(sub);
       }
     }
-
     return sub;
+  }
+
+  private withSubscriptionLock<T>(
+    userId: string,
+    run: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    return this.subscriptionRepository.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `subscription:${userId}`,
+      ]);
+      return run(manager);
+    });
+  }
+
+  private hasPaidAccess(sub: Subscription): boolean {
+    return Boolean(
+      sub.providerVerifiedAt &&
+      sub.expiryDate &&
+      [SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE_PERIOD].includes(
+        sub.status,
+      ),
+    );
   }
 
   /**
@@ -154,7 +189,7 @@ export class PlanEntitlementService implements OnModuleInit {
    */
   async getUserPlan(userId: string): Promise<Plan> {
     const sub = await this.getUserSubscription(userId);
-    if (sub.status === SubscriptionStatus.EXPIRED) {
+    if (sub.plan.code !== PlanCode.STARTER && !this.hasPaidAccess(sub)) {
       return this.getPlanByCode(PlanCode.STARTER);
     }
     return sub.plan;
@@ -166,11 +201,12 @@ export class PlanEntitlementService implements OnModuleInit {
   async getUserEntitlementsPayload(userId: string) {
     const sub = await this.getUserSubscription(userId);
     const plan = sub.plan;
-    const isExpired = sub.status === SubscriptionStatus.EXPIRED;
+    const useStarterLimits =
+      plan.code !== PlanCode.STARTER && !this.hasPaidAccess(sub);
 
     // In expired state, effective entitlements for new features fall back to STARTER,
     // but the displayed current plan reflects the billing state.
-    const effectivePlan = isExpired
+    const effectivePlan = useStarterLimits
       ? await this.getPlanByCode(PlanCode.STARTER)
       : plan;
 
@@ -193,6 +229,14 @@ export class PlanEntitlementService implements OnModuleInit {
         provider: sub.provider,
         cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
       },
+      effectivePlanCode: effectivePlan.code,
+      billingAvailable: false,
+      purchaseVerification:
+        plan.code === PlanCode.STARTER
+          ? 'NOT_REQUIRED'
+          : sub.providerVerifiedAt
+            ? 'VERIFIED'
+            : 'UNVERIFIED',
       entitlements: effectivePlan.features,
       limits: effectivePlan.limits,
     };
@@ -301,98 +345,23 @@ export class PlanEntitlementService implements OnModuleInit {
   }
 
   /**
-   * Verify and process a purchase from Google Play, Apple App Store, or direct testing.
-   * IDEMPOTENT: repeated calls with the same purchase token return the existing active subscription.
+   * Keep checkout unavailable until a real store verifier is implemented.
    */
-  async verifyAndProcessPurchase(
-    userId: string,
-    dto: PurchaseDto,
+  verifyAndProcessPurchase(
+    _userId: string,
+    _dto: PurchaseDto,
   ): Promise<Subscription> {
-    if (!dto.purchaseToken || dto.purchaseToken.trim().length === 0) {
-      throw new BadRequestException('A valid purchase token is required.');
-    }
-
-    // Verify token: Reject fake/malformed tokens (must be at least 8 characters, alphanumeric/dashes)
-    if (dto.purchaseToken.length < 8) {
-      throw new BadRequestException('Invalid or unverified purchase token.');
-    }
-
-    const targetPlan = await this.getPlanByCode(dto.planCode);
-    if (!targetPlan || targetPlan.code === PlanCode.STARTER) {
-      throw new BadRequestException('Target plan must be a paid plan.');
-    }
-
-    // Check for existing subscription with this exact purchase token (idempotency check)
-    const existingSameToken = await this.subscriptionRepository
-      .createQueryBuilder('sub')
-      .addSelect('sub.providerPurchaseToken')
-      .where('sub.userId = :userId AND sub.providerPurchaseToken = :token', {
-        userId,
-        token: dto.purchaseToken,
-      })
-      .leftJoinAndSelect('sub.plan', 'plan')
-      .getOne();
-
-    if (
-      existingSameToken &&
-      existingSameToken.status === SubscriptionStatus.ACTIVE
-    ) {
-      return existingSameToken;
-    }
-
-    // Snapshot existing release policy before upgrading/changing
-    await this.preserveReleasePolicySnapshot(userId, 'PRE_UPGRADE_SNAPSHOT');
-
-    let sub = await this.subscriptionRepository.findOne({
-      where: { userId },
-      relations: { plan: true },
-      order: { createdAt: 'DESC' },
-    });
-
-    const now = new Date();
-    const oneYearLater = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
-
-    if (sub) {
-      sub.plan = targetPlan;
-      sub.planId = targetPlan.id;
-      sub.status = SubscriptionStatus.ACTIVE;
-      sub.startDate = now;
-      sub.expiryDate = oneYearLater;
-      sub.provider = dto.provider;
-      sub.providerPurchaseToken = dto.purchaseToken;
-      sub.providerSubscriptionId = dto.subscriptionId ?? dto.orderId ?? null;
-      sub.autoRenew = true;
-      sub.cancelAtPeriodEnd = false;
-      sub.metadata = {
-        orderId: dto.orderId,
-        verifiedAt: now.toISOString(),
-      };
-      sub = await this.subscriptionRepository.save(sub);
-    } else {
-      sub = this.subscriptionRepository.create({
-        userId,
-        plan: targetPlan,
-        planId: targetPlan.id,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: now,
-        expiryDate: oneYearLater,
-        provider: dto.provider,
-        providerPurchaseToken: dto.purchaseToken,
-        providerSubscriptionId: dto.subscriptionId ?? dto.orderId ?? null,
-        autoRenew: true,
-        cancelAtPeriodEnd: false,
-        metadata: {
-          orderId: dto.orderId,
-          verifiedAt: now.toISOString(),
-        },
-      });
-      sub = await this.subscriptionRepository.save(sub);
-    }
-
-    this.logger.log(
-      `User ${userId} successfully subscribed to plan ${targetPlan.code}`,
+    void _userId;
+    void _dto;
+    // A token string is not proof of payment. No store verifier is configured yet.
+    return Promise.reject(
+      new ServiceUnavailableException({
+        statusCode: 503,
+        code: 'BILLING_UNAVAILABLE',
+        message:
+          'Purchases are unavailable until secure store verification is configured. No subscription has been changed.',
+      }),
     );
-    return sub;
   }
 
   /**
@@ -402,25 +371,16 @@ export class PlanEntitlementService implements OnModuleInit {
     userId: string,
     dto: RestorePurchaseDto,
   ): Promise<Subscription> {
-    const sub = await this.getUserSubscription(userId);
-    // If user already has an active paid subscription, return it
-    if (
-      sub.status === SubscriptionStatus.ACTIVE &&
-      sub.plan.code !== PlanCode.STARTER
-    ) {
-      return sub;
-    }
-
-    if (dto.purchaseToken) {
-      // If a token was provided, attempt to reconcile
-      return this.verifyAndProcessPurchase(userId, {
-        planCode: PlanCode.SECURE,
-        provider: dto.provider,
-        purchaseToken: dto.purchaseToken,
+    if (dto.purchaseToken || dto.originalTransactionId) {
+      throw new ServiceUnavailableException({
+        statusCode: 503,
+        code: 'BILLING_UNAVAILABLE',
+        message:
+          'Store purchase restoration is unavailable. No subscription has been changed.',
       });
     }
-
-    return sub;
+    // This only refreshes server state; it does not inspect or verify a store account.
+    return this.getUserSubscription(userId);
   }
 
   /**
@@ -432,21 +392,36 @@ export class PlanEntitlementService implements OnModuleInit {
     userId: string,
     targetPlanCode: PlanCode,
   ): Promise<Subscription> {
-    const targetPlan = await this.getPlanByCode(targetPlanCode);
-    const sub = await this.getUserSubscription(userId);
-
-    // Snapshot existing release policy to preserve all rules and verifiers
-    await this.preserveReleasePolicySnapshot(
-      userId,
-      `DOWNGRADE_TO_${targetPlanCode}`,
-    );
-
-    sub.plan = targetPlan;
-    sub.planId = targetPlan.id;
-    if (targetPlanCode === PlanCode.STARTER) {
-      sub.expiryDate = null;
-      sub.autoRenew = false;
-    }
-    return this.subscriptionRepository.save(sub);
+    const ranks = {
+      [PlanCode.STARTER]: 0,
+      [PlanCode.SECURE]: 1,
+      [PlanCode.FAMILY]: 2,
+    };
+    if (!Object.hasOwn(ranks, targetPlanCode))
+      throw new BadRequestException('Choose a valid target plan.');
+    return this.withSubscriptionLock(userId, async (manager) => {
+      const repository = manager.getRepository(Subscription);
+      const sub = await this.getOrCreateUserSubscription(userId, repository);
+      if (ranks[targetPlanCode] >= ranks[sub.plan.code])
+        throw new BadRequestException(
+          'The target plan must be lower than your current plan. Upgrades require verified payment.',
+        );
+      const targetPlan = await this.getPlanByCode(targetPlanCode);
+      if (!targetPlan.isActive)
+        throw new BadRequestException('The target plan is unavailable.');
+      await this.preserveReleasePolicySnapshot(
+        userId,
+        `DOWNGRADE_TO_${targetPlanCode}`,
+      );
+      sub.plan = targetPlan;
+      sub.planId = targetPlan.id;
+      if (targetPlanCode === PlanCode.STARTER) {
+        sub.status = SubscriptionStatus.ACTIVE;
+        sub.expiryDate = null;
+        sub.autoRenew = false;
+        sub.cancelAtPeriodEnd = false;
+      }
+      return repository.save(sub);
+    });
   }
 }

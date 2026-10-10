@@ -21,6 +21,9 @@ export class PasswordReset {
   @Column()
   expiresAt!: Date;
 
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  lastSentAt!: Date;
+
   @Column({ default: 0 })
   attempts!: number;
 

@@ -41,6 +41,32 @@ describe('Storage and S3 Security', () => {
     ).rejects.toThrow('AWS S3 is not configured');
   });
 
+  it('supports IAM credential providers without static AWS keys', () => {
+    const settings = [
+      'AWS_S3_BUCKET_NAME',
+      'AWS_S3_BUCKET',
+      'AWS_ACCESS_KEY_ID',
+      'AWS_SECRET_ACCESS_KEY',
+    ];
+    const previous = Object.fromEntries(
+      settings.map((key) => [key, process.env[key]]),
+    );
+    try {
+      settings.forEach((key) => delete process.env[key]);
+      process.env.AWS_S3_BUCKET_NAME = 'role-backed-test-bucket';
+      expect(new S3StorageService().isConfigured()).toBe(true);
+      process.env.AWS_ACCESS_KEY_ID = 'incomplete-test-pair';
+      expect(() => new S3StorageService()).toThrow(
+        'both AWS access key fields',
+      );
+    } finally {
+      for (const key of settings) {
+        if (previous[key] === undefined) delete process.env[key];
+        else process.env[key] = previous[key];
+      }
+    }
+  });
+
   it('uploads to S3 with SHA-256 checksum, SSE encryption, and partitioned key structure', async () => {
     const s3Service = new S3StorageService();
     const mockSend = jest.fn().mockResolvedValue({});
@@ -137,5 +163,22 @@ describe('Storage and S3 Security', () => {
     expect(migration.s3Uri).toBe(
       `s3://migrated-vault-bucket/${migration.storageKey}`,
     );
+  });
+
+  it('rejects local references outside the private storage directory', async () => {
+    const storage = new StorageService(new S3StorageService());
+    await expect(
+      storage.readVaultItemCiphertext('../outside.bin'),
+    ).rejects.toThrow('Invalid local storage reference');
+    await expect(
+      storage.deleteVaultItemFile('/tmp/outside.bin'),
+    ).rejects.toThrow('Invalid local storage reference');
+    await expect(
+      storage.migrateLocalFileToS3({
+        vaultId: 'vault',
+        itemId: 'item',
+        localFileName: '../outside.bin',
+      }),
+    ).rejects.toThrow();
   });
 });

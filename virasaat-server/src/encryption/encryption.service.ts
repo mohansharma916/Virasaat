@@ -13,15 +13,35 @@ export class EncryptionService {
    * Replace this with AWS KMS / GCP KMS /
    * Azure Key Vault / HSM.
    */
-  private getMasterKey(): Buffer {
-    const key = process.env.ENCRYPTION_MASTER_KEY;
+  private getMasterKey(version: string): Buffer {
+    const currentVersion = process.env.ENCRYPTION_MASTER_KEY_VERSION || 'v1';
+    let keys: Record<string, string> = {};
+    if (process.env.ENCRYPTION_MASTER_KEYS) {
+      try {
+        const parsed: unknown = JSON.parse(process.env.ENCRYPTION_MASTER_KEYS);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          throw new Error('Invalid keyring');
+        }
+        keys = parsed as Record<string, string>;
+      } catch {
+        throw new InternalServerErrorException('Encryption keyring is invalid');
+      }
+    }
+    const key = Object.prototype.hasOwnProperty.call(keys, version)
+      ? keys[version]
+      : version === currentVersion
+        ? process.env.ENCRYPTION_MASTER_KEY
+        : undefined;
 
     if (!key) {
       throw new InternalServerErrorException(
-        'Encryption master key is not configured',
+        'The required encryption key version is not configured',
       );
     }
 
+    if (typeof key !== 'string') {
+      throw new InternalServerErrorException('Encryption keyring is invalid');
+    }
     const buffer = Buffer.from(key, 'base64');
 
     if (buffer.length !== 32) {
@@ -55,7 +75,8 @@ export class EncryptionService {
      * In production this operation belongs
      * to KMS.
      */
-    const masterKey = this.getMasterKey();
+    const keyVersion = process.env.ENCRYPTION_MASTER_KEY_VERSION || 'v1';
+    const masterKey = this.getMasterKey(keyVersion);
 
     const keyIv = randomBytes(12);
 
@@ -83,7 +104,7 @@ export class EncryptionService {
 
       algorithm: this.algorithm,
 
-      keyVersion: 'v1',
+      keyVersion,
     };
   }
 
@@ -97,8 +118,11 @@ export class EncryptionService {
     keyAuthTag: string;
     iv: string;
     authTag: string;
+    keyVersion?: string | null;
   }) {
-    const masterKey = this.getMasterKey();
+    // Records written before key versioning use v1. Never try the current key
+    // against a historical version: retain the old key until migration finishes.
+    const masterKey = this.getMasterKey(input.keyVersion || 'v1');
 
     /**
      * Recover DEK.

@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -12,7 +13,7 @@ import {
 } from '../email-template.types';
 
 export function renderWelcomeTemplate(data: WelcomeEmailData): RenderedEmail {
-  const dashboardUrl = data.dashboardUrl || 'https://virasaat.com/dashboard';
+  const dashboardUrl = data.dashboardUrl || getEmailAppLink('home');
   const subject = `Welcome to Virasaat — Safeguarding your digital legacy`;
 
   const contentHtml = `
@@ -71,7 +72,7 @@ export function renderWelcomeTemplate(data: WelcomeEmailData): RenderedEmail {
                         Appoint Your Trusted Contacts
                       </div>
                       <div style="font-family: 'Inter', sans-serif; font-size: 13px; color: ${BRAND_COLORS.textSecondary}; line-height: 19px; margin-top: 2px;">
-                        Designate nominees, family members, or executors who should be notified when explicit verification criteria are met.
+                        Save trusted person details privately. Invitations, verification, and inheritance release are not available yet.
                       </div>
                     </td>
                   </tr>
@@ -90,7 +91,7 @@ export function renderWelcomeTemplate(data: WelcomeEmailData): RenderedEmail {
                         Configure Your Routine Check-in
                       </div>
                       <div style="font-family: 'Inter', sans-serif; font-size: 13px; color: ${BRAND_COLORS.textSecondary}; line-height: 19px; margin-top: 2px;">
-                        Set your preferred monthly check-in time. A simple click tells Virasaat that you are safe and all items remain private.
+                        Save your check-in preferences and confirm activity in the app. Scheduled reminders and escalation are not available yet.
                       </div>
                     </td>
                   </tr>
@@ -113,7 +114,7 @@ export function renderWelcomeTemplate(data: WelcomeEmailData): RenderedEmail {
       <tr>
         <td style="padding-top: 12px;">
           <p style="font-family: 'Inter', sans-serif; font-size: 13px; color: ${BRAND_COLORS.textMuted}; line-height: 20px; text-align: center;">
-            Have questions or need assistance? Reply directly to this email or reach us at <a href="mailto:support@virasaat.com" style="color: ${BRAND_COLORS.primaryForest};">support@virasaat.com</a>.
+            Open the app to review your saved records and account settings.
           </p>
         </td>
       </tr>
@@ -137,15 +138,15 @@ THREE STEPS TO COMPLETE YOUR SETUP:
    Store wills, deeds, financial folios, insurance policies, and video messages.
 
 2. Appoint Your Trusted Contacts
-   Designate nominees and beneficiaries who will carry out your legacy.
+   Save trusted person details privately. Invitations, verification, and inheritance release are not available yet.
 
 3. Configure Your Routine Check-in
-   Set your preferred monthly check-in cadence to keep your vault private.
+   Save check-in preferences and confirm activity in the app. Scheduled reminders and escalation are not available yet.
 
 GET STARTED:
 Open your vault: ${dashboardUrl}
 
-Need assistance? Reach our support team at support@virasaat.com.
+Open the app to review your records and account settings.
 `;
 
   const text = wrapInPlainTextLayout({

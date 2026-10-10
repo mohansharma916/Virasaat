@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,8 +15,7 @@ import {
 export function renderReleaseAuthorizedTemplate(
   data: ReleaseAuthorizedEmailData,
 ): RenderedEmail {
-  const accessUrl =
-    data.accessUrl || `https://virasaat.com/release/${data.releaseId}`;
+  const accessUrl = data.accessUrl || getEmailAppLink('home');
   const expiryDays = data.accessExpiryDays || 30;
   const itemsText =
     data.itemCountSummary ||
@@ -95,9 +95,9 @@ export function renderReleaseAuthorizedTemplate(
                   How to Access Your Materials
                 </div>
                 <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.textSecondary}; line-height: 18px;">
-                  1. Click the button below to open the secure Virasaat legacy viewer.<br />
-                  2. A short two-factor identity code will verify your email ownership.<br />
-                  3. Decrypt and review messages, documents, and instructions at your own pace.
+                  1. The button opens the current Virasaat app.<br />
+                  2. Recipient identity verification and package delivery are not available yet.<br />
+                  3. This sample does not authorize access to any vault items.
                 </div>
               </td>
             </tr>
@@ -108,7 +108,7 @@ export function renderReleaseAuthorizedTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: accessUrl, label: 'Access Legacy Package' })}
+          ${renderCtaButton({ url: accessUrl, label: 'Open Virasaat App' })}
         </td>
       </tr>
 
@@ -126,7 +126,9 @@ export function renderReleaseAuthorizedTemplate(
   const html = wrapInEmailLayout({
     preheader: `A personal legacy package prepared by ${data.ownerName} has been authorized and is ready for you.`,
     title: subject,
-    contentHtml,
+    contentHtml:
+      `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
+      contentHtml,
     securityNotice:
       'This message communicates the release of confidential legacy assets authorized under owner instructions.',
   });
@@ -150,12 +152,14 @@ This legacy package was created with deep intention and care. Please save any ne
 
   const text = wrapInPlainTextLayout({
     title: 'Legacy Package Release',
-    bodyText,
+    bodyText:
+      'Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.\n\n' +
+      bodyText,
   });
 
   return {
     templateType: EmailTemplateType.RELEASE_AUTHORIZED,
-    subject,
+    subject: '[Illustrative sample — workflow unavailable] ' + subject,
     html,
     text,
   };

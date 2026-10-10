@@ -7,18 +7,14 @@ import {
   ArrowLeft,
   KeyRound,
   FileCheck2,
-  Users2,
-  Database,
   Trash2,
-  AlertCircle,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy & Data Protection | Virasaat (विरासत)',
   description:
-    'Virasaat zero-knowledge privacy policy. How we safeguard your bank accounts, investments, personal videos, and family handover data in full compliance with the DPDP Act 2023.',
+    'How Virasaat processes account details and vault content, manages server encryption keys and handles privacy requests.',
   alternates: {
     canonical: '/privacy/',
   },
@@ -118,10 +114,10 @@ export default function PrivacyPolicyPage() {
           <div className="glass-pill" style={{ marginBottom: '16px' }}>
             <Lock size={14} color="#D4AF37" />
             <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-              ZERO-KNOWLEDGE ARCHITECTURE
+              SERVER-MANAGED ENCRYPTION
             </span>
             <span style={{ opacity: 0.5 }}>|</span>
-            <span style={{ color: 'var(--sage)' }}>DPDP Act 2023 Compliant</span>
+            <span style={{ color: 'var(--sage)' }}>Current Product Information</span>
           </div>
 
           <h1
@@ -144,7 +140,7 @@ export default function PrivacyPolicyPage() {
               marginBottom: '18px',
             }}
           >
-            At Virasaat, your financial secrets and personal family memories are sacred. We engineered our entire platform on a <strong>Zero-Knowledge Cryptographic Model</strong>: your data is encrypted directly on your phone with keys that only you and your designated loved ones ever hold.
+            This policy describes the current Virasaat service. Vault descriptions and files are encrypted by the server before storage. Virasaat manages the encryption keys; authorized server processes can decrypt content. Automated family handover and recipient access are currently unavailable.
           </p>
 
           <div
@@ -162,7 +158,7 @@ export default function PrivacyPolicyPage() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FileCheck2 size={14} color="#35B86B" />
-              <span>Effective Date: November 1, 2026</span>
+              <span>Effective Date: October 10, 2026</span>
             </div>
           </div>
         </div>
@@ -184,11 +180,11 @@ export default function PrivacyPolicyPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
             <KeyRound size={22} color="#D4AF37" />
             <h2 style={{ fontSize: '1.25rem', color: 'var(--warm-ivory)', margin: 0, fontWeight: 700 }}>
-              The Virasaat Zero-Knowledge Promise
+              How Vault Encryption Works
             </h2>
           </div>
           <p style={{ color: 'var(--sage)', fontSize: '0.94rem', lineHeight: 1.65, margin: 0 }}>
-            Every bank account number, locker location, insurance policy, mutual fund entry, will draft, and personal video note is encrypted on your hardware device using <strong>AES-256-GCM encryption</strong>. Virasaat engineers, administrators, and servers <strong>do not possess your decryption keys</strong> and cannot read your private vault under any circumstances—even under legal subpoena or physical server inspection.
+            Descriptions and uploaded files reach the authenticated API before <strong>AES-256-GCM encryption</strong> on the server. The current service uses a server-managed master key to protect content encryption keys. <strong>Virasaat has technical access to decrypt vault content.</strong> Basic metadata, including titles and categories, is stored separately and is not encrypted by this vault-content mechanism.
           </p>
         </div>
 
@@ -198,7 +194,7 @@ export default function PrivacyPolicyPage() {
             1. Who We Are & Data Fiduciary Details
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            <strong>Virasaat Technologies Inc.</strong> (&quot;Virasaat&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) provides zero-knowledge encrypted vault storage, digital heritage organization, and automated inactivity-triggered asset handover workflows through our mobile applications (iOS and Android) and website.
+            <strong>Virasaat Technologies Inc.</strong> (&quot;Virasaat&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) provides vault record organization, server-encrypted content storage and check-in tools. Verified family handover is planned and disabled in the current service. The service is being developed through our mobile applications (iOS and Android) and website.
           </p>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
             For the purposes of the <strong>Digital Personal Data Protection Act, 2023 (DPDP Act, India)</strong>, the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011 (&quot;SPDI Rules&quot;), and applicable global privacy statutes, Virasaat acts as a <strong>Data Fiduciary</strong> regarding basic account metadata and as a secure encrypted custodian regarding vault ciphertext.
@@ -224,7 +220,7 @@ export default function PrivacyPolicyPage() {
                 A. Account & Contact Information (Plaintext Metadata)
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6, margin: 0 }}>
-                When you register on our website or mobile app, we collect your <strong>full name</strong>, <strong>email address</strong>, <strong>country of residence</strong>, <strong>mobile operating system preference (iOS / Android)</strong>, and communication language. This data is strictly used for account identity, monthly security check-ins, and transactional notices.
+                When you register on our website or mobile app, we collect your <strong>full name</strong>, <strong>email address</strong>, <strong>country of residence</strong>, <strong>mobile operating system preference (iOS / Android)</strong>, and communication language where provided. This data is used for account verification, check-in recording and relevant account or waitlist notices.
               </p>
             </div>
 
@@ -237,10 +233,10 @@ export default function PrivacyPolicyPage() {
               }}
             >
               <h3 style={{ fontSize: '1.05rem', color: 'var(--warm-ivory)', marginBottom: '6px' }}>
-                B. Vault Items & Personal Media (Client-Side Encrypted Ciphertext)
+                B. Vault Items & Personal Media
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6, margin: 0 }}>
-                Financial assets (bank accounts, Demat IDs, fixed deposits, mutual funds, insurance policies, locker combinations, property references) and personal media (video messages, handwritten letters, audio notes, will drafts). <strong>All such data is encrypted on your device prior to cloud backup.</strong> We only store unreadable encrypted binary blobs on our secure AWS cloud infrastructure.
+                Vault records can include financial references, document descriptions, personal messages and supported media files. <strong>Descriptions and files are encrypted on the server before storage.</strong> Account and item metadata are stored in the database; Virasaat operates the keys needed to decrypt vault content.
               </p>
             </div>
 
@@ -256,7 +252,7 @@ export default function PrivacyPolicyPage() {
                 C. Trusted Family Contacts (Nominees)
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6, margin: 0 }}>
-                To enable automated handover, you may supply the name, mobile phone number, relationship, and email address of your designated recipients. You confirm you have their consent to provide these details solely for handover notifications.
+                You may supply the name, mobile phone number, relationship and email address of intended trusted people. Obtain their permission before saving their details. Saving them does not send an invitation, verify their identity or grant vault access; these workflows are currently unavailable.
               </p>
             </div>
 
@@ -284,7 +280,7 @@ export default function PrivacyPolicyPage() {
             3. Legal Grounds for Processing (DPDP Act & SPDI)
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            Under the Indian DPDP Act 2023, we process personal data based on your explicit, informed consent for the specified purpose of digital estate organization and emergency succession handover.
+            We use the information you provide to operate account verification, vault organization, check-in recording and waitlist updates. Planned handover capabilities are not an active processing workflow in the current service.
           </p>
           <div
             style={{
@@ -298,11 +294,11 @@ export default function PrivacyPolicyPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <FileCheck2 size={16} color="#35B86B" />
               <strong style={{ color: '#35B86B', fontSize: '0.92rem' }}>
-                Section 14 Statutory Nomination Right (DPDP Act 2023)
+                Trusted People & Data Requests
               </strong>
             </div>
             <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-              Section 14 of the DPDP Act guarantees every Data Principal the right to nominate any other individual who, in the event of death or incapacity of the Data Principal, shall exercise their data rights. Virasaat directly fulfills this statutory right through its encrypted handover workflows.
+              A saved trusted person is an organizational record. It does not itself activate data-rights nomination, financial inheritance or a release of vault content. Contact us about data access requests; verified recipient workflows are still being developed.
             </p>
           </div>
         </section>
@@ -310,16 +306,16 @@ export default function PrivacyPolicyPage() {
         {/* Section 4 */}
         <section style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.45rem', color: 'var(--warm-ivory)', marginBottom: '14px', fontWeight: 700 }}>
-            4. The Heartbeat Protocol: Inactivity Handover Safeguards
+            4. Check-Ins & Planned Family Handover
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '12px' }}>
-            Virasaat operates an automated inactivity verification protocol designed with redundant fail-safes to ensure <strong>zero false alarms</strong>:
+            The current service records check-in activity. It does not determine whether a user is alive or healthy and does not provide an emergency response service:
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px', marginBottom: '14px' }}>
-            <li><strong>Cadence Check-Ins:</strong> You select your routine check-in cadence (every 30, 60, or 90 days) via 1-tap push notification or email confirmation.</li>
-            <li><strong>Gentle Reminder Escalations:</strong> If a scheduled check-in is missed, automated reminders are dispatched via SMS, Email, and Push Notifications over multiple consecutive weeks.</li>
-            <li><strong>Mandatory Safety Buffer Window:</strong> A 14 to 30-day grace window must elapse without response before handover eligibility is reached.</li>
-            <li><strong>Recipient Verification:</strong> Handover instructions and decryption capabilities are only unlocked for verified trusted persons following independent two-factor authentication.</li>
+            <li><strong>Check-Ins:</strong> Configure available schedule settings and confirm activity within your account.</li>
+            <li><strong>Reminders:</strong> Scheduled delivery, SMS, push notifications and vacation pause are not currently available.</li>
+            <li><strong>Release Controls:</strong> A missed check-in does not authorize access or start an automatic release countdown.</li>
+            <li><strong>Recipient Access:</strong> Invitations, acceptance, recipient verification and family handover are planned and currently disabled.</li>
           </ul>
         </section>
 
@@ -329,7 +325,7 @@ export default function PrivacyPolicyPage() {
             5. Data Storage, Residency & Security Controls
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            All encrypted vault backups and databases are hosted in <strong>Amazon Web Services (AWS ap-south-1 Mumbai region)</strong>, fulfilling Indian domestic data residency standards.
+            The deployment uses AWS services configured for the Mumbai region. Descriptions and uploaded files use server-managed encryption; metadata and account records remain accessible to authorized service processes. This statement is not a certification of data-residency compliance.
           </p>
           <div
             style={{
@@ -340,28 +336,28 @@ export default function PrivacyPolicyPage() {
           >
             <div style={{ background: 'rgba(6, 40, 33, 0.7)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '16px' }}>
               <div style={{ color: '#ECC862', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>
-                Hardware Secure Enclave
+                Device Biometrics
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
-                Biometric Face ID / Fingerprint auth keys are bound directly to your phone hardware and never leave your device.
+                Supported devices perform biometric checks through the operating system to protect app access. Those checks do not derive or hold the server encryption key.
               </div>
             </div>
 
             <div style={{ background: 'rgba(6, 40, 33, 0.7)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '16px' }}>
               <div style={{ color: '#ECC862', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>
-                TLS 1.3 & AES-256-GCM
+                HTTPS & AES-256-GCM
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
-                Military-grade authenticated encryption at rest and in transit across all network communications.
+                Production API access uses HTTPS. Descriptions and files are encrypted using AES-256-GCM on the server before storage.
               </div>
             </div>
 
             <div style={{ background: 'rgba(6, 40, 33, 0.7)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '16px' }}>
               <div style={{ color: '#ECC862', fontWeight: 700, fontSize: '0.88rem', marginBottom: '4px' }}>
-                Zero Plaintext Exposure
+                Server Key Custody
               </div>
               <div style={{ fontSize: '0.82rem', color: 'var(--sage)' }}>
-                Even in the hypothetical event of a database breach, attackers obtain only mathematically uncrackable ciphertext.
+                The server processes plaintext during upload and authorized retrieval. Key protection, access controls and metadata privacy are part of the security boundary.
               </div>
             </div>
           </div>
@@ -376,22 +372,23 @@ export default function PrivacyPolicyPage() {
             <strong>We do not sell, rent, monetize, or trade your personal or financial data under any circumstance.</strong> Our business model relies exclusively on premium subscription tiers, never on advertising or behavioral data mining.
           </p>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '10px' }}>
-            We engage only essential, audited infrastructure sub-processors:
+            The service uses the following infrastructure providers:
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px' }}>
             <li><strong>AWS (Amazon Web Services):</strong> Encrypted cloud object storage & PostgreSQL compute (Mumbai, India).</li>
             <li><strong>Google Identity Services:</strong> Optional single sign-on authentication.</li>
-            <li><strong>Transactional Email / SMS Gateways:</strong> For sending heartbeat verification links and security alerts.</li>
+            <li><strong>Transactional Email Provider:</strong> For supported account and waitlist messages. SMS and push delivery are not currently available.</li>
+            <li><strong>Google Fonts:</strong> The website requests font files from Google, which receives the request metadata, including the IP address.</li>
           </ul>
         </section>
 
         {/* Section 7 */}
         <section style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.45rem', color: 'var(--warm-ivory)', marginBottom: '14px', fontWeight: 700 }}>
-            7. Your Rights: Right to Erasure & Account Deletion
+            7. Privacy Requests & Unavailable Account Deletion
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            In full accordance with Apple App Store Guideline 5.1.1(v), Google Play User Data policies, and Section 12 of the DPDP Act 2023, you hold the complete, unhindered <strong>Right to be Forgotten</strong>:
+            You can contact the privacy address below about access, correction, consent withdrawal or deletion. <strong>Automated account deletion is not currently available.</strong> The app does not accept a deletion request it cannot execute.
           </p>
           <div
             style={{
@@ -404,11 +401,11 @@ export default function PrivacyPolicyPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <Trash2 size={16} color="#D94A4A" />
               <strong style={{ color: '#FFBABA', fontSize: '0.92rem' }}>
-                Instant In-App Account Deletion
+                Account Deletion Is Unavailable
               </strong>
             </div>
             <p style={{ color: 'var(--warm-ivory)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-              You may initiate complete account deletion at any time directly within the mobile application under <strong>Profile &rarr; Delete Account</strong>. When confirmed, all encryption keys are invalidated, all ciphertext vault files on S3 are permanently purged, and your database record is expunged within 30 days.
+              The app currently reports that the deletion lifecycle is not configured and leaves your account unchanged. Contact the privacy address below to discuss a privacy request. A complete deletion workflow must address account records, stored files, retention and backups. The shared server master key is not a per-user key. No automatic purge or immediate cryptographic erasure is currently provided.
             </p>
           </div>
         </section>
@@ -416,10 +413,10 @@ export default function PrivacyPolicyPage() {
         {/* Section 8 */}
         <section style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.45rem', color: 'var(--warm-ivory)', marginBottom: '14px', fontWeight: 700 }}>
-            8. Data Protection Officer & Grievance Redressal
+            8. Privacy Contact & Requests
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            Pursuant to the DPDP Act 2023 and Rule 5(9) of the Information Technology (SPDI) Rules, 2011, Virasaat has appointed a dedicated Data Protection & Grievance Officer:
+            For questions about how the current service handles your information or to raise a privacy request, use the following contact:
           </p>
           <div
             style={{
@@ -430,7 +427,7 @@ export default function PrivacyPolicyPage() {
             }}
           >
             <div style={{ fontWeight: 700, color: 'var(--warm-ivory)', marginBottom: '4px' }}>
-              Data Protection & Grievance Redressal Officer
+              Privacy & Data Requests
             </div>
             <div style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '8px' }}>
               Name: Mohan Sharma · Virasaat Technologies Inc.
@@ -442,7 +439,7 @@ export default function PrivacyPolicyPage() {
               </a>{' '}
               / <a href="mailto:mohansharma916@gmail.com" style={{ color: '#ECC862', textDecoration: 'none' }}>mohansharma916@gmail.com</a>
               <br />
-              Response SLA: All data subject inquiries and grievances will be acknowledged within 24 hours and resolved within 72 hours.
+              Please describe your request and the account or waitlist email it relates to. Do not email account passwords or private vault contents.
             </div>
           </div>
         </section>

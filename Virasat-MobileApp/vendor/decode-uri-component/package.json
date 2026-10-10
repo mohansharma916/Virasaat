@@ -1,0 +1,14 @@
+{
+  "name": "decode-uri-component",
+  "version": "0.5.0",
+  "description": "Upstream patched decoder with CommonJS export for Expo SDK 57",
+  "license": "MIT",
+  "repository": "github:SamVerschueren/decode-uri-component",
+  "main": "index.cjs",
+  "type": "commonjs",
+  "sideEffects": false,
+  "files": [
+    "index.cjs",
+    "license"
+  ]
+}

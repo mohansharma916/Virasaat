@@ -19,46 +19,10 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 
 export default function PlansScreen() {
   const insets = useSafeAreaInsets();
-  const { currentPlan, purchasePlan, restorePurchases, refreshSubscription } =
+  const { effectivePlanCode, restorePurchases, refreshSubscription } =
     useSubscription();
-  const [purchasingPlan, setPurchasingPlan] = useState<PlanCode | null>(null);
   const [restoring, setRestoring] = useState(false);
 
-  const handleSelectPlan = async (planCode: PlanCode) => {
-    if (planCode === PlanCode.STARTER) {
-      Alert.alert(
-        'Starter Plan',
-        'You are already on the Starter plan. To upgrade your limits, select Secure or Family.',
-      );
-      return;
-    }
-
-    if (currentPlan?.code === planCode) {
-      Alert.alert(
-        'Current Plan',
-        `You are currently subscribed to Virasat ${currentPlan.name}.`,
-      );
-      return;
-    }
-
-    try {
-      setPurchasingPlan(planCode);
-      await purchasePlan(planCode);
-      await refreshSubscription();
-      Alert.alert(
-        'Upgrade Successful',
-        `Welcome to Virasat ${planCode === PlanCode.FAMILY ? 'Family' : 'Secure'}! Your new entitlements are now active.`,
-        [{ text: 'Continue', onPress: () => router.replace('/(auth)/home') }],
-      );
-    } catch (error) {
-      Alert.alert(
-        'Subscription Failed',
-        getApiErrorMessage(error, 'We were unable to complete your subscription. Please try again.'),
-      );
-    } finally {
-      setPurchasingPlan(null);
-    }
-  };
 
   const handleRestore = async () => {
     try {
@@ -66,8 +30,8 @@ export default function PlansScreen() {
       await restorePurchases();
       await refreshSubscription();
       Alert.alert(
-        'Purchases Restored',
-        'Your subscription status has been verified with your store account.',
+        'Subscription Refreshed',
+        'Your saved account subscription was refreshed. Store purchase restoration is not available yet.',
       );
     } catch (error) {
       Alert.alert(
@@ -79,9 +43,9 @@ export default function PlansScreen() {
     }
   };
 
-  const isStarter = !currentPlan || currentPlan.code === PlanCode.STARTER;
-  const isSecure = currentPlan?.code === PlanCode.SECURE;
-  const isFamily = currentPlan?.code === PlanCode.FAMILY;
+  const isStarter = effectivePlanCode === PlanCode.STARTER;
+  const isSecure = effectivePlanCode === PlanCode.SECURE;
+  const isFamily = effectivePlanCode === PlanCode.FAMILY;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -105,8 +69,7 @@ export default function PlansScreen() {
           <Text style={styles.eyebrow}>PLANS & PROTECTION</Text>
           <Text style={styles.title}>Choose Your Legacy Shield</Text>
           <Text style={styles.subtitle}>
-            Every tier provides a secure baseline release workflow. Higher plans
-            provide more trusted persons, multi-party verifiers, and customization.
+            Starter access is available now. Paid checkout, purchase restoration, automatic reminders, verification workflows, and inheritance release are coming soon. Paid-tier benefits below are planned.
           </Text>
         </View>
 
@@ -186,22 +149,16 @@ export default function PlansScreen() {
           </View>
 
           <Pressable
-            disabled={isSecure || purchasingPlan !== null}
-            onPress={() => handleSelectPlan(PlanCode.SECURE)}
-            style={({ pressed }) => [
+            disabled
+            accessibilityState={{ disabled: true }}
+                        style={({ pressed }) => [
               styles.planButton,
               styles.planButtonPrimary,
-              isSecure && styles.planButtonDisabled,
+              styles.planButtonDisabled,
               pressed && styles.pressed,
             ]}
           >
-            {purchasingPlan === PlanCode.SECURE ? (
-              <ActivityIndicator color={colors.neutral.white} />
-            ) : (
-              <Text style={styles.planButtonPrimaryText}>
-                {isSecure ? 'Current Plan' : 'Upgrade to Secure'}
-              </Text>
-            )}
+            <Text style={styles.planButtonPrimaryText}>Coming soon</Text>
           </Pressable>
         </View>
 
@@ -239,22 +196,16 @@ export default function PlansScreen() {
           </View>
 
           <Pressable
-            disabled={isFamily || purchasingPlan !== null}
-            onPress={() => handleSelectPlan(PlanCode.FAMILY)}
-            style={({ pressed }) => [
+            disabled
+            accessibilityState={{ disabled: true }}
+                        style={({ pressed }) => [
               styles.planButton,
               styles.planButtonPrimary,
-              isFamily && styles.planButtonDisabled,
+              styles.planButtonDisabled,
               pressed && styles.pressed,
             ]}
           >
-            {purchasingPlan === PlanCode.FAMILY ? (
-              <ActivityIndicator color={colors.neutral.white} />
-            ) : (
-              <Text style={styles.planButtonPrimaryText}>
-                {isFamily ? 'Current Plan' : 'Upgrade to Family'}
-              </Text>
-            )}
+            <Text style={styles.planButtonPrimaryText}>Coming soon</Text>
           </Pressable>
         </View>
 
@@ -269,14 +220,12 @@ export default function PlansScreen() {
             {restoring ? (
               <ActivityIndicator size="small" color={colors.primary.deepForest} />
             ) : (
-              <Text style={styles.restoreText}>Restore Existing Purchases</Text>
+              <Text style={styles.restoreText}>Refresh Account Subscription</Text>
             )}
           </Pressable>
 
           <Text style={styles.disclaimerText}>
-            Subscriptions auto-renew annually. You can manage or cancel your
-            subscription anytime in your app store settings. Your legacy records
-            and release policies are never deleted upon plan expiration or downgrade.
+            Paid billing is unavailable. Refreshing updates your saved account subscription only; it does not restore a store purchase. Saved records and policy preferences are retained if access limits change.
           </Text>
         </View>
       </ScrollView>

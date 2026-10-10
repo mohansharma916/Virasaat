@@ -2,28 +2,17 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import type { WaitlistRegistration } from '@/lib/waitlist';
 import { Sparkles, ArrowRight, Lock, CheckCircle2, Mail, Check } from 'lucide-react';
 
 interface CtaBannerProps {
   onOpenWaitlist: (email?: string) => void;
+  registration?: WaitlistRegistration | null;
 }
 
-export default function CtaBanner({ onOpenWaitlist }: CtaBannerProps) {
+export default function CtaBanner({ onOpenWaitlist, registration }: CtaBannerProps) {
   const [email, setEmail] = useState('');
-  const [submittedQueue, setSubmittedQueue] = useState<number | null>(null);
-
-  React.useEffect(() => {
-    try {
-      const savedQueue = localStorage.getItem('virasaat_queue_num');
-      const savedEmail = localStorage.getItem('virasaat_user_email');
-      if (savedQueue) {
-        setSubmittedQueue(parseInt(savedQueue, 10));
-      }
-      if (savedEmail) {
-        setEmail(savedEmail);
-      }
-    } catch {}
-  }, []);
+  const submittedQueue = registration?.queueNumber ?? null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,10 +145,10 @@ export default function CtaBanner({ onOpenWaitlist }: CtaBannerProps) {
                     </div>
                     <div>
                       <div style={{ color: '#35B86B', fontWeight: 700, fontSize: '0.92rem' }}>
-                        Spot #{submittedQueue} Reserved! Confirmation email sent.
+                        Spot #{submittedQueue} Reserved! Signup confirmed.
                       </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>
-                        We will notify {email} as soon as invites open.
+                        Launch updates will go to {registration?.email}.
                       </div>
                     </div>
                   </div>
@@ -250,11 +239,11 @@ export default function CtaBanner({ onOpenWaitlist }: CtaBannerProps) {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <CheckCircle2 size={16} color="#35B86B" />
-                <span>Free Lifetime Core Access for Waitlist Members</span>
+                <span>Free Waitlist Signup for Launch Updates</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Lock size={16} color="#D4AF37" />
-                <span>100% Private & Device Encrypted</span>
+                <span>Server-Managed Vault Encryption</span>
               </div>
             </div>
           </div>

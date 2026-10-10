@@ -54,6 +54,9 @@ export interface SubscriptionInfo {
 }
 
 export interface EntitlementsPayload {
+  effectivePlanCode: PlanCode;
+  billingAvailable: boolean;
+  purchaseVerification: 'NOT_REQUIRED' | 'UNVERIFIED' | 'VERIFIED';
   plan: PlanInfo;
   subscription: SubscriptionInfo;
   entitlements: Record<Feature, boolean>;

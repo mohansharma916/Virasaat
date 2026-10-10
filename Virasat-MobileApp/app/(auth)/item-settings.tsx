@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { assignLegacyItem, listLegacyItems, type LegacyItem } from '@/src/api/vault.api';
 import { listRecipients, type Recipient } from '@/src/api/recipients.api';
@@ -18,11 +18,12 @@ import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 
 export default function ItemSettingsScreen() {
+  const params = useLocalSearchParams<{ itemId?: string }>();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<LegacyItem[]>([]);
   const [people, setPeople] = useState<Recipient[]>([]);
   const [policy, setPolicy] = useState<ReleasePolicy | null>(null);
-  const [itemId, setItemId] = useState('');
+  const [itemId, setItemId] = useState(params.itemId ?? '');
   const [recipientId, setRecipientId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -105,7 +106,7 @@ export default function ItemSettingsScreen() {
           <Text style={styles.eyebrow}>VAULT ASSIGNMENT</Text>
           <Text style={styles.title}>Release Settings</Text>
           <Text style={styles.subtitle}>
-            Connect vault items to trusted recipients. Items are only released once all conditions are met.
+            Save recipient and policy preferences for each item. Recipient access and inheritance release are not available yet.
           </Text>
         </View>
 

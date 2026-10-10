@@ -3,6 +3,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,9 +24,13 @@ import { PlanEntitlementService } from '../subscriptions/plan-entitlement.servic
 import { Feature } from '../subscriptions/subscription.constants';
 import { NotificationsService } from '../notification/notifications.service';
 import { EmailTemplateType } from '../notification/email/email-template.types';
+import { UsersService } from '../users/users.service';
+import { getEmailAppLink } from '../notification/email/email-links';
+import { nextCheckInAt } from './check-in-time';
 
 @Injectable()
 export class CheckInService {
+  private readonly logger = new Logger(CheckInService.name);
   constructor(
     @InjectRepository(CheckInPolicy)
     private readonly policyRepository: Repository<CheckInPolicy>,
@@ -38,6 +43,8 @@ export class CheckInService {
 
     @Optional()
     private readonly notificationsService?: NotificationsService,
+    @Optional()
+    private readonly usersService?: UsersService,
   ) {}
 
   /**
@@ -68,145 +75,205 @@ export class CheckInService {
       }
     }
 
-    let policy = await this.policyRepository.findOne({
-      where: { userId },
-    });
-
-    if (!policy) {
-      policy = this.policyRepository.create({
-        userId,
-        cadence: dto.cadence ?? CheckInCadence.MONTHLY,
-        preferredTime: dto.preferredTime ?? '09:00',
-        timezone: dto.timezone ?? 'Asia/Kolkata',
-        reminderConfig: {
-          channels: dto.reminderConfig?.channels ?? ['EMAIL'],
-
-          reminderDaysBefore: dto.reminderConfig?.reminderDaysBefore ?? [3, 1],
-        },
-        escalationEnabled: dto.escalationEnabled ?? false,
+    return this.policyRepository.manager.transaction(async (manager) => {
+      const policies = manager.getRepository(CheckInPolicy);
+      const events = manager.getRepository(CheckInEvent);
+      let policy = await policies.findOne({
+        where: { userId },
+        lock: { mode: 'pessimistic_write' },
       });
-    } else {
-      if (dto.cadence !== undefined) {
-        policy.cadence = dto.cadence;
+      const scheduleChanged =
+        !policy ||
+        (dto.cadence !== undefined && dto.cadence !== policy.cadence) ||
+        (dto.preferredTime !== undefined &&
+          dto.preferredTime !== policy.preferredTime) ||
+        (dto.timezone !== undefined && dto.timezone !== policy.timezone);
+
+      if (!policy) {
+        policy = policies.create({
+          userId,
+          cadence: dto.cadence ?? CheckInCadence.MONTHLY,
+          preferredTime: dto.preferredTime ?? '09:00',
+          timezone: dto.timezone ?? 'Asia/Kolkata',
+          reminderConfig: {
+            channels: dto.reminderConfig?.channels ?? ['EMAIL'],
+
+            reminderDaysBefore: dto.reminderConfig?.reminderDaysBefore ?? [
+              3, 1,
+            ],
+          },
+          escalationEnabled: dto.escalationEnabled ?? false,
+        });
+      } else {
+        if (dto.cadence !== undefined) {
+          policy.cadence = dto.cadence;
+        }
+
+        if (dto.preferredTime !== undefined) {
+          policy.preferredTime = dto.preferredTime;
+        }
+
+        if (dto.timezone !== undefined) {
+          policy.timezone = dto.timezone;
+        }
+
+        if (dto.reminderConfig !== undefined) {
+          policy.reminderConfig = {
+            ...policy.reminderConfig,
+            ...dto.reminderConfig,
+          };
+        }
+
+        if (dto.escalationEnabled !== undefined) {
+          policy.escalationEnabled = dto.escalationEnabled;
+        }
       }
 
-      if (dto.preferredTime !== undefined) {
-        policy.preferredTime = dto.preferredTime;
+      if (scheduleChanged || !policy.nextCheckInAt) {
+        policy.nextCheckInAt = this.calculateNextCheckIn(policy);
       }
 
-      if (dto.timezone !== undefined) {
-        policy.timezone = dto.timezone;
+      policy = await policies.save(policy);
+
+      // Create the first event if there isn't one.
+      const existingEvent = await events.findOne({
+        where: {
+          policyId: policy.id,
+          status: CheckInEventStatus.PENDING,
+        },
+      });
+
+      if (existingEvent && policy.nextCheckInAt) {
+        if (
+          new Date(existingEvent.dueAt).getTime() !==
+          new Date(policy.nextCheckInAt).getTime()
+        ) {
+          existingEvent.dueAt = policy.nextCheckInAt;
+          existingEvent.reminderCount = 0;
+          await events.save(existingEvent);
+        }
+      } else if (policy.nextCheckInAt) {
+        await events.save(
+          events.create({
+            policyId: policy.id,
+            dueAt: policy.nextCheckInAt,
+            status: CheckInEventStatus.PENDING,
+          }),
+        );
       }
 
-      if (dto.reminderConfig !== undefined) {
-        policy.reminderConfig = {
-          ...policy.reminderConfig,
-          ...dto.reminderConfig,
-        };
-      }
-
-      if (dto.escalationEnabled !== undefined) {
-        policy.escalationEnabled = dto.escalationEnabled;
-      }
-    }
-
-    policy.nextCheckInAt = this.calculateNextCheckIn(policy);
-
-    policy = await this.policyRepository.save(policy);
-
-    // Create the first event if there isn't one.
-    const existingEvent = await this.eventRepository.findOne({
-      where: {
-        policyId: policy.id,
-        status: CheckInEventStatus.PENDING,
-      },
+      return policy;
     });
-
-    if (!existingEvent && policy.nextCheckInAt) {
-      await this.createEvent(policy, policy.nextCheckInAt);
-    }
-
-    return policy;
   }
 
   /**
    * Confirm the user's check-in.
    */
   async confirmCheckIn(userId: string, eventId: string) {
-    const result = await this.policyRepository.manager.transaction(async (manager) => {
-      const policies = manager.getRepository(CheckInPolicy);
-      const events = manager.getRepository(CheckInEvent);
-      const policy = await policies.findOne({
-        where: { userId },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!policy)
-        throw new NotFoundException('Check-in policy not configured');
-      const event = await events.findOne({
-        where: { id: eventId, policyId: policy.id },
-      });
-      if (!event) throw new NotFoundException('Check-in not found');
-      if (event.status === CheckInEventStatus.COMPLETED)
+    const result = await this.policyRepository.manager.transaction(
+      async (manager) => {
+        const policies = manager.getRepository(CheckInPolicy);
+        const events = manager.getRepository(CheckInEvent);
+        const policy = await policies.findOne({
+          where: { userId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!policy)
+          throw new NotFoundException('Check-in policy not configured');
+        const event = await events.findOne({
+          where: { id: eventId, policyId: policy.id },
+        });
+        if (!event) throw new NotFoundException('Check-in not found');
+        if (event.status === CheckInEventStatus.COMPLETED)
+          return {
+            success: true,
+            nextCheckInAt: policy.nextCheckInAt,
+            respondedAt: event.respondedAt,
+            newlyCompleted: false,
+            cadence: policy.cadence,
+            timezone: policy.timezone,
+          };
+        if (event.status !== CheckInEventStatus.PENDING)
+          throw new BadRequestException(
+            'This check-in needs a secure activity review. No release has been authorized by this request.',
+          );
+        event.status = CheckInEventStatus.COMPLETED;
+        event.respondedAt = new Date();
+        await events.save(event);
+        policy.nextCheckInAt = this.calculateNextCheckIn(policy);
+        await policies.save(policy);
+        await events.save(
+          events.create({
+            policyId: policy.id,
+            dueAt: policy.nextCheckInAt,
+            status: CheckInEventStatus.PENDING,
+          }),
+        );
+        await manager.getRepository(AuditEvent).save({
+          actorId: userId,
+          action: 'checkin_completed',
+          targetType: 'check_in_event',
+          targetId: event.id,
+          result: AuditResult.SUCCESS,
+        });
         return {
           success: true,
           nextCheckInAt: policy.nextCheckInAt,
           respondedAt: event.respondedAt,
+          newlyCompleted: true,
+          cadence: policy.cadence,
+          timezone: policy.timezone,
         };
-      if (event.status !== CheckInEventStatus.PENDING)
-        throw new BadRequestException(
-          'This check-in needs a secure activity review. No release has been authorized by this request.',
-        );
-      event.status = CheckInEventStatus.COMPLETED;
-      event.respondedAt = new Date();
-      await events.save(event);
-      policy.nextCheckInAt = this.calculateNextCheckIn(policy);
-      await policies.save(policy);
-      await events.save(
-        events.create({
-          policyId: policy.id,
-          dueAt: policy.nextCheckInAt,
-          status: CheckInEventStatus.PENDING,
-        }),
-      );
-      await manager.getRepository(AuditEvent).save({
-        actorId: userId,
-        action: 'checkin_completed',
-        targetType: 'check_in_event',
-        targetId: event.id,
-        result: AuditResult.SUCCESS,
-      });
-      return {
-        success: true,
-        nextCheckInAt: policy.nextCheckInAt,
-        respondedAt: event.respondedAt,
-      };
-    });
+      },
+    );
 
-    if (this.notificationsService) {
-      this.notificationsService
-        .sendTemplatedEmail({
-          to: `user_${userId}@virasaat.internal`,
-          userId,
-          templateType: EmailTemplateType.CHECK_IN_CONFIRMED,
-          data: {
-            recipientName: 'Valued Member',
-            confirmedAt: new Date().toLocaleString('en-US', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            }),
-            nextCheckInDate: result.nextCheckInAt
-              ? new Date(result.nextCheckInAt).toLocaleDateString('en-US', {
-                  dateStyle: 'long',
-                })
-              : 'Next cycle',
-            cadence: 'Monthly Routine',
-            dashboardUrl: 'https://virasaat.com/dashboard',
-          },
-        })
-        .catch(() => {});
+    if (
+      result.newlyCompleted &&
+      this.notificationsService &&
+      this.usersService
+    ) {
+      const users = this.usersService;
+      const notifications = this.notificationsService;
+      void (async () => {
+        const user = await users.findById(userId);
+        if (user)
+          await notifications.sendTemplatedEmail({
+            to: user.email,
+            userId,
+            templateType: EmailTemplateType.CHECK_IN_CONFIRMED,
+            data: {
+              recipientName: user.name,
+              confirmedAt: new Date(result.respondedAt!).toLocaleString(
+                'en-US',
+                {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                  timeZone: result.timezone || 'Asia/Kolkata',
+                },
+              ),
+              nextCheckInDate: result.nextCheckInAt
+                ? new Date(result.nextCheckInAt).toLocaleDateString('en-US', {
+                    dateStyle: 'long',
+                    timeZone: result.timezone || 'Asia/Kolkata',
+                  })
+                : 'Next cycle',
+              cadence:
+                result.cadence === CheckInCadence.WEEKLY ? 'Weekly' : 'Monthly',
+              dashboardUrl: getEmailAppLink('home'),
+            },
+          });
+      })().catch(() =>
+        this.logger.warn(
+          'Check-in confirmed, but its email confirmation could not be sent.',
+        ),
+      );
     }
 
-    return result;
+    return {
+      success: result.success,
+      nextCheckInAt: result.nextCheckInAt,
+      respondedAt: result.respondedAt,
+    };
   }
 
   /**
@@ -247,39 +314,9 @@ export class CheckInService {
   }
 
   /**
-   * Create check-in event.
-   */
-  private async createEvent(policy: CheckInPolicy, dueAt: Date) {
-    const event = this.eventRepository.create({
-      policyId: policy.id,
-      dueAt,
-      status: CheckInEventStatus.PENDING,
-    });
-
-    return this.eventRepository.save(event);
-  }
-
-  /**
    * Calculate next check-in date.
    */
   private calculateNextCheckIn(policy: CheckInPolicy): Date {
-    const now = new Date();
-
-    const [hours, minutes] = policy.preferredTime.split(':').map(Number);
-
-    const next = new Date(now);
-
-    next.setHours(hours);
-    next.setMinutes(minutes);
-    next.setSeconds(0);
-    next.setMilliseconds(0);
-
-    if (policy.cadence === CheckInCadence.WEEKLY) {
-      next.setDate(next.getDate() + 7);
-    } else {
-      next.setMonth(next.getMonth() + 1);
-    }
-
-    return next;
+    return nextCheckInAt(policy);
   }
 }

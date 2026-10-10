@@ -59,6 +59,9 @@ export class S3StorageService {
     const secretAccessKey =
       this.configService?.get<string>('AWS_SECRET_ACCESS_KEY') ||
       process.env.AWS_SECRET_ACCESS_KEY;
+    const sessionToken =
+      this.configService?.get<string>('AWS_SESSION_TOKEN') ||
+      process.env.AWS_SESSION_TOKEN;
 
     const endpoint =
       this.configService?.get<string>('AWS_S3_ENDPOINT') ||
@@ -72,13 +75,23 @@ export class S3StorageService {
       this.configService?.get<string>('AWS_S3_KMS_KEY_ID') ||
       process.env.AWS_S3_KMS_KEY_ID;
 
-    if (this.bucketName && accessKeyId && secretAccessKey) {
+    if (this.bucketName) {
+      if (Boolean(accessKeyId) !== Boolean(secretAccessKey)) {
+        throw new Error(
+          'Configure both AWS access key fields, or use the AWS credential provider chain.',
+        );
+      }
       this.s3Client = new S3Client({
         region: this.region,
-        credentials: {
-          accessKeyId,
-          secretAccessKey,
-        },
+        ...(accessKeyId && secretAccessKey
+          ? {
+              credentials: {
+                accessKeyId,
+                secretAccessKey,
+                ...(sessionToken ? { sessionToken } : {}),
+              },
+            }
+          : {}),
         ...(endpoint ? { endpoint, forcePathStyle } : {}),
       });
       this.configured = true;
@@ -87,7 +100,7 @@ export class S3StorageService {
       );
     } else {
       this.logger.warn(
-        'S3StorageService: AWS S3 credentials or bucket name not configured. Local fallback storage will be used until AWS keys are set.',
+        'S3StorageService: S3 bucket is not configured. New vault file uploads are unavailable until S3 is configured.',
       );
     }
   }

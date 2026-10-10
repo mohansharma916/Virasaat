@@ -81,6 +81,7 @@ const sessionSlice = createSlice({
     ) {
       state.user = action.payload;
       state.status = 'ready';
+      state.requestId = undefined;
     },
     clearSession(state) {
       state.requestId = undefined;

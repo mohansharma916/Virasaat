@@ -71,7 +71,10 @@ export const getAccessToken = async () => {
 };
 
 export const removeAccessToken = async () => {
-  await removeValue(ACCESS_TOKEN_KEY);
+  await Promise.all([
+    removeValue(ACCESS_TOKEN_KEY),
+    clearBiometricSession(),
+  ]);
 };
 
 export const saveBiometricUnlockEnabled = async (enabled: boolean) => {
@@ -96,7 +99,6 @@ export const getLastEmail = async () => {
 
 export const saveBiometricSession = async (sessionData: { email: string; token: string; user?: any }) => {
   await writeValue(BIOMETRIC_SAVED_SESSION_KEY, JSON.stringify(sessionData));
-  await saveBiometricUnlockEnabled(true);
 };
 
 export const getBiometricSession = async (): Promise<{ email: string; token: string; user?: any } | null> => {

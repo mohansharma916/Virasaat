@@ -15,10 +15,12 @@ import FaqSection from './FaqSection';
 import CtaBanner from './CtaBanner';
 import Footer from './Footer';
 import WaitlistModal from './WaitlistModal';
+import type { WaitlistRegistration } from '@/lib/waitlist';
 
 export default function ShowcaseApp() {
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [defaultEmail, setDefaultEmail] = useState('');
+  const [registration, setRegistration] = useState<WaitlistRegistration | null>(null);
 
   const openWaitlist = (email?: string) => {
     if (typeof email === 'string' && email.trim()) {
@@ -37,7 +39,7 @@ export default function ShowcaseApp() {
     <>
       <Navbar onOpenWaitlist={() => openWaitlist()} />
       <main>
-        <Hero onOpenWaitlist={openWaitlist} />
+        <Hero onOpenWaitlist={openWaitlist} registration={registration} />
         <CrisisStats />
         <VaultPillars onOpenWaitlist={() => openWaitlist()} />
         <MobileAppShowcase onOpenWaitlist={() => openWaitlist()} />
@@ -47,14 +49,14 @@ export default function ShowcaseApp() {
         <ComparisonMatrix onOpenWaitlist={() => openWaitlist()} />
         <Testimonials />
         <FaqSection onOpenWaitlist={() => openWaitlist()} />
-        <CtaBanner onOpenWaitlist={openWaitlist} />
+        <CtaBanner onOpenWaitlist={openWaitlist} registration={registration} />
       </main>
       <Footer />
-      <WaitlistModal
-        isOpen={waitlistOpen}
+      {waitlistOpen && <WaitlistModal
         onClose={closeWaitlist}
         defaultEmail={defaultEmail}
-      />
+        onJoined={setRegistration}
+      />}
     </>
   );
 }

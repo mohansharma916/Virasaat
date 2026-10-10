@@ -103,13 +103,13 @@ export default function TrustedPersonIntroScreen() {
           <SecurityStep
             number="03"
             title="Your trusted person is contacted"
-            description="Only after the defined verification process is completed."
+            description="Verification and inheritance release are planned features and are unavailable."
           />
 
           <SecurityStep
             number="04"
             title="Your vault remains protected"
-            description="Access is released only according to the rules you define."
+            description="Save their details privately. Invitations and recipient access are unavailable."
           />
         </View>
 

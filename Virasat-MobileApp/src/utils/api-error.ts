@@ -6,16 +6,6 @@ export function getApiErrorMessage(
 ) {
   if (!error) return fallback;
 
-  if (typeof error === 'object' && error !== null) {
-    const err = error as any;
-    if (err.isUnauthorized || err.status === 401) {
-      return 'Your session has expired. Sign in again to continue.';
-    }
-    if (typeof err.message === 'string' && err.message) {
-      return err.message;
-    }
-  }
-
   if (isAxiosError(error)) {
     // A rejected login/OTP has no app session to expire. Only authenticated
     // requests should replace the server's error with the session-expiry message.
@@ -39,6 +29,15 @@ export function getApiErrorMessage(
     if (!error.response) {
       return 'Unable to reach Virasat. Check your connection and try again.';
     }
+    return fallback;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const err = error as { isUnauthorized?: boolean; message?: unknown };
+    if (err.isUnauthorized) {
+      return 'Your session has expired. Sign in again to continue.';
+    }
+    if (typeof err.message === 'string' && err.message) return err.message;
   }
 
   return error instanceof Error && error.message ? error.message : fallback;

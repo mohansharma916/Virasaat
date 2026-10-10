@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Sparkles, Menu, X, ArrowRight, Lock, Smartphone } from 'lucide-react';
+import { Shield, Sparkles, Menu, X, Lock, Smartphone } from 'lucide-react';
 
 interface NavbarProps {
   onOpenWaitlist: () => void;
@@ -311,7 +311,7 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
               }}
             >
               <Lock size={14} />
-              <span>100% Private & Device Encrypted</span>
+              <span>Server-Managed Vault Encryption</span>
             </div>
           </div>
         </div>

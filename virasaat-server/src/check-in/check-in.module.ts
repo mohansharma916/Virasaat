@@ -9,12 +9,14 @@ import { CheckInEvent } from './entities/check-in-event.entity';
 
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { NotificationsModule } from '../notification/notification.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CheckInPolicy, CheckInEvent]),
     SubscriptionsModule,
     NotificationsModule,
+    UsersModule,
   ],
 
   controllers: [CheckInController],

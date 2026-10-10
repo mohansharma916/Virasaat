@@ -5,7 +5,6 @@ import {
 } from '../types/subscription.types';
 import {
   getPublicPlans,
-  purchasePlan,
   restorePurchases,
 } from '../api/subscription.api';
 
@@ -47,26 +46,7 @@ class PurchaseServiceImpl {
       throw new Error('Starter is a free tier and does not require purchase.');
     }
 
-    if (!__DEV__) {
-      throw new Error('Paid subscriptions are not available yet. Please continue with Starter.');
-    }
-
-    const provider = this.defaultProvider;
-    // Development-only simulated checkout; replace with native store billing before paid launch.
-    const timestamp = Date.now();
-    const randomHex = Math.random().toString(36).substring(2, 10);
-    const purchaseToken = `${provider.toLowerCase()}_token_${planCode.toLowerCase()}_${timestamp}_${randomHex}`;
-    const orderId = `GPA.${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // Authoritative server-side verification and activation
-    const result = await purchasePlan({
-      planCode,
-      provider,
-      purchaseToken,
-      orderId,
-    });
-
-    return result;
+    throw new Error('Paid subscriptions are not available yet. Please continue with Starter.');
   }
 
   /**

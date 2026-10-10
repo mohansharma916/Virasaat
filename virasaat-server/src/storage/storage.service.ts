@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { S3StorageService, S3UploadResult } from './s3-storage.service';
 import { readFile, unlink } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 
 export interface StorageSaveResult {
@@ -56,7 +56,7 @@ export class StorageService {
   }): Promise<StorageSaveResult> {
     if (!this.s3StorageService.isConfigured()) {
       const errorMsg =
-        'AWS S3 is not configured. Direct S3 storage is required for all vault items. Please check AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_S3_BUCKET_NAME in environment settings.';
+        'AWS S3 is not configured. Direct S3 storage is required for all vault files. Configure AWS_S3_BUCKET_NAME and an AWS credential provider or a complete access key pair.';
       this.logger.error(errorMsg);
       throw new ServiceUnavailableException(errorMsg);
     }
@@ -129,7 +129,7 @@ export class StorageService {
     const storageDirectory = resolve(
       process.env.PRIVATE_STORAGE_DIR ?? 'storage',
     );
-    return readFile(resolve(storageDirectory, ciphertextRef));
+    return readFile(this.localPath(storageDirectory, ciphertextRef));
   }
 
   /**
@@ -147,7 +147,7 @@ export class StorageService {
     const storageDirectory = resolve(
       process.env.PRIVATE_STORAGE_DIR ?? 'storage',
     );
-    await unlink(resolve(storageDirectory, ciphertextRef)).catch(
+    await unlink(this.localPath(storageDirectory, ciphertextRef)).catch(
       () => undefined,
     );
   }
@@ -171,7 +171,7 @@ export class StorageService {
     const storageDirectory = resolve(
       process.env.PRIVATE_STORAGE_DIR ?? 'storage',
     );
-    const localPath = resolve(storageDirectory, params.localFileName);
+    const localPath = this.localPath(storageDirectory, params.localFileName);
     const ciphertext = await readFile(localPath);
 
     const s3Key = `vaults/${params.vaultId}/items/${params.itemId}/${randomUUID()}.bin`;
@@ -238,6 +238,14 @@ export class StorageService {
 
   private isS3Key(ref: string): boolean {
     return ref.startsWith('vaults/') || ref.startsWith('s3://');
+  }
+
+  private localPath(directory: string, ref: string): string {
+    const path = resolve(directory, ref);
+    if (!path.startsWith(`${resolve(directory)}${sep}`)) {
+      throw new BadRequestException('Invalid local storage reference.');
+    }
+    return path;
   }
 
   private extractS3Key(ref: string): string {

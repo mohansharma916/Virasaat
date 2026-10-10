@@ -159,8 +159,9 @@ export default function TrustedPersonReviewScreen() {
           selected={
             notificationMode === 'INFORM_NOW'
           }
-          title="Inform now"
-          description="We'll send them an invitation now. They'll know you've chosen them."
+          disabled
+          title="Invitations coming soon"
+          description="Invitation sending and recipient acceptance are not available yet."
           onPress={() =>
             setNotificationMode('INFORM_NOW')
           }
@@ -174,7 +175,7 @@ export default function TrustedPersonReviewScreen() {
             'INFORM_ON_ACTIVATION'
           }
           title="Keep private"
-          description="Save without sending any invitation. You can choose to inform them later."
+          description="Save their details privately. No invitation is sent and no item access is granted."
           onPress={() =>
             setNotificationMode(
               'INFORM_ON_ACTIVATION'
@@ -233,17 +234,23 @@ function NotificationOption({
   title,
   description,
   onPress,
+  disabled = false,
 }: {
   selected: boolean;
   title: string;
   description: string;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
+      disabled={disabled}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, disabled }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.option,
+        disabled && { opacity: 0.5 },
         selected && styles.optionSelected,
         pressed && styles.optionPressed,
       ]}

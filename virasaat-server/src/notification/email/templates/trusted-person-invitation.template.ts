@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,8 +15,7 @@ import {
 export function renderTrustedPersonInvitationTemplate(
   data: TrustedPersonInvitationEmailData,
 ): RenderedEmail {
-  const invitationUrl =
-    data.invitationUrl || 'https://virasaat.com/trusted-person/accept';
+  const invitationUrl = data.invitationUrl || getEmailAppLink('home');
   const subject = `${data.ownerName} has designated you as a Trusted Contact on Virasaat`;
 
   const contentHtml = `
@@ -71,7 +71,7 @@ export function renderTrustedPersonInvitationTemplate(
                         Zero Immediate Access
                       </div>
                       <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.textSecondary}; line-height: 18px; margin-top: 2px;">
-                        You do not have access to any vault items, credentials, or private documents today. Everything is client-side encrypted and sealed.
+                        You do not have access to any vault items, credentials, or private documents today. Descriptions and uploaded files use server-managed encryption. Authorized server processes can decrypt content.
                       </div>
                     </td>
                   </tr>
@@ -103,7 +103,7 @@ export function renderTrustedPersonInvitationTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: invitationUrl, label: 'Acknowledge Designation & Verify Details' })}
+          ${renderCtaButton({ url: invitationUrl, label: 'Open Virasaat App' })}
         </td>
       </tr>
 
@@ -121,7 +121,9 @@ export function renderTrustedPersonInvitationTemplate(
   const html = wrapInEmailLayout({
     preheader: `${data.ownerName} has named you as their Trusted Contact on Virasaat. Learn what this entails.`,
     title: subject,
-    contentHtml,
+    contentHtml:
+      `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
+      contentHtml,
     securityNotice:
       'You were designated as a trusted contact by a verified Virasaat account owner.',
   });
@@ -133,7 +135,7 @@ ${data.ownerName} has appointed you as a designated Trusted Contact on Virasaat$
 
 WHAT DOES THIS MEAN?
 - ${data.ownerName} has chosen you to help ensure their vital documents, instructions, and legacy are honored.
-- You do NOT have access to their vault or private items now. Everything is sealed and encrypted.
+- You do NOT have access to their vault or private items now. Descriptions and uploaded files use server-managed encryption; titles and categories are metadata.
 - You would only be contacted if ${data.ownerName} becomes unreachable over extended check-in cycles.
 
 ACKNOWLEDGE DESIGNATION:
@@ -145,12 +147,14 @@ No account creation or credit card is required.
 
   const text = wrapInPlainTextLayout({
     title: 'Trusted Contact Appointment',
-    bodyText,
+    bodyText:
+      'Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.\n\n' +
+      bodyText,
   });
 
   return {
     templateType: EmailTemplateType.TRUSTED_PERSON_INVITATION,
-    subject,
+    subject: '[Illustrative sample — workflow unavailable] ' + subject,
     html,
     text,
   };

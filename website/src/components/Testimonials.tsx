@@ -1,34 +1,24 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
-import { Heart, Star, Quote, ShieldCheck } from 'lucide-react';
+import { Heart, Quote, ShieldCheck } from 'lucide-react';
 
 export default function Testimonials() {
   const stories = [
     {
-      name: 'Aditya & Tanvi Kulkarni',
-      role: 'Fintech Director & Parents of two (Ages 4 & 7)',
-      location: 'Bengaluru, India',
-      quote:
-        'Between Zerodha, IndMoney, EPF, and term life insurance, my wife wouldn’t know how to initiate a claim if something happened to me on a business trip. In 10 minutes on Virasaat, I linked every folio and recorded a video capsule for my daughter’s 18th birthday. The peace of mind is priceless.',
-      badge: 'Family & Wealth Vault',
+      name: 'A young family', role: 'Illustrative use case', location: 'Example scenario',
+      quote: 'Organize account references, insurance details and personal messages in one place. Keep a separate plan for giving family access in an emergency.',
+      badge: 'Family Records',
     },
     {
-      name: 'Siddharth Roy',
-      role: 'Staff Engineer & NRI Resident',
-      location: 'San Francisco & Kolkata',
-      quote:
-        'Living abroad while maintaining ancestral property and mutual funds in India used to be an administrative nightmare. The 30-day heartbeat with automatic timezone awareness ensures my family across two continents is synchronized with zero friction.',
-      badge: 'Cross-Border Portfolio',
+      name: 'A family living abroad', role: 'Illustrative use case', location: 'Example scenario',
+      quote: 'Record where important property documents and investment references are kept. Use the check-in tools to record activity, without relying on automatic emergency alerts.',
+      badge: 'Cross-Border Records',
     },
     {
-      name: 'Dr. Meenakshi Sundaram',
-      role: 'Surgeon & Private Practice Owner',
-      location: 'Chennai, India',
-      quote:
-        'As a doctor, I see sudden life emergencies every day. Traditional paper wills get locked away in court probate for years. Virasaat’s dual-confirmation protocol with my spouse and legal advisor ensures instant, dignified clarity.',
-      badge: 'Zero-Knowledge Security',
+      name: 'A busy professional', role: 'Illustrative use case', location: 'Example scenario',
+      quote: 'Save important notes and intended assignments to trusted people. Invitation delivery, identity verification and family handover are still planned.',
+      badge: 'Personal Organization',
     },
   ];
 
@@ -54,7 +44,7 @@ export default function Testimonials() {
           </h2>
 
           <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)' }}>
-            Real stories from parents and professionals who organized their accounts and personal messages.
+            Illustrative situations showing how families could organize their records. These are examples, not customer testimonials.
           </p>
         </div>
 
@@ -62,7 +52,7 @@ export default function Testimonials() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '24px',
             marginBottom: '48px',
           }}
@@ -82,11 +72,7 @@ export default function Testimonials() {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', gap: '3px' }}>
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={16} fill="#D4AF37" color="#D4AF37" />
-                    ))}
-                  </div>
+
                   <span className="glass-pill" style={{ fontSize: '0.72rem', padding: '2px 8px' }}>
                     {st.badge}
                   </span>
@@ -103,7 +89,7 @@ export default function Testimonials() {
                     fontStyle: 'italic',
                   }}
                 >
-                  "{st.quote}"
+                  {st.quote}
                 </p>
               </div>
 

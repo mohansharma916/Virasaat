@@ -6,19 +6,14 @@ import {
   ArrowLeft,
   Scale,
   AlertTriangle,
-  Lock,
-  HeartHandshake,
-  CheckCircle2,
-  FileText,
   Clock,
-  Sparkles,
   Gavel,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions (Digital Custody Agreement) | Virasaat (विरासत)',
   description:
-    'Terms of service, digital custody agreements, heartbeat protocol rules, and testamentary legal disclaimers for the Virasaat mobile application and platform.',
+    'Terms of service, digital custody agreements, current check-in limitations, and testamentary legal disclaimers for the Virasaat mobile application and platform.',
   alternates: {
     canonical: '/terms/',
   },
@@ -197,13 +192,13 @@ export default function TermsAndConditionsPage() {
           </div>
 
           <p style={{ color: 'var(--warm-ivory)', fontSize: '0.94rem', lineHeight: 1.7, marginBottom: '12px' }}>
-            <strong>1. Not a Substitute for a Legal Will:</strong> Virasaat is a technological organization, zero-knowledge digital custody, and emergency handover orchestration platform. <strong>Virasaat does not act as a law firm, wealth management fiduciary, or court of probate.</strong>
+            <strong>1. Not a Substitute for a Legal Will:</strong> Virasaat is a record organization platform with server-encrypted vault content. Automated family handover is planned and currently unavailable. <strong>Virasaat does not act as a law firm, wealth management fiduciary, or court of probate.</strong>
           </p>
           <p style={{ color: 'var(--warm-ivory)', fontSize: '0.94rem', lineHeight: 1.7, marginBottom: '12px' }}>
             <strong>2. No Alteration of Statutory Heirship:</strong> Providing your bank details, insurance policies, or locker instructions to designated recipients via Virasaat does <em>not</em> legally substitute for a formal registered Last Will and Testament, nor does it override statutory succession rights governed by the <strong>Indian Succession Act, 1925</strong>, the <strong>Hindu Succession Act, 1956</strong>, <strong>Muslim Personal Law (Shariat)</strong>, or corresponding jurisdictional succession statutes.
           </p>
           <p style={{ color: 'var(--warm-ivory)', fontSize: '0.94rem', lineHeight: 1.7, margin: 0 }}>
-            <strong>3. Informational Roadmap:</strong> Virasaat is designed to prevent your family from losing awareness of your ₹1.5+ Lakh Crore in forgotten accounts. Users are encouraged to execute their formal legal testamentary instruments in accordance with local statutes.
+            <strong>3. Informational Roadmap:</strong> Virasaat helps you organize references to your accounts and important documents. Users are encouraged to execute their formal legal testamentary instruments in accordance with local statutes.
           </p>
         </div>
 
@@ -226,10 +221,10 @@ export default function TermsAndConditionsPage() {
         {/* Section 2 */}
         <section style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.45rem', color: 'var(--warm-ivory)', marginBottom: '14px', fontWeight: 700 }}>
-            2. Zero-Knowledge Cryptography & User Key Custody
+            2. Server-Managed Encryption & Account Security
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            Virasaat employs a zero-knowledge architecture. You acknowledge and agree to the following technical realities:
+            Virasaat uses server-managed encryption for vault descriptions and uploaded files. You acknowledge the following technical realities:
           </p>
           <div
             style={{
@@ -240,8 +235,8 @@ export default function TermsAndConditionsPage() {
             }}
           >
             <ul style={{ color: 'var(--sage)', lineHeight: 1.7, paddingLeft: '20px', margin: 0 }}>
-              <li><strong>Local Encryption:</strong> Your vault assets are encrypted locally on your phone using keys derived from your passphrase and device hardware enclave prior to cloud synchronization.</li>
-              <li><strong>No Master Backdoor:</strong> Virasaat does not hold a master recovery key. If you forget your passphrase, lose access to your biometric device, and have not configured an active heartbeat handover fallback, <strong>Virasaat cannot recover your encrypted data</strong>.</li>
+              <li><strong>Server Encryption:</strong> Descriptions and files reach the API before AES-256-GCM encryption. Basic item metadata is stored separately.</li>
+              <li><strong>Key Custody:</strong> Virasaat manages the server master key and authorized service processes can decrypt content. User-held encryption or recovery keys are not currently provided. Access depends on the supported account verification flow.</li>
               <li><strong>Device Security:</strong> You are solely responsible for preventing unauthorized physical or biometric access to your smartphone.</li>
             </ul>
           </div>
@@ -250,17 +245,17 @@ export default function TermsAndConditionsPage() {
         {/* Section 3 */}
         <section style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.45rem', color: 'var(--warm-ivory)', marginBottom: '14px', fontWeight: 700 }}>
-            3. The Heartbeat Handover Protocol Agreement
+            3. Check-In Tools & Unavailable Release Features
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '12px' }}>
-            By enabling the Virasaat Heartbeat Protocol, you explicitly authorize and instruct Virasaat to carry out automated succession release workflows under the following agreed conditions:
+            Check-in tools record account activity. They do not establish health, authorize inheritance or provide an emergency response service. In the current release:
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px', marginBottom: '14px' }}>
-            <li><strong>Obligation to Check In:</strong> You agree to respond to periodic safety check-ins according to your chosen cadence (monthly or quarterly).</li>
-            <li><strong>Automated Escalation:</strong> If you miss a scheduled check-in, our automated systems will initiate escalation notifications via Push Notifications, SMS, and registered email.</li>
-            <li><strong>Grace Period Window:</strong> Handover will <em>never</em> trigger prematurely. A mandatory safety grace period (minimum 14 to 30 days) must fully elapse without any response before handover eligibility is attained.</li>
-            <li><strong>Release Authorization:</strong> Once the safety grace period expires with zero response across all channels, you irrevocably authorize Virasaat to contact your verified trusted contacts and release the digital asset roadmap and instructions you designated for each recipient.</li>
-            <li><strong>Release Immunity:</strong> Virasaat shall not be held liable for any damages or disclosures resulting from handover executed in accordance with your configured settings if you failed to respond to reminders during the grace window.</li>
+            <li><strong>Check-Ins:</strong> You may configure available schedule settings and confirm activity in the app.</li>
+            <li><strong>Notifications:</strong> Scheduled reminders, SMS, push delivery and vacation pause are not currently available.</li>
+            <li><strong>No Release Countdown:</strong> A missed check-in does not start an automatic 14-day or 30-day release workflow.</li>
+            <li><strong>Release Unavailable:</strong> Invitation delivery, recipient verification and access to released vault items are disabled while verified controls are developed.</li>
+            <li><strong>Independent Arrangements:</strong> Keep a separate estate plan, emergency contact process and copies of important records. Do not rely on Virasaat for emergency delivery.</li>
           </ul>
         </section>
 
@@ -274,8 +269,8 @@ export default function TermsAndConditionsPage() {
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px' }}>
             <li>You warrant that you have obtained their authorization to record their contact information on the platform.</li>
-            <li>You acknowledge that Virasaat delivers the digital roadmap and encrypted notes you entered. Virasaat does not manage the underlying bank accounts, claim insurance proceeds, or arbitrate inheritance disputes among legal heirs.</li>
-            <li>Recipients must undergo independent phone and email identity verification before viewing handover notes.</li>
+            <li>Virasaat organizes the records you enter. It does not manage bank accounts, claim insurance proceeds, arbitrate inheritance disputes or currently deliver records to recipients.</li>
+            <li>Saving a trusted person or intended assignment does not verify their identity or grant access to your vault.</li>
           </ul>
         </section>
 
@@ -294,10 +289,10 @@ export default function TermsAndConditionsPage() {
               }}
             >
               <h3 style={{ fontSize: '1rem', color: 'var(--warm-ivory)', marginBottom: '4px' }}>
-                Founding Waitlist Free Lifetime Tier
+                Waitlist Registration
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
-                Early founding members who join the official waitlist and verify their email receive free lifetime access to the Core Vault tier, including financial account cataloging, document storage, personal video notes, and heartbeat check-in protocol.
+                Waitlist signup is free and registers you for launch updates. Registration is confirmed only after the server acknowledges it. It does not activate a subscription, guarantee email delivery or confer a lifetime app entitlement.
               </p>
             </div>
 
@@ -313,7 +308,7 @@ export default function TermsAndConditionsPage() {
                 Premium Tiers & In-App Purchases
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
-                Advanced tiers offering high-capacity 4K video note storage, multi-nominee cryptographic threshold recovery, and priority concierge are billed annually or monthly through Apple App Store (In-App Purchases) or Google Play Billing in compliance with platform guidelines.
+                App plans include Starter, Secure and Family, with different limits and feature availability. Check the app and supported store purchase flow for current prices and billing terms. Paid plans do not enable features that remain unavailable, including verified family handover and recipient access.
               </p>
             </div>
           </div>
@@ -344,7 +339,7 @@ export default function TermsAndConditionsPage() {
             You retain <strong>100% intellectual property ownership</strong> of all notes, letters, images, videos, and documents you upload to your Virasaat vault. Virasaat claims zero copyright, ownership, or licensing rights over your personal memories.
           </p>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            The Virasaat trademark, brand identity, UI design, client-side encryption algorithms, and source code are the exclusive property of Virasaat Technologies Inc.
+            The Virasaat trademark, brand identity, UI design, server encryption implementation, and source code are the exclusive property of Virasaat Technologies Inc.
           </p>
         </section>
 
@@ -362,7 +357,7 @@ export default function TermsAndConditionsPage() {
             }}
           >
             <p style={{ color: 'var(--sage)', fontSize: '0.9rem', lineHeight: 1.7, margin: 0 }}>
-              TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VIRASAAT TECHNOLOGIES INC. AND ITS DIRECTORS, EMPLOYEES, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOSS OF BANK ASSETS, LOSS OF PROFITS, BANKING DISPUTES, SUCCESSION DISPUTES AMONG NOMINEES AND STATUTORY HEIRS, OR UNRECOVERABLE CIPHERTEXT RESULTING FROM LOST USER MASTER PASSWORDS. IN NO EVENT SHALL VIRASAAT&apos;S AGGREGATE LIABILITY EXCEED THE TOTAL FEES PAID BY YOU IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
+              TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VIRASAAT TECHNOLOGIES INC. AND ITS DIRECTORS, EMPLOYEES, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOSS OF BANK ASSETS, LOSS OF PROFITS, BANKING DISPUTES, SUCCESSION DISPUTES AMONG NOMINEES AND STATUTORY HEIRS, OR LOSS OF ACCESS TO STORED CONTENT. IN NO EVENT SHALL VIRASAAT&apos;S AGGREGATE LIABILITY EXCEED THE TOTAL FEES PAID BY YOU IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
             </p>
           </div>
         </section>
@@ -383,15 +378,15 @@ export default function TermsAndConditionsPage() {
         {/* Section 10 */}
         <section style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.45rem', color: 'var(--warm-ivory)', marginBottom: '14px', fontWeight: 700 }}>
-            10. Termination & Permanent Erasure
+            10. Account Deletion
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            You may terminate this Agreement at any time by deleting your account from within the mobile app (<strong>Profile &rarr; Delete Account</strong>). Upon termination:
+            <strong>Automated account deletion is currently unavailable.</strong> The app reports that its deletion lifecycle is not configured and leaves your account unchanged. Contact the privacy address in our privacy policy to discuss a request. A complete deletion process must account for database records, stored files, retention and backups:
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px' }}>
-            <li>Your encryption keys are revoked and invalidated.</li>
-            <li>All encrypted vault files are permanently purged from AWS S3 storage.</li>
-            <li>Heartbeat monitoring stops immediately and no future notifications or handovers will occur.</li>
+            <li>The server master key is shared service infrastructure; it is not a user-held key revoked on account deletion.</li>
+            <li>No automatic file purge or immediate cryptographic erasure is currently provided.</li>
+            <li>Automated family handover is currently disabled. Keep independent copies of important content.</li>
           </ul>
         </section>
 

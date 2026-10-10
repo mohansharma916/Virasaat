@@ -16,28 +16,28 @@ export default function SecurityArchitecture() {
   const securityFeatures = [
     {
       icon: Lock,
-      title: 'Encrypted on Your Device',
-      desc: 'All documents, accounts, and video notes are locked right on your phone before being saved.',
+      title: 'Server-Managed Encryption',
+      desc: 'Vault descriptions and uploaded files are encrypted by the server before storage.',
     },
     {
       icon: EyeOff,
-      title: 'Zero-Knowledge Privacy',
-      desc: 'Even our team and engineers cannot read your documents or view your personal messages.',
+      title: 'Clear Key Custody',
+      desc: 'Virasaat operates the encryption keys. Authorized server processes can decrypt vault content.',
     },
     {
       icon: Fingerprint,
       title: 'Face ID & Fingerprint Login',
-      desc: 'Only you can open the app using your smartphone’s built-in biometric security.',
+      desc: 'Biometrics help protect app access on supported devices. They do not hold the vault encryption key.',
     },
     {
       icon: Cpu,
-      title: 'Safe Handover Keys',
-      desc: 'Handover keys are protected and only unlock when the safety check triggers and your nominee verifies.',
+      title: 'Release Access Disabled',
+      desc: 'Automated handover and recipient access are disabled until verified release controls are ready.',
     },
     {
       icon: Database,
       title: 'Safe Cloud Backup',
-      desc: 'Your encrypted vault is safely backed up so you never lose access if you change your phone.',
+      desc: 'Stored content is associated with your account. Keep an independent copy of important documents.',
     },
     {
       icon: FileCheck2,
@@ -63,12 +63,12 @@ export default function SecurityArchitecture() {
               marginBottom: '16px',
             }}
           >
-            Bank-Grade Security. <br />
-            <span className="text-gradient-gold">100% Private to You.</span>
+            Understand Your Security. <br />
+            <span className="text-gradient-gold">Know Who Holds the Keys.</span>
           </h2>
 
           <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)' }}>
-            Your family’s financial accounts and heartfelt memories deserve complete protection. Only you and your chosen family have the keys.
+            Your account controls access to your vault. The current service uses server-managed encryption; basic item titles and categories are stored as metadata.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export default function SecurityArchitecture() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
               gap: '40px',
               alignItems: 'center',
             }}
@@ -120,11 +120,11 @@ export default function SecurityArchitecture() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ShieldCheck size={18} color="#D4AF37" />
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFF' }}>
-                    Hardware Face ID Protection
+                    Account & App Access Protection
                   </span>
                 </div>
                 <span className="glass-pill" style={{ padding: '3px 10px', fontSize: '0.72rem' }}>
-                  100% Encrypted
+                  Encrypted Vault Content
                 </span>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function SecurityArchitecture() {
             {/* Explanation text */}
             <div>
               <div style={{ fontSize: '0.78rem', color: '#ECC862', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '8px' }}>
-                PRIVACY GUARANTEE
+                CURRENT SECURITY MODEL
               </div>
               <h3
                 style={{
@@ -141,14 +141,14 @@ export default function SecurityArchitecture() {
                   marginBottom: '12px',
                 }}
               >
-                We Cannot See Your Data. <br />
-                Even If We Wanted To.
+                Encryption at Rest. <br />
+                Keys Managed by Virasaat.
               </h3>
               <p style={{ fontSize: '0.94rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '16px' }}>
-                When you list an account or save a personal video in Virasaat, the encryption happens locally on your smartphone before anything is saved.
+                Descriptions and uploaded files reach the authenticated API before AES-256-GCM encryption on the server. This is not end-to-end encryption.
               </p>
               <p style={{ fontSize: '0.94rem', color: 'var(--sage)', lineHeight: 1.65, margin: 0 }}>
-                Our servers only hold scrambled, unreadable data. You hold the master key right on your phone.
+                Virasaat holds the server encryption key and can decrypt stored content through authorized server processes. Your phone’s biometrics protect app access, not encryption key custody.
               </p>
             </div>
           </div>

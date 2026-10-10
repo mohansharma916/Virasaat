@@ -1,3 +1,4 @@
+import { getEmailAppLink } from '../email-links';
 import {
   BRAND_COLORS,
   renderCtaButton,
@@ -14,7 +15,7 @@ import {
 export function renderCheckInReminderTemplate(
   data: CheckInReminderEmailData,
 ): RenderedEmail {
-  const checkInUrl = data.checkInUrl || 'https://virasaat.com/check-in';
+  const checkInUrl = data.checkInUrl || getEmailAppLink('home');
   const cadence = data.cadence || 'Monthly';
   const daysText =
     data.daysRemaining === 0
@@ -88,7 +89,7 @@ export function renderCheckInReminderTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: checkInUrl, label: '✓ Confirm I Am Safe & Well' })}
+          ${renderCtaButton({ url: checkInUrl, label: 'Open Virasaat App' })}
         </td>
       </tr>
 
@@ -102,7 +103,7 @@ export function renderCheckInReminderTemplate(
                   Why do we send check-ins?
                 </div>
                 <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.textSecondary}; line-height: 18px; margin-top: 4px;">
-                  A single tap resets your check-in timer. Only if repeated reminders and the grace period go unanswered will Virasaat initiate your designated contingency protocol.
+                  Confirm activity inside the app. Scheduled reminders, escalation, and inheritance release are not available yet.
                 </div>
               </td>
             </tr>
@@ -115,7 +116,9 @@ export function renderCheckInReminderTemplate(
   const html = wrapInEmailLayout({
     preheader: `Friendly reminder: Your Virasaat check-in is ${daysText}. Confirm with one click.`,
     title: subject,
-    contentHtml,
+    contentHtml:
+      `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
+      contentHtml,
     securityNotice:
       'This routine notification was generated based on your check-in schedule preferences.',
   });
@@ -135,17 +138,19 @@ Click the link below to confirm you are safe and reset your check-in timer:
 ${checkInUrl}
 
 WHY WE SEND THIS:
-Confirming your safety takes one click and ensures your private vault remains secure and locked.
+Confirm activity inside the app. No vault items are released by a missed check-in.
 `;
 
   const text = wrapInPlainTextLayout({
     title: 'Routine Check-In Reminder',
-    bodyText,
+    bodyText:
+      'Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.\n\n' +
+      bodyText,
   });
 
   return {
     templateType: EmailTemplateType.CHECK_IN_REMINDER,
-    subject,
+    subject: '[Illustrative sample — workflow unavailable] ' + subject,
     html,
     text,
   };
