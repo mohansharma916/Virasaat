@@ -85,11 +85,10 @@ export async function signInWithGoogle(): Promise<string | null> {
 
   if (!GoogleSignin) {
     Alert.alert(
-      'Google Sign-In Unavailable in Expo Go',
-      'Google Sign-In uses native binaries that are not included in the standard Expo Go client.\n\n' +
-        'To use Google Sign-In, please create a development build:\n' +
-        '  npx expo run:android  (or run:ios)\n\n' +
-        'For now, you can continue by logging in with your Email and Password.',
+      'Google Sign-In Unavailable',
+      __DEV__
+        ? 'Google Sign-In uses native binaries that are not included in the standard Expo Go client.\n\nTo use Google Sign-In, please create a development build:\n  npx expo run:android  (or run:ios)\n\nFor now, you can continue by logging in with your Email and Password.'
+        : 'Google Sign-In is temporarily unavailable on this device. Please continue by signing in with your email and password.',
       [{ text: 'OK' }],
     );
     return null;
