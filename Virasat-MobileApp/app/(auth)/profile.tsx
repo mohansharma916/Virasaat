@@ -447,7 +447,7 @@ export default function ProfileScreen() {
               {/* Privacy Policy */}
               <Pressable
                 accessibilityRole="button"
-                onPress={() => void Linking.openURL('https://virasaat.app/privacy/')}
+                onPress={() => void Linking.openURL('https://virasat.app/privacy/')}
                 style={styles.planCardAction}
               >
                 <View style={[styles.planActionIconCircle, { backgroundColor: colors.brand.sage }]}>
@@ -465,7 +465,7 @@ export default function ProfileScreen() {
               {/* Terms of Service */}
               <Pressable
                 accessibilityRole="button"
-                onPress={() => void Linking.openURL('https://virasaat.app/terms/')}
+                onPress={() => void Linking.openURL('https://virasat.app/terms/')}
                 style={styles.planCardAction}
               >
                 <View style={[styles.planActionIconCircle, { backgroundColor: colors.brand.sage }]}>

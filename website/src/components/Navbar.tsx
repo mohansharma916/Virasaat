@@ -112,7 +112,7 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
                     color: '#F8F5EA',
                   }}
                 >
-                  VIRASAAT
+                  VIRASAT
                 </span>
                 <span
                   style={{

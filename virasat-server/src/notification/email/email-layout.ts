@@ -27,17 +27,17 @@ export const BRAND_COLORS = {
 };
 
 /**
- * Universal responsive HTML email layout wrapper for Virasaat emails.
+ * Universal responsive HTML email layout wrapper for Virasat emails.
  * Bulletproof across Gmail, Outlook, Apple Mail, Yahoo, iOS and Android clients.
  */
 export function wrapInEmailLayout(options: EmailLayoutOptions): string {
   const {
-    preheader = 'Virasaat — Digital Legacy & Inheritance Vault',
+    preheader = 'Virasat — Digital Legacy & Inheritance Vault',
     title,
     contentHtml,
     recipientEmail,
     unsubscribeUrl,
-    securityNotice = 'This is an automated communication regarding your Virasaat digital vault and security settings.',
+    securityNotice = 'This is an automated communication regarding your Virasat digital vault and security settings.',
   } = options;
 
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -162,7 +162,7 @@ export function wrapInEmailLayout(options: EmailLayoutOptions): string {
                 </tr>
                 <tr>
                   <td align="center" style="padding-top: 10px;">
-                    <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; letter-spacing: 3px; color: ${BRAND_COLORS.deepForest}; text-transform: uppercase; display: block;">VIRASAAT</span>
+                    <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; letter-spacing: 3px; color: ${BRAND_COLORS.deepForest}; text-transform: uppercase; display: block;">VIRASAT</span>
                     <span style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 1.5px; color: ${BRAND_COLORS.textMuted}; text-transform: uppercase; display: block; margin-top: 2px;">DIGITAL LEGACY &amp; INHERITANCE VAULT</span>
                   </td>
                 </tr>
@@ -236,11 +236,11 @@ export function wrapInEmailLayout(options: EmailLayoutOptions): string {
                         </td>
                         <td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
                         <td style="padding: 0 10px;">
-                          <a href="https://virasaat.app/privacy" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Privacy Policy</a>
+                          <a href="https://virasat.app/privacy" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Privacy Policy</a>
                         </td>
                         <td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
                         <td style="padding: 0 10px;">
-                          <a href="https://virasaat.app/terms" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Terms of Service</a>
+                          <a href="https://virasat.app/terms" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Terms of Service</a>
                         </td>
                         ${
                           unsubscribeUrl
@@ -258,7 +258,7 @@ export function wrapInEmailLayout(options: EmailLayoutOptions): string {
                 <!-- Copyright -->
                 <tr>
                   <td align="center" style="padding-top: 16px; font-family: 'Inter', sans-serif; font-size: 11px; color: ${BRAND_COLORS.textMuted};">
-                    &copy; ${new Date().getFullYear()} Virasaat Technologies Inc. All rights reserved.<br />
+                    &copy; ${new Date().getFullYear()} Virasat Technologies Inc. All rights reserved.<br />
                     Safeguarding digital legacies with sovereignty, dignity, and care.
                   </td>
                 </tr>
@@ -291,7 +291,7 @@ export function wrapInPlainTextLayout(options: {
   const year = new Date().getFullYear();
 
   return `
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ${divider}
 
@@ -304,13 +304,13 @@ ${subDivider}
 SECURITY REASSURANCE:
 Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-${options.securityNotice || 'This is an automated communication regarding your Virasaat digital vault and security settings.'}
+${options.securityNotice || 'This is an automated communication regarding your Virasat digital vault and security settings.'}
 
 Security Settings: ${getEmailAppLink('security')}
-Privacy Policy: https://virasaat.app/privacy
-Terms of Service: https://virasaat.app/terms
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) ${year} Virasaat Technologies Inc. All rights reserved.
+(C) ${year} Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ${divider}
 `.trim();

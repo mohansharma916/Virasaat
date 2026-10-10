@@ -16,7 +16,7 @@ export function renderTrustedPersonInvitationTemplate(
   data: TrustedPersonInvitationEmailData,
 ): RenderedEmail {
   const invitationUrl = data.invitationUrl || getEmailAppLink('home');
-  const subject = `${data.ownerName} has designated you as a Trusted Contact on Virasaat`;
+  const subject = `${data.ownerName} has designated you as a Trusted Contact on Virasat`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -28,7 +28,7 @@ export function renderTrustedPersonInvitationTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Hello ${escapeHtml(data.recipientName)},<br />
-            <strong>${escapeHtml(data.ownerName)}</strong> has appointed you as a designated <strong>Trusted Contact</strong> on Virasaat${data.relationship ? ` (specified role: <em>${escapeHtml(data.relationship)}</em>)` : ''}.
+            <strong>${escapeHtml(data.ownerName)}</strong> has appointed you as a designated <strong>Trusted Contact</strong> on Virasat${data.relationship ? ` (specified role: <em>${escapeHtml(data.relationship)}</em>)` : ''}.
           </p>
         </td>
       </tr>
@@ -103,7 +103,7 @@ export function renderTrustedPersonInvitationTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: invitationUrl, label: 'Open Virasaat App' })}
+          ${renderCtaButton({ url: invitationUrl, label: 'Open Virasat App' })}
         </td>
       </tr>
 
@@ -119,19 +119,19 @@ export function renderTrustedPersonInvitationTemplate(
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `${data.ownerName} has named you as their Trusted Contact on Virasaat. Learn what this entails.`,
+    preheader: `${data.ownerName} has named you as their Trusted Contact on Virasat. Learn what this entails.`,
     title: subject,
     contentHtml:
       `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
       contentHtml,
     securityNotice:
-      'You were designated as a trusted contact by a verified Virasaat account owner.',
+      'You were designated as a trusted contact by a verified Virasat account owner.',
   });
 
   const bodyText = `
 Hello ${data.recipientName},
 
-${data.ownerName} has appointed you as a designated Trusted Contact on Virasaat${data.relationship ? ` (Relationship: ${data.relationship})` : ''}.
+${data.ownerName} has appointed you as a designated Trusted Contact on Virasat${data.relationship ? ` (Relationship: ${data.relationship})` : ''}.
 
 WHAT DOES THIS MEAN?
 - ${data.ownerName} has chosen you to help ensure their vital documents, instructions, and legacy are honored.

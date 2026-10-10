@@ -22,7 +22,7 @@ export function renderOtpVerificationTemplate(
         ? 'sign in verification'
         : 'account registration';
 
-  const subject = `${data.otpCode} is your Virasaat verification code`;
+  const subject = `${data.otpCode} is your Virasat verification code`;
 
   // HTML content
   const contentHtml = `
@@ -35,7 +35,7 @@ export function renderOtpVerificationTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Hello ${escapeHtml(data.recipientName || 'there')},<br />
-            Please use the 6-digit one-time code below to complete your ${formattedPurpose} on <strong>Virasaat</strong>.
+            Please use the 6-digit one-time code below to complete your ${formattedPurpose} on <strong>Virasat</strong>.
           </p>
         </td>
       </tr>
@@ -83,7 +83,7 @@ export function renderOtpVerificationTemplate(
                   Security Reminder
                 </div>
                 <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.textSecondary}; line-height: 18px; margin-top: 4px;">
-                  Never disclose this code to anyone. Virasaat staff or support agents will never ask for your verification code.
+                  Never disclose this code to anyone. Virasat staff or support agents will never ask for your verification code.
                 </div>
               </td>
             </tr>
@@ -98,24 +98,24 @@ export function renderOtpVerificationTemplate(
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `Your Virasaat verification code is ${data.otpCode}. It expires in ${expiryMinutes} minutes.`,
+    preheader: `Your Virasat verification code is ${data.otpCode}. It expires in ${expiryMinutes} minutes.`,
     title: subject,
     contentHtml,
     securityNotice:
-      'This one-time verification code was requested from the Virasaat application.',
+      'This one-time verification code was requested from the Virasat application.',
   });
 
   const bodyText = `
 Hello ${data.recipientName || 'there'},
 
-Your 6-digit one-time verification code for Virasaat is:
+Your 6-digit one-time verification code for Virasat is:
 
     ${data.otpCode}
 
 This code is valid for ${expiryMinutes} minutes.
 
 SECURITY REMINDER:
-Never share this code with anyone. Virasaat personnel will never ask for your verification code.
+Never share this code with anyone. Virasat personnel will never ask for your verification code.
 If you did not make this request, you can safely disregard this message.
 `;
 

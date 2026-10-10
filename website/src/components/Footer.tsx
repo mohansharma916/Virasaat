@@ -64,7 +64,7 @@ export default function Footer() {
                 <Shield size={18} color="#D4AF37" />
               </div>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: '#F8F5EA', fontWeight: 800 }}>
-                VIRASAAT
+                VIRASAT
               </span>
             </div>
 
@@ -221,7 +221,7 @@ export default function Footer() {
             lineHeight: 1.6,
           }}
         >
-          <strong style={{ color: 'var(--sage)' }}>Legal & Regulatory Disclaimer:</strong> Virasaat provides record organization and server-encrypted vault content. Automated handover, recipient access and scheduled notifications are planned and currently unavailable. Virasaat does not act as a law firm, investment advisor, or substitute for formal probate court certification. Users are encouraged to execute their formal legal testamentary wills in accordance with local state and national statutes.
+          <strong style={{ color: 'var(--sage)' }}>Legal & Regulatory Disclaimer:</strong> Virasat provides record organization and server-encrypted vault content. Automated handover, recipient access and scheduled notifications are planned and currently unavailable. Virasat does not act as a law firm, investment advisor, or substitute for formal probate court certification. Users are encouraged to execute their formal legal testamentary wills in accordance with local state and national statutes.
         </div>
 
         {/* Bottom Bar */}
@@ -238,7 +238,7 @@ export default function Footer() {
           }}
         >
           <div>
-            © {new Date().getFullYear()} Virasaat Technologies Inc. All rights reserved.
+            © {new Date().getFullYear()} Virasat Technologies Inc. All rights reserved.
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>

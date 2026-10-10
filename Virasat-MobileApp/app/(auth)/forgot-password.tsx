@@ -277,7 +277,7 @@ export default function ForgotPasswordScreen() {
             >
               <ArrowLeft size={20} color={colors.neutral.textPrimary} />
             </Pressable>
-            <Text style={styles.topBarBrand}>VIRASAAT</Text>
+            <Text style={styles.topBarBrand}>VIRASAT</Text>
             <View style={styles.topBarPlaceholder} />
           </View>
 
@@ -619,7 +619,7 @@ export default function ForgotPasswordScreen() {
 
               <Text style={styles.title}>Password Reset Complete</Text>
               <Text style={styles.subtitle}>
-                Your Virasaat vault password has been successfully updated. You can now log in with
+                Your Virasat vault password has been successfully updated. You can now log in with
                 your new password.
               </Text>
 

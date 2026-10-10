@@ -46,18 +46,18 @@ $ npm run start:prod
 
 ## Email & Nodemailer Setup (Demo Purpose)
 
-Virasaat uses **Nodemailer** to send transactional emails (OTP signups, password resets, check-in reminders, welcome emails, and emergency disclosures).
+Virasat uses **Nodemailer** to send transactional emails (OTP signups, password resets, check-in reminders, welcome emails, and emergency disclosures).
 
 ### 1. Configure Environment Variables
 
-Add your SMTP credentials in `virasaat-server/.env`:
+Add your SMTP credentials in `virasat-server/.env`:
 
 ```env
 # Quick Setup for Gmail:
 SMTP_SERVICE="gmail"
 SMTP_USER="your-email@gmail.com"
 SMTP_PASS="xxxx xxxx xxxx xxxx"
-SMTP_FROM="\"Virasaat\" <your-email@gmail.com>"
+SMTP_FROM="\"Virasat\" <your-email@gmail.com>"
 ```
 
 > **Note for Gmail users:**
@@ -65,7 +65,7 @@ SMTP_FROM="\"Virasaat\" <your-email@gmail.com>"
 > 1. Go to your [Google Account Security Settings](https://myaccount.google.com/security)
 > 2. Ensure **2-Step Verification** is turned ON.
 > 3. Go to [App Passwords](https://myaccount.google.com/apppasswords)
-> 4. Enter an app name (e.g. `Virasaat Demo`) and click **Create**.
+> 4. Enter an app name (e.g. `Virasat Demo`) and click **Create**.
 > 5. Copy the 16-character generated password into `SMTP_PASS` in your `.env`.
 
 ### 2. Verify Email Delivery via CLI

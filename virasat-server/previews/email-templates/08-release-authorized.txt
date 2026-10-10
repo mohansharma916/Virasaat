@@ -1,14 +1,16 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
 LEGACY PACKAGE RELEASE
 ------------------------------------------------------------
 
+Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.
+
 
 Dear Ananya Sharma,
 
-A personal legacy package created by Mohan Sharma on Virasaat has been authorized for you.
+A personal legacy package created by Mohan Sharma on Virasat has been authorized for you.
 
 PACKAGE DETAILS:
 - From: Mohan Sharma
@@ -17,21 +19,21 @@ PACKAGE DETAILS:
 
 HOW TO ACCESS:
 Click the link below to enter the secure viewer and verify your identity:
-https://virasaat.com/release/REL-2026-0042
+virasat://home
 
 This legacy package was created with deep intention and care. Please save any necessary documents to your local device.
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

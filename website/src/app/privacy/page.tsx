@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy & Data Protection | Virasaat (विरासत)',
+  title: 'Privacy Policy & Data Protection | Virasat (विरासत)',
   description:
-    'How Virasaat processes account details and vault content, manages server encryption keys and handles privacy requests.',
+    'How Virasat processes account details and vault content, manages server encryption keys and handles privacy requests.',
   alternates: {
     canonical: '/privacy/',
   },
@@ -77,7 +77,7 @@ export default function PrivacyPolicyPage() {
                 fontWeight: 800,
               }}
             >
-              VIRASAAT
+              VIRASAT
             </span>
           </Link>
 
@@ -140,7 +140,7 @@ export default function PrivacyPolicyPage() {
               marginBottom: '18px',
             }}
           >
-            This policy describes the current Virasaat service. Vault descriptions and files are encrypted by the server before storage. Virasaat manages the encryption keys; authorized server processes can decrypt content. Automated family handover and recipient access are currently unavailable.
+            This policy describes the current Virasat service. Vault descriptions and files are encrypted by the server before storage. Virasat manages the encryption keys; authorized server processes can decrypt content. Automated family handover and recipient access are currently unavailable.
           </p>
 
           <div
@@ -184,7 +184,7 @@ export default function PrivacyPolicyPage() {
             </h2>
           </div>
           <p style={{ color: 'var(--sage)', fontSize: '0.94rem', lineHeight: 1.65, margin: 0 }}>
-            Descriptions and uploaded files reach the authenticated API before <strong>AES-256-GCM encryption</strong> on the server. The current service uses a server-managed master key to protect content encryption keys. <strong>Virasaat has technical access to decrypt vault content.</strong> Basic metadata, including titles and categories, is stored separately and is not encrypted by this vault-content mechanism.
+            Descriptions and uploaded files reach the authenticated API before <strong>AES-256-GCM encryption</strong> on the server. The current service uses a server-managed master key to protect content encryption keys. <strong>Virasat has technical access to decrypt vault content.</strong> Basic metadata, including titles and categories, is stored separately and is not encrypted by this vault-content mechanism.
           </p>
         </div>
 
@@ -194,10 +194,10 @@ export default function PrivacyPolicyPage() {
             1. Who We Are & Data Fiduciary Details
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            <strong>Virasaat Technologies Inc.</strong> (&quot;Virasaat&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) provides vault record organization, server-encrypted content storage and check-in tools. Verified family handover is planned and disabled in the current service. The service is being developed through our mobile applications (iOS and Android) and website.
+            <strong>Virasat Technologies Inc.</strong> (&quot;Virasat&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) provides vault record organization, server-encrypted content storage and check-in tools. Verified family handover is planned and disabled in the current service. The service is being developed through our mobile applications (iOS and Android) and website.
           </p>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            For the purposes of the <strong>Digital Personal Data Protection Act, 2023 (DPDP Act, India)</strong>, the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011 (&quot;SPDI Rules&quot;), and applicable global privacy statutes, Virasaat acts as a <strong>Data Fiduciary</strong> regarding basic account metadata and as a secure encrypted custodian regarding vault ciphertext.
+            For the purposes of the <strong>Digital Personal Data Protection Act, 2023 (DPDP Act, India)</strong>, the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011 (&quot;SPDI Rules&quot;), and applicable global privacy statutes, Virasat acts as a <strong>Data Fiduciary</strong> regarding basic account metadata and as a secure encrypted custodian regarding vault ciphertext.
           </p>
         </section>
 
@@ -236,7 +236,7 @@ export default function PrivacyPolicyPage() {
                 B. Vault Items & Personal Media
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6, margin: 0 }}>
-                Vault records can include financial references, document descriptions, personal messages and supported media files. <strong>Descriptions and files are encrypted on the server before storage.</strong> Account and item metadata are stored in the database; Virasaat operates the keys needed to decrypt vault content.
+                Vault records can include financial references, document descriptions, personal messages and supported media files. <strong>Descriptions and files are encrypted on the server before storage.</strong> Account and item metadata are stored in the database; Virasat operates the keys needed to decrypt vault content.
               </p>
             </div>
 
@@ -430,12 +430,12 @@ export default function PrivacyPolicyPage() {
               Privacy & Data Requests
             </div>
             <div style={{ color: 'var(--sage)', fontSize: '0.9rem', marginBottom: '8px' }}>
-              Name: Mohan Sharma · Virasaat Technologies Inc.
+              Name: Mohan Sharma · Virasat Technologies Inc.
             </div>
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
               Email:{' '}
-              <a href="mailto:privacy@virasaat.app" style={{ color: '#ECC862', textDecoration: 'none' }}>
-                privacy@virasaat.app
+              <a href="mailto:privacy@virasat.app" style={{ color: '#ECC862', textDecoration: 'none' }}>
+                privacy@virasat.app
               </a>{' '}
               / <a href="mailto:mohansharma916@gmail.com" style={{ color: '#ECC862', textDecoration: 'none' }}>mohansharma916@gmail.com</a>
               <br />
@@ -475,7 +475,7 @@ export default function PrivacyPolicyPage() {
               fontSize: '0.86rem',
             }}
           >
-            &copy; {new Date().getFullYear()} Virasaat Technologies Inc. All rights reserved.
+            &copy; {new Date().getFullYear()} Virasat Technologies Inc. All rights reserved.
           </Link>
         </div>
       </main>

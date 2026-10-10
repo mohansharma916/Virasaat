@@ -28,7 +28,7 @@ export function renderReleaseCaseOpenedTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 22px;">
             Dear ${escapeHtml(data.verifierName)},<br />
-            In accordance with the contingency instructions established by <strong>${escapeHtml(data.ownerName)}</strong>, an official verification review has been opened on Virasaat due to: <em>${escapeHtml(data.triggerReason)}</em>.
+            In accordance with the contingency instructions established by <strong>${escapeHtml(data.ownerName)}</strong>, an official verification review has been opened on Virasat due to: <em>${escapeHtml(data.triggerReason)}</em>.
           </p>
         </td>
       </tr>
@@ -98,7 +98,7 @@ export function renderReleaseCaseOpenedTemplate(
         <td align="center">
           ${renderCtaButton({
             url: verificationUrl,
-            label: 'Open Virasaat App',
+            label: 'Open Virasat App',
             variant: 'gold',
           })}
         </td>

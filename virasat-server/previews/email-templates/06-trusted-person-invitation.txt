@@ -1,37 +1,39 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
 TRUSTED CONTACT APPOINTMENT
 ------------------------------------------------------------
 
+Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.
+
 
 Hello Ananya Sharma,
 
-Mohan Sharma has appointed you as a designated Trusted Contact on Virasaat (Relationship: Spouse & Primary Nominee).
+Mohan Sharma has appointed you as a designated Trusted Contact on Virasat (Relationship: Spouse & Primary Nominee).
 
 WHAT DOES THIS MEAN?
 - Mohan Sharma has chosen you to help ensure their vital documents, instructions, and legacy are honored.
-- You do NOT have access to their vault or private items now. Everything is sealed and encrypted.
+- You do NOT have access to their vault or private items now. Descriptions and uploaded files use server-managed encryption; titles and categories are metadata.
 - You would only be contacted if Mohan Sharma becomes unreachable over extended check-in cycles.
 
 ACKNOWLEDGE DESIGNATION:
 Please review and verify your contact details:
-https://virasaat.com/nominee/accept?invite=inv_98471
+virasat://home
 
 No account creation or credit card is required.
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

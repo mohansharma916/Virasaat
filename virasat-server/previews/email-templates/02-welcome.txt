@@ -1,12 +1,12 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
-WELCOME TO VIRASAAT
+WELCOME TO VIRASAT
 ------------------------------------------------------------
 
 
-Welcome to Virasaat, Mohan Sharma!
+Welcome to Virasat, Mohan Sharma!
 
 Your account is verified and your secure digital vault has been initialized.
 
@@ -15,27 +15,27 @@ THREE STEPS TO COMPLETE YOUR SETUP:
    Store wills, deeds, financial folios, insurance policies, and video messages.
 
 2. Appoint Your Trusted Contacts
-   Designate nominees and beneficiaries who will carry out your legacy.
+   Save trusted person details privately. Invitations, verification, and inheritance release are not available yet.
 
 3. Configure Your Routine Check-in
-   Set your preferred monthly check-in cadence to keep your vault private.
+   Save check-in preferences and confirm activity in the app. Scheduled reminders and escalation are not available yet.
 
 GET STARTED:
-Open your vault: https://virasaat.com/dashboard
+Open your vault: virasat://home
 
-Need assistance? Reach our support team at support@virasaat.com.
+Open the app to review your records and account settings.
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

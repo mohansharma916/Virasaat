@@ -1,4 +1,4 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
@@ -10,7 +10,7 @@ SECURITY ALERT: NEW SIGN-IN FROM UNRECOGNIZED DEVICE
 ------------------------------------------------------------
 Hello Mohan Sharma,
 
-We detected the following activity on your Virasaat account:
+We detected the following activity on your Virasat account:
 A new session was established using your password credentials from an unfamiliar IP address and location.
 
 EVENT DETAILS:
@@ -20,23 +20,23 @@ EVENT DETAILS:
 - Location: Bengaluru, Karnataka, India
 
 WAS THIS NOT YOU?
-Immediately lock your vault and revoke all active sessions:
-https://virasaat.com/security/lock-vault
+Open the app security settings. Reset your password if you believe it is compromised; recovery revokes prior sessions:
+virasat://security
 
-If this was you, no action is needed. Review audit logs:
-https://virasaat.com/security/audit
+If this was you, no action is needed. Open security settings:
+virasat://security
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

@@ -14,7 +14,7 @@ import {
 
 export function renderWelcomeTemplate(data: WelcomeEmailData): RenderedEmail {
   const dashboardUrl = data.dashboardUrl || getEmailAppLink('home');
-  const subject = `Welcome to Virasaat — Safeguarding your digital legacy`;
+  const subject = `Welcome to Virasat — Safeguarding your digital legacy`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -22,7 +22,7 @@ export function renderWelcomeTemplate(data: WelcomeEmailData): RenderedEmail {
         <td align="left">
           ${renderStatusBadge({ label: 'Vault Established', variant: 'success' })}
           <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 26px; font-weight: 700; color: ${BRAND_COLORS.deepForest}; line-height: 34px; margin-bottom: 12px;">
-            Welcome to Virasaat, ${escapeHtml(data.recipientName)}
+            Welcome to Virasat, ${escapeHtml(data.recipientName)}
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Your account is verified and your secure digital vault has been initialized. You have taken a profound step toward ensuring your life's work, financial legacy, and heartfelt memories remain protected and seamlessly passed to those who matter most.
@@ -122,14 +122,14 @@ export function renderWelcomeTemplate(data: WelcomeEmailData): RenderedEmail {
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `Welcome to Virasaat, ${data.recipientName}. Your digital vault is ready for setup.`,
+    preheader: `Welcome to Virasat, ${data.recipientName}. Your digital vault is ready for setup.`,
     title: subject,
     contentHtml,
     recipientEmail: data.userEmail,
   });
 
   const bodyText = `
-Welcome to Virasaat, ${data.recipientName}!
+Welcome to Virasat, ${data.recipientName}!
 
 Your account is verified and your secure digital vault has been initialized.
 
@@ -150,7 +150,7 @@ Open the app to review your records and account settings.
 `;
 
   const text = wrapInPlainTextLayout({
-    title: 'Welcome to Virasaat',
+    title: 'Welcome to Virasat',
     bodyText,
   });
 

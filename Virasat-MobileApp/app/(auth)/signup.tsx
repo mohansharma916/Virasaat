@@ -310,7 +310,7 @@ export default function SignupScreen() {
                   style={styles.termsLink}
                   onPress={(e) => {
                     e.stopPropagation();
-                    void Linking.openURL('https://virasaat.app/terms/');
+                    void Linking.openURL('https://virasat.app/terms/');
                   }}
                 >
                   Terms
@@ -320,7 +320,7 @@ export default function SignupScreen() {
                   style={styles.termsLink}
                   onPress={(e) => {
                     e.stopPropagation();
-                    void Linking.openURL('https://virasaat.app/privacy/');
+                    void Linking.openURL('https://virasat.app/privacy/');
                   }}
                 >
                   Privacy Policy

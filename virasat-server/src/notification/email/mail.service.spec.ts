@@ -55,7 +55,7 @@ describe('MailService', () => {
             SMTP_USER: 'demo@gmail.com',
             SMTP_PASS: 'app-password-1234',
             SMTP_SERVICE: 'gmail',
-            SMTP_FROM: '"Virasaat Demo" <demo@gmail.com>',
+            SMTP_FROM: '"Virasat Demo" <demo@gmail.com>',
           };
           return config[key];
         }),
@@ -81,7 +81,7 @@ describe('MailService', () => {
     it('should send email using transporter', async () => {
       const result = await service.sendMail({
         to: 'recipient@example.com',
-        subject: 'Welcome to Virasaat',
+        subject: 'Welcome to Virasat',
         html: '<h1>Welcome!</h1>',
         text: 'Welcome!',
       });
@@ -89,8 +89,8 @@ describe('MailService', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'recipient@example.com',
-          from: '"Virasaat Demo" <demo@gmail.com>',
-          subject: 'Welcome to Virasaat',
+          from: '"Virasat Demo" <demo@gmail.com>',
+          subject: 'Welcome to Virasat',
         }),
       );
       expect(result.success).toBe(true);

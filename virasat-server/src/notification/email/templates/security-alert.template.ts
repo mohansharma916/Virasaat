@@ -18,7 +18,7 @@ export function renderSecurityAlertTemplate(
   const lockVaultUrl = data.lockVaultUrl || getEmailAppLink('security');
   const reviewActivityUrl =
     data.reviewActivityUrl || getEmailAppLink('security');
-  const subject = `Security Alert: ${data.alertTitle} on your Virasaat account`;
+  const subject = `Security Alert: ${data.alertTitle} on your Virasat account`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -30,7 +30,7 @@ export function renderSecurityAlertTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Hello ${escapeHtml(data.recipientName)},<br />
-            Our security monitoring system detected new activity on your Virasaat account: <strong>${escapeHtml(data.alertDescription)}</strong>.
+            Our security monitoring system detected new activity on your Virasat account: <strong>${escapeHtml(data.alertDescription)}</strong>.
           </p>
         </td>
       </tr>
@@ -106,7 +106,7 @@ export function renderSecurityAlertTemplate(
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `Security alert: ${data.alertTitle} on your Virasaat account. Review immediate actions.`,
+    preheader: `Security alert: ${data.alertTitle} on your Virasat account. Review immediate actions.`,
     title: subject,
     contentHtml,
     securityNotice:
@@ -118,7 +118,7 @@ SECURITY ALERT: ${data.alertTitle.toUpperCase()}
 ------------------------------------------------------------
 Hello ${data.recipientName},
 
-We detected the following activity on your Virasaat account:
+We detected the following activity on your Virasat account:
 ${data.alertDescription}
 
 EVENT DETAILS:

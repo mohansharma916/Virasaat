@@ -5,11 +5,11 @@ export interface FaqItem {
 
 export const faqsData: FaqItem[] = [
   {
-    question: 'What can I organize in Virasaat today?',
+    question: 'What can I organize in Virasat today?',
     answer: 'The app lets you record financial and document details, upload supported files, save personal messages, organize trusted people and record check-ins. Automated family handover, recipient invitations and milestone delivery are not currently available.',
   },
   {
-    question: 'Does Virasaat replace a legal will or emergency plan?',
+    question: 'Does Virasat replace a legal will or emergency plan?',
     answer: 'No. It is an organization tool. It does not transfer ownership of financial assets, decide inheritance or provide an emergency response service. Keep independent copies of important documents and a separate estate and emergency plan.',
   },
   {
@@ -22,7 +22,7 @@ export const faqsData: FaqItem[] = [
   },
   {
     question: 'How is vault content encrypted?',
-    answer: 'Descriptions and uploaded files are encrypted on the server using AES-256-GCM before storage. Virasaat manages the server encryption key and authorized server processes can decrypt content. Titles and categories are stored as metadata. The current app does not provide end-to-end encryption or user-held recovery keys.',
+    answer: 'Descriptions and uploaded files are encrypted on the server using AES-256-GCM before storage. Virasat manages the server encryption key and authorized server processes can decrypt content. Titles and categories are stored as metadata. The current app does not provide end-to-end encryption or user-held recovery keys.',
   },
   {
     question: 'Can I schedule a message for a birthday or wedding?',

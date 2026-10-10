@@ -33,7 +33,7 @@ export class EmailPreviewController {
   @Get('status')
   getStatus() {
     return {
-      service: 'Virasaat Email Notification Engine',
+      service: 'Virasat Email Notification Engine',
       smtp: this.mailService
         ? this.mailService.getStatus()
         : { configured: false, mock: true },
@@ -56,7 +56,7 @@ export class EmailPreviewController {
       html = rendered.html;
       text = rendered.text;
     } else {
-      subject = dto.subject || '🎉 Virasaat Demo Email Test';
+      subject = dto.subject || '🎉 Virasat Demo Email Test';
       const sample = this.emailTemplateService.renderSample(
         EmailTemplateType.WELCOME,
       );

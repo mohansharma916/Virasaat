@@ -6,13 +6,13 @@ export default function Home() {
   const softwareAppSchema = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'Virasaat Vault',
+    name: 'Virasat Vault',
     operatingSystem: 'iOS, Android',
     applicationCategory: 'FinanceApplication',
     description:
       'Organize financial records, documents and personal messages. Automated family handover and recipient access are planned and currently unavailable.',
-    url: 'https://virasaat.app',
-    image: 'https://virasaat.app/images/hero-vault.jpg',
+    url: 'https://virasat.app',
+    image: 'https://virasat.app/images/hero-vault.jpg',
     featureList: [
       'Mobile apps in development for iOS and Android',
       'Financial and document record organization',
@@ -40,18 +40,18 @@ export default function Home() {
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Virasaat Technologies Inc.',
-    url: 'https://virasaat.app',
-    logo: 'https://virasaat.app/images/vault-security.jpg',
+    name: 'Virasat Technologies Inc.',
+    url: 'https://virasat.app',
+    logo: 'https://virasat.app/images/vault-security.jpg',
     sameAs: [
-      'https://twitter.com/VirasaatApp',
-      'https://linkedin.com/company/virasaat-app',
-      'https://github.com/mohansharma916/Virasaat',
+      'https://twitter.com/VirasatApp',
+      'https://linkedin.com/company/virasat-app',
+      'https://github.com/mohansharma916/Virasat',
     ],
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Support',
-      email: 'support@virasaat.app',
+      email: 'support@virasat.app',
       availableLanguage: ['English', 'Hindi'],
     },
   };

@@ -16,7 +16,7 @@ export function renderCheckInMissedTemplate(
   data: CheckInMissedEmailData,
 ): RenderedEmail {
   const checkInUrl = data.checkInUrl || getEmailAppLink('home');
-  const subject = `URGENT: Missed Check-in on Virasaat — Grace Period Active`;
+  const subject = `URGENT: Missed Check-in on Virasat — Grace Period Active`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -28,7 +28,7 @@ export function renderCheckInMissedTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 20px;">
             Hello ${escapeHtml(data.recipientName)},<br />
-            We did not receive your confirmation for the scheduled check-in on <strong>${escapeHtml(data.missedDate)}</strong>. To protect your wishes, Virasaat has placed your account into an active <strong>${data.gracePeriodDays}-day grace period</strong>.
+            We did not receive your confirmation for the scheduled check-in on <strong>${escapeHtml(data.missedDate)}</strong>. To protect your wishes, Virasat has placed your account into an active <strong>${data.gracePeriodDays}-day grace period</strong>.
           </p>
         </td>
       </tr>
@@ -56,7 +56,7 @@ export function renderCheckInMissedTemplate(
         <td align="center">
           ${renderCtaButton({
             url: checkInUrl,
-            label: 'Open Virasaat App',
+            label: 'Open Virasat App',
             variant: 'warning',
           })}
         </td>
@@ -110,7 +110,7 @@ export function renderCheckInMissedTemplate(
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `URGENT: Missed Virasaat check-in. Grace period ends on ${data.gracePeriodEndDate}. Confirm safety now.`,
+    preheader: `URGENT: Missed Virasat check-in. Grace period ends on ${data.gracePeriodEndDate}. Confirm safety now.`,
     title: subject,
     contentHtml:
       `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +

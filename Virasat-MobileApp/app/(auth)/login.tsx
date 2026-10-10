@@ -369,14 +369,14 @@ export default function LoginScreen() {
             By continuing, you agree to Virasat's{' '}
             <Text
               style={{ color: colors.primary.deepForest, textDecorationLine: 'underline', fontWeight: '600' }}
-              onPress={() => void Linking.openURL('https://virasaat.app/terms/')}
+              onPress={() => void Linking.openURL('https://virasat.app/terms/')}
             >
               Terms
             </Text>{' '}
             and{' '}
             <Text
               style={{ color: colors.primary.deepForest, textDecorationLine: 'underline', fontWeight: '600' }}
-              onPress={() => void Linking.openURL('https://virasaat.app/privacy/')}
+              onPress={() => void Linking.openURL('https://virasat.app/privacy/')}
             >
               Privacy Policy
             </Text>.

@@ -32,7 +32,7 @@ export function renderReleaseAuthorizedTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 22px;">
             Dear ${escapeHtml(data.recipientName)},<br />
-            In accordance with the verified instructions and wishes established by <strong>${escapeHtml(data.ownerName)}</strong>, their designated legacy package created for you on Virasaat has been authorized for secure access.
+            In accordance with the verified instructions and wishes established by <strong>${escapeHtml(data.ownerName)}</strong>, their designated legacy package created for you on Virasat has been authorized for secure access.
           </p>
         </td>
       </tr>
@@ -95,7 +95,7 @@ export function renderReleaseAuthorizedTemplate(
                   How to Access Your Materials
                 </div>
                 <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.textSecondary}; line-height: 18px;">
-                  1. The button opens the current Virasaat app.<br />
+                  1. The button opens the current Virasat app.<br />
                   2. Recipient identity verification and package delivery are not available yet.<br />
                   3. This sample does not authorize access to any vault items.
                 </div>
@@ -108,7 +108,7 @@ export function renderReleaseAuthorizedTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: accessUrl, label: 'Open Virasaat App' })}
+          ${renderCtaButton({ url: accessUrl, label: 'Open Virasat App' })}
         </td>
       </tr>
 
@@ -136,7 +136,7 @@ export function renderReleaseAuthorizedTemplate(
   const bodyText = `
 Dear ${data.recipientName},
 
-A personal legacy package created by ${data.ownerName} on Virasaat has been authorized for you.
+A personal legacy package created by ${data.ownerName} on Virasat has been authorized for you.
 
 PACKAGE DETAILS:
 - From: ${data.ownerName}

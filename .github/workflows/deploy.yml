@@ -15,7 +15,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: virasaat-server
+        working-directory: virasat-server
 
     steps:
       - name: Checkout
@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: virasaat-server/package-lock.json
+          cache-dependency-path: virasat-server/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -123,13 +123,13 @@ jobs:
 
               set -e
 
-              cd /opt/VirasaatServer/Virasaat
+              cd /opt/VirasatServer/Virasat
 
               echo "Checking out tested code..."
               git fetch origin
               git reset --hard "${{ github.sha }}"
 
-              cd virasaat-server
+              cd virasat-server
 
               echo "Building containers..."
               docker compose build

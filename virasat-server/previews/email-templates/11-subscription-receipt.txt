@@ -1,17 +1,19 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
 SUBSCRIPTION CONFIRMATION
 ------------------------------------------------------------
 
+Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.
+
 
 Hello Mohan Sharma,
 
-Thank you for subscribing to Virasaat Pro Heritage.
+Thank you for subscribing to Family (illustrative).
 
 RECEIPT SUMMARY:
-- Plan: Virasaat Pro Heritage
+- Plan: Family (illustrative)
 - Amount: ₹2,499 (Annual)
 - Invoice: #INV-2026-0924
 - Purchase Date: October 2, 2026
@@ -20,26 +22,26 @@ RECEIPT SUMMARY:
 
 FEATURES UNLOCKED:
 * Unlimited encrypted legacy items & documents
-* Up to 10 designated Trusted Contacts & Nominees
-* Custom weekly, bi-weekly & monthly check-in cadence
+* Up to 8 saved trusted person records (planned tier)
+* Weekly and monthly check-in preferences (planned tier)
 * HD video & audio legacy message vault
-* Dual-approval release policy with step-up verification
-* Priority concierge & estate guidance
+* Inheritance release is unavailable
+* Paid checkout is unavailable
 
 Manage your subscription and vault settings:
-https://virasaat.com/account/subscription
+virasat://home
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

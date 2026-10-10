@@ -26,7 +26,7 @@ export default function WaitlistModal({ onClose, defaultEmail = '', onJoined }: 
   const [errorMessage, setErrorMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
-  const shareUrl = 'https://virasaat.app/';
+  const shareUrl = 'https://virasat.app/';
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -115,7 +115,7 @@ export default function WaitlistModal({ onClose, defaultEmail = '', onJoined }: 
               <div style={{ fontSize: '2.6rem', color: 'var(--warm-ivory)', fontFamily: 'var(--font-display)' }}>#{registration.queueNumber}</div>
               <p style={{ color: 'var(--text-secondary)' }}>Preferred device: {registration.platform}</p>
             </div>
-            <p style={{ color: 'var(--sage)', marginBottom: '12px' }}>Share Virasaat with family or friends:</p>
+            <p style={{ color: 'var(--sage)', marginBottom: '12px' }}>Share Virasat with family or friends:</p>
             <a href={shareUrl} style={{ color: 'var(--gold-light)', overflowWrap: 'anywhere' }}>{shareUrl}</a>
             <button type="button" onClick={handleCopy} className="btn btn-secondary" style={{ margin: '14px auto' }}>
               {copied ? <Check size={14} /> : <Copy size={14} />}

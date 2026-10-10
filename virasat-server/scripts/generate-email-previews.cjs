@@ -37,7 +37,7 @@ const fileMap = {
 
 const titleMap = {
   OTP_VERIFICATION: 'OTP Verification (Signup & Security)',
-  WELCOME: 'Welcome to Virasaat (After Signup)',
+  WELCOME: 'Welcome to Virasat (After Signup)',
   CHECK_IN_REMINDER: 'Check-In Routine Reminder',
   CHECK_IN_MISSED: 'Check-In Missed (Grace Period Alert)',
   CHECK_IN_CONFIRMED: 'Check-In Confirmed Success',
@@ -78,7 +78,7 @@ const galleryHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Virasaat — Email Templates Preview Gallery</title>
+  <title>Virasat — Email Templates Preview Gallery</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
@@ -309,7 +309,7 @@ const galleryHtml = `<!DOCTYPE html>
     <div class="brand">
       <div class="crest">V</div>
       <div>
-        <div class="brand-title">VIRASAAT</div>
+        <div class="brand-title">VIRASAT</div>
         <div class="brand-sub">Official Email Template Catalog</div>
       </div>
     </div>

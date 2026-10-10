@@ -132,7 +132,7 @@ export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
               fontWeight: 400,
             }}
           >
-            <strong style={{ color: '#FFF' }}>Virasaat</strong> helps you organize financial references, important documents and personal messages in one place. Descriptions and files use server-managed encryption. Family handover is planned and currently unavailable; keep an independent estate and emergency plan.
+            <strong style={{ color: '#FFF' }}>Virasat</strong> helps you organize financial references, important documents and personal messages in one place. Descriptions and files use server-managed encryption. Family handover is planned and currently unavailable; keep an independent estate and emergency plan.
           </p>
 
           {/* INLINE COMING SOON WAITLIST BOX */}

@@ -30,7 +30,7 @@ class PurchaseServiceImpl {
     const plans = await getPublicPlans();
     return plans.map((p) => ({
       planCode: p.code,
-      productId: `in.virasaat.subscription.${p.code.toLowerCase()}`,
+      productId: `in.virasat.subscription.${p.code.toLowerCase()}`,
       title: p.name,
       priceText: p.price === 0 ? 'Free' : `₹${p.price.toLocaleString()}/year`,
       currency: p.currency,

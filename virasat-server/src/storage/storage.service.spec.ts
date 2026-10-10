@@ -11,7 +11,7 @@ describe('Storage and S3 Security', () => {
   let prevDir: string | undefined;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), 'virasaat-s3-test-'));
+    tempDir = await mkdtemp(join(tmpdir(), 'virasat-s3-test-'));
     prevDir = process.env.PRIVATE_STORAGE_DIR;
     process.env.PRIVATE_STORAGE_DIR = tempDir;
   });

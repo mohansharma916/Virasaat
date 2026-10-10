@@ -197,9 +197,9 @@ describe('Waitlist registration and email safety', () => {
     expect(layout).toContain('Server-Managed Encryption');
     expect(layout).toContain('Authorized server processes can decrypt content');
     expect(layout).toContain('href="virasat://security"');
-    expect(layout).toContain('https://virasaat.app/privacy');
+    expect(layout).toContain('https://virasat.app/privacy');
     expect(layout).not.toMatch(
-      /Zero-Knowledge|client-side encryption|virasaat\.com|>Preferences</,
+      /Zero-Knowledge|client-side encryption|virasaat\.com|virasaat\.app|>Preferences</,
     );
   });
 

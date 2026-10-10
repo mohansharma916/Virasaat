@@ -1,9 +1,11 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
 VERIFICATION REVIEW NOTICE
 ------------------------------------------------------------
+
+Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.
 
 
 CONFIDENTIAL: VERIFICATION PROTOCOL OPENED
@@ -21,21 +23,21 @@ Three consecutive missed check-in cycles and elapsed 7-day grace period
 As an appointed verifier, your verification status is required. Vault materials remain encrypted and protected until verification is complete.
 
 ACCESS VERIFICATION PORTAL:
-https://virasaat.com/cases/VRS-CASE-2026-9041
+virasat://home
 
 Please complete your review before October 16, 2026 at 6:00 PM.
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

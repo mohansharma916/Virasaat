@@ -18,7 +18,7 @@ export function renderPasswordResetTemplate(
   const expiryMinutes = data.expiryMinutes || 15;
   const resetUrl =
     data.resetUrl || getEmailAppLink('recovery', { mode: 'reset' });
-  const subject = `Reset your Virasaat account password`;
+  const subject = `Reset your Virasat account password`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -30,7 +30,7 @@ export function renderPasswordResetTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Hello ${escapeHtml(data.recipientName || 'there')},<br />
-            We received a request to reset the password associated with your Virasaat account.
+            We received a request to reset the password associated with your Virasat account.
           </p>
         </td>
       </tr>
@@ -102,17 +102,17 @@ export function renderPasswordResetTemplate(
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `Password reset request for your Virasaat account. Valid for ${expiryMinutes} minutes.`,
+    preheader: `Password reset request for your Virasat account. Valid for ${expiryMinutes} minutes.`,
     title: subject,
     contentHtml,
     securityNotice:
-      'This password reset link was generated on behalf of your Virasaat account.',
+      'This password reset link was generated on behalf of your Virasat account.',
   });
 
   const bodyText = `
 Hello ${data.recipientName || 'there'},
 
-We received a request to reset your Virasaat account password.
+We received a request to reset your Virasat account password.
 
 ${data.resetCode ? `Your reset code is: ${data.resetCode}\n` : ''}
 Reset your password using this link (valid for ${expiryMinutes} minutes):

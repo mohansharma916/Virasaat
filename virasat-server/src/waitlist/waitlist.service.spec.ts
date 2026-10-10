@@ -41,7 +41,7 @@ describe('WaitlistService', () => {
     mockConfigService = {
       get: jest.fn((key: string) => {
         if (key === 'WAITLIST_START_NUMBER') return '72';
-        if (key === 'ADMIN_EMAIL') return 'admin@virasaat.app';
+        if (key === 'ADMIN_EMAIL') return 'admin@virasat.app';
         return null;
       }),
     };

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Virasaat - CLI Email Delivery & SMTP Test Utility
+ * Virasat - CLI Email Delivery & SMTP Test Utility
  *
  * Usage:
  *   node scripts/test-email.cjs [recipient-email]
@@ -15,7 +15,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
 
-// Load environment variables from virasaat-server/.env
+// Load environment variables from virasat-server/.env
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const service = process.env.SMTP_SERVICE || process.env.MAIL_SERVICE;
@@ -41,12 +41,12 @@ const pass =
 const from =
   process.env.SMTP_FROM ||
   process.env.MAIL_FROM ||
-  (user ? `"Virasaat Demo" <${user}>` : '"Virasaat Demo" <demo@virasaat.app>');
+  (user ? `"Virasat Demo" <${user}>` : '"Virasat Demo" <demo@virasat.app>');
 
 const recipient = process.argv[2] || user;
 
 console.log('='.repeat(60));
-console.log('📧 Virasaat Email & Nodemailer Diagnostic Tool');
+console.log('📧 Virasat Email & Nodemailer Diagnostic Tool');
 console.log('='.repeat(60));
 
 console.log('\n[Configuration Detected]');
@@ -67,7 +67,7 @@ if (!user || !pass) {
   console.log('\nTip for Gmail users:');
   console.log('1. Go to your Google Account -> Security -> 2-Step Verification');
   console.log('2. Search for "App passwords" (https://myaccount.google.com/apppasswords)');
-  console.log('3. Generate an app password for "Virasaat Demo" and paste the 16 characters in SMTP_PASS.\n');
+  console.log('3. Generate an app password for "Virasat Demo" and paste the 16 characters in SMTP_PASS.\n');
   process.exit(1);
 }
 
@@ -108,7 +108,7 @@ async function main() {
           <div style="display: inline-block; padding: 6px 12px; background: #EBF5EE; border-radius: 20px; color: #2D6A4F; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 16px;">
             Demo Verification
           </div>
-          <h1 style="color: #1A362B; font-size: 24px; margin-top: 0; margin-bottom: 12px;">Virasaat Email Service is Ready!</h1>
+          <h1 style="color: #1A362B; font-size: 24px; margin-top: 0; margin-bottom: 12px;">Virasat Email Service is Ready!</h1>
           <p style="color: #4A5568; line-height: 1.6; font-size: 15px;">
             This email confirms that your <strong>Nodemailer</strong> SMTP configuration is active and working properly.
           </p>
@@ -120,7 +120,7 @@ async function main() {
             </p>
           </div>
           <p style="color: #718096; font-size: 13px; margin-bottom: 0;">
-            Virasaat Secure Legacy & Vault Platform &bull; Demo Delivery System
+            Virasat Secure Legacy & Vault Platform &bull; Demo Delivery System
           </p>
         </div>
       </body>
@@ -131,8 +131,8 @@ async function main() {
     const info = await transporter.sendMail({
       from,
       to: recipient,
-      subject: '✨ Virasaat Nodemailer Demo Verification',
-      text: `Hello! This confirms that your Virasaat Nodemailer integration is configured and running. Sent from: ${user} to ${recipient} at ${new Date().toISOString()}`,
+      subject: '✨ Virasat Nodemailer Demo Verification',
+      text: `Hello! This confirms that your Virasat Nodemailer integration is configured and running. Sent from: ${user} to ${recipient} at ${new Date().toISOString()}`,
       html: htmlContent,
     });
 

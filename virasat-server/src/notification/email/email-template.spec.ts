@@ -34,7 +34,7 @@ describe('EmailTemplateService', () => {
       });
 
       expect(rendered.subject).toContain('654321');
-      expect(rendered.subject).toContain('Virasaat verification code');
+      expect(rendered.subject).toContain('Virasat verification code');
       expect(rendered.html).toContain('654321');
       expect(rendered.html).toContain('Aarav Patel');
       expect(rendered.html).toContain('10 minutes');
@@ -54,11 +54,11 @@ describe('EmailTemplateService', () => {
       const rendered = service.renderWelcome({
         recipientName: 'Aarav Patel',
         userEmail: 'aarav@example.com',
-        dashboardUrl: 'https://virasaat.com/dashboard',
+        dashboardUrl: 'https://virasat.com/dashboard',
         vaultId: 'vlt_123',
       });
 
-      expect(rendered.subject).toContain('Welcome to Virasaat');
+      expect(rendered.subject).toContain('Welcome to Virasat');
       expect(rendered.html).toContain('Aarav Patel');
       expect(rendered.html).toContain(
         'Three Steps to Complete Your Vault Setup',
@@ -81,7 +81,7 @@ describe('EmailTemplateService', () => {
       expect(rendered.subject).toContain('due in 3 days');
       expect(rendered.html).toContain('Aarav Patel');
       expect(rendered.html).toContain('October 10, 2026');
-      expect(rendered.html).toContain('Open Virasaat App');
+      expect(rendered.html).toContain('Open Virasat App');
       expect(rendered.text).toContain('Monthly');
     });
 
@@ -109,7 +109,7 @@ describe('EmailTemplateService', () => {
       expect(rendered.subject).toContain('URGENT: Missed Check-in');
       expect(rendered.html).toContain('7-day grace period');
       expect(rendered.html).toContain('October 8, 2026');
-      expect(rendered.html).toContain('Open Virasaat App');
+      expect(rendered.html).toContain('Open Virasat App');
       expect(rendered.text).toContain('URGENT: MISSED CHECK-IN NOTICE');
     });
   });
@@ -135,13 +135,13 @@ describe('EmailTemplateService', () => {
         recipientName: 'Diya Patel',
         ownerName: 'Aarav Patel',
         relationship: 'Sister',
-        invitationUrl: 'https://virasaat.com/invite/123',
+        invitationUrl: 'https://virasat.com/invite/123',
       });
 
       expect(rendered.subject).toContain('Aarav Patel has designated you');
       expect(rendered.html).toContain('Sister');
       expect(rendered.html).toContain('Zero Immediate Access');
-      expect(rendered.html).toContain('Open Virasaat App');
+      expect(rendered.html).toContain('Open Virasat App');
     });
   });
 
@@ -149,8 +149,8 @@ describe('EmailTemplateService', () => {
     it('uses implemented destinations and accurate encryption claims in every sample', () => {
       for (const type of service.getAllTemplateTypes()) {
         const rendered = service.renderSample(type);
-        expect(rendered.html).not.toContain('https://virasaat.com');
-        expect(rendered.text).not.toContain('https://virasaat.com');
+        expect(rendered.html).not.toContain('https://virasat.com');
+        expect(rendered.text).not.toContain('https://virasat.com');
         expect(rendered.html).not.toMatch(
           /client-side encryption|Zero-Knowledge Encrypted/,
         );
@@ -180,7 +180,7 @@ describe('EmailTemplateService', () => {
         expect(rendered.text).toContain(
           'This message performs no account action.',
         );
-        expect(rendered.html).toContain('Open Virasaat App');
+        expect(rendered.html).toContain('Open Virasat App');
       }
     });
 
@@ -214,8 +214,8 @@ describe('EmailTemplateService', () => {
         expect(rendered.templateType).toBe(type);
         expect(rendered.subject).toBeTruthy();
         expect(rendered.html).toContain('<!DOCTYPE html');
-        expect(rendered.html).toContain('VIRASAAT');
-        expect(rendered.text).toContain('VIRASAAT');
+        expect(rendered.html).toContain('VIRASAT');
+        expect(rendered.text).toContain('VIRASAT');
         expect(rendered.text).toContain('Digital Legacy & Inheritance Vault');
       }
     });

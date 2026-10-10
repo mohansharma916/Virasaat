@@ -11,7 +11,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
   const comparisonData = [
     {
       feature: 'Automated Reminder & Family Workflow',
-      virasaat: 'Planned',
+      virasat: 'Planned',
       lawyer: false,
       google: 'Only for Gmail',
       cloud: false,
@@ -20,7 +20,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
     },
     {
       feature: 'Complete Bank & Investment List',
-      virasaat: true,
+      virasat: true,
       lawyer: 'Static paper',
       google: false,
       cloud: 'Messy text files',
@@ -29,7 +29,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
     },
     {
       feature: 'Personal Video Messages & Letters',
-      virasaat: true,
+      virasat: true,
       lawyer: false,
       google: false,
       cloud: 'No delivery triggers',
@@ -38,7 +38,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
     },
     {
       feature: 'Encryption Model',
-      virasaat: 'Server-managed',
+      virasat: 'Server-managed',
       lawyer: false,
       google: false,
       cloud: false,
@@ -47,16 +47,16 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
     },
     {
       feature: 'Personal Claim Instructions',
-      virasaat: 'User-written notes',
+      virasat: 'User-written notes',
       lawyer: 'Extra legal fees',
       google: false,
       cloud: false,
       pwManager: false,
-      note: 'Record your own instructions; Virasaat does not claim assets or provide automatic claim guides.',
+      note: 'Record your own instructions; Virasat does not claim assets or provide automatic claim guides.',
     },
     {
       feature: 'Verified Family Handover',
-      virasaat: 'Unavailable',
+      virasat: 'Unavailable',
       lawyer: false,
       google: false,
       cloud: false,
@@ -65,7 +65,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
     },
     {
       feature: 'Time to Set Up',
-      virasaat: '5 - 10 Minutes',
+      virasat: '5 - 10 Minutes',
       lawyer: 'Weeks of meetings',
       google: '20 Minutes',
       cloud: 'Hours of sorting',
@@ -74,7 +74,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
     },
     {
       feature: 'Cost',
-      virasaat: 'Free signup; app plans vary',
+      virasat: 'Free signup; app plans vary',
       lawyer: '₹25,000 - ₹50,000+',
       google: 'Free (Account only)',
       cloud: '$10 - $20 / month',
@@ -105,7 +105,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
           </h2>
 
           <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)' }}>
-            Virasaat helps organize your records alongside your other estate planning tools. Planned features are marked below; it does not replace a will or an emergency plan.
+            Virasat helps organize your records alongside your other estate planning tools. Planned features are marked below; it does not replace a will or an emergency plan.
           </p>
         </div>
 
@@ -141,7 +141,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Sparkles size={16} />
-                      <span>Virasaat</span>
+                      <span>Virasat</span>
                     </div>
                   </th>
                   <th style={{ padding: '20px 18px', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
@@ -174,7 +174,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
                       </div>
                     </td>
 
-                    {/* Virasaat Column */}
+                    {/* Virasat Column */}
                     <td
                       style={{
                         padding: '18px 20px',
@@ -183,8 +183,8 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
                         borderRight: '2px solid rgba(212, 175, 55, 0.4)',
                       }}
                     >
-                      {typeof row.virasaat === 'boolean' ? (
-                        row.virasaat ? (
+                      {typeof row.virasat === 'boolean' ? (
+                        row.virasat ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#35B86B', fontWeight: 700, fontSize: '0.9rem' }}>
                             <Check size={18} />
                             <span>Included</span>
@@ -194,7 +194,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
                         )
                       ) : (
                         <span style={{ color: '#ECC862', fontWeight: 700, fontSize: '0.92rem' }}>
-                          {row.virasaat}
+                          {row.virasat}
                         </span>
                       )}
                     </td>

@@ -30,7 +30,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
       accent: '#ECC862',
       tagline: 'List your bank accounts, mutual funds, and policies so your family never has to guess.',
       description:
-        'List your bank accounts, mutual fund references, investment portfolios and insurance details. These are records you enter; Virasaat does not connect to financial institutions or deliver them to family today.',
+        'List your bank accounts, mutual fund references, investment portfolios and insurance details. These are records you enter; Virasat does not connect to financial institutions or deliver them to family today.',
       features: [
         'Mutual Funds & Stocks: Zerodha, Groww, CAMS, and KFintech folios',
         'Life & Health Insurance: Policy numbers and claim advisor contacts',
@@ -93,7 +93,7 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
       accent: '#3D68C5',
       tagline: 'Keep references to your independent account-access instructions.',
       description:
-        'Record where independent account-access instructions are kept. Virasaat does not unlock external accounts or act as a password manager.',
+        'Record where independent account-access instructions are kept. Virasat does not unlock external accounts or act as a password manager.',
       features: [
         'Emergency instructions for Apple Keychain and password managers',
         'Simple steps for unlocking family laptops and devices in an emergency',

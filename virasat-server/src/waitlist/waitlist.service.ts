@@ -150,7 +150,7 @@ export class WaitlistService {
             </div>
 
             <div style="text-align: center; border-top: 1px solid #eee; padding-top: 14px; font-size: 13px; color: #777;">
-              Sent automatically by Virasaat Server Waitlist System.
+              Sent automatically by Virasat Server Waitlist System.
             </div>
           </div>
         `,
@@ -168,12 +168,12 @@ export class WaitlistService {
     const userMailPromise = this.mailService
       .sendMail({
         to: email,
-        subject: `You're on the Virasaat Waitlist! (Founding Member #${queueNumber})`,
+        subject: `You're on the Virasat Waitlist! (Founding Member #${queueNumber})`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 28px; background: #ffffff; border: 1px solid #e1e8e5; border-radius: 16px;">
             <div style="text-align: center; margin-bottom: 24px;">
               <div style="display: inline-block; background: #0B5D4B; color: #ECC862; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 13px; letter-spacing: 0.5px;">
-                VIRASAAT • COMING SOON
+                VIRASAT • COMING SOON
               </div>
               <h1 style="color: #063F34; margin: 16px 0 6px; font-size: 26px;">You're on the waitlist!</h1>
               <p style="color: #4a5568; font-size: 16px; margin: 0;">
@@ -194,7 +194,7 @@ export class WaitlistService {
             </div>
 
             <p style="color: #2d3748; line-height: 1.65; font-size: 15px;">
-              Virasaat is designed to be the simplest, safest way to protect your family's financial future:
+              Virasat is designed to be the simplest, safest way to protect your family's financial future:
             </p>
 
             <ul style="color: #2d3748; line-height: 1.7; font-size: 14px; padding-left: 20px;">
@@ -209,7 +209,7 @@ export class WaitlistService {
             </p>
 
             <div style="border-top: 1px solid #edf2f7; margin-top: 28px; padding-top: 18px; text-align: center; color: #718096; font-size: 13px;">
-              Virasaat — Simple, safe family heritage.<br />
+              Virasat — Simple, safe family heritage.<br />
               Have questions or suggestions? Just reply to this email!
             </div>
           </div>

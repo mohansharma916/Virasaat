@@ -1,4 +1,4 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
@@ -8,27 +8,27 @@ VERIFY YOUR EMAIL ADDRESS
 
 Hello Mohan Sharma,
 
-Your 6-digit one-time verification code for Virasaat is:
+Your 6-digit one-time verification code for Virasat is:
 
     849201
 
 This code is valid for 10 minutes.
 
 SECURITY REMINDER:
-Never share this code with anyone. Virasaat personnel will never ask for your verification code.
+Never share this code with anyone. Virasat personnel will never ask for your verification code.
 If you did not make this request, you can safely disregard this message.
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

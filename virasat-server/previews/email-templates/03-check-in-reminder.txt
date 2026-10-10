@@ -1,14 +1,16 @@
-VIRASAAT
+VIRASAT
 Digital Legacy & Inheritance Vault
 ============================================================
 
 ROUTINE CHECK-IN REMINDER
 ------------------------------------------------------------
 
+Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.
+
 
 Hello Mohan Sharma,
 
-This is your routine scheduled check-in for your Virasaat account (Monthly).
+This is your routine scheduled check-in for your Virasat account (Monthly).
 
 CHECK-IN DETAILS:
 - Status: Pending (due in 3 days)
@@ -17,22 +19,22 @@ CHECK-IN DETAILS:
 
 CONFIRM YOUR CHECK-IN:
 Click the link below to confirm you are safe and reset your check-in timer:
-https://virasaat.com/check-in/confirm?token=demo_token
+virasat://home
 
 WHY WE SEND THIS:
-Confirming your safety takes one click and ensures your private vault remains secure and locked.
+Confirm activity inside the app. No vault items are released by a missed check-in.
 
 
 ------------------------------------------------------------
 SECURITY REASSURANCE:
-Your legacy items and personal documents are protected with AES-256 client-side encryption. Virasaat cannot read your private items without explicit authorization protocol.
+Descriptions and uploaded files are encrypted on the server using AES-256-GCM. Authorized server processes can decrypt content. Titles and categories are stored as metadata.
 
-This is an automated communication regarding your Virasaat digital vault and security settings.
+This is an automated communication regarding your Virasat digital vault and security settings.
 
-Help & Security: https://virasaat.com/security
-Privacy Policy: https://virasaat.com/privacy
-Terms of Service: https://virasaat.com/terms
+Security Settings: virasat://security
+Privacy Policy: https://virasat.app/privacy
+Terms of Service: https://virasat.app/terms
 
-(C) 2026 Virasaat Technologies Inc. All rights reserved.
+(C) 2026 Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.
 ============================================================

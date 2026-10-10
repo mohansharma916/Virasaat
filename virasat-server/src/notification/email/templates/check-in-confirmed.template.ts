@@ -17,7 +17,7 @@ export function renderCheckInConfirmedTemplate(
 ): RenderedEmail {
   const dashboardUrl = data.dashboardUrl || getEmailAppLink('home');
   const cadence = data.cadence || 'Monthly';
-  const subject = `Check-in Confirmed — Your Virasaat Vault is Secure`;
+  const subject = `Check-in Confirmed — Your Virasat Vault is Secure`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -105,7 +105,7 @@ export function renderCheckInConfirmedTemplate(
   const bodyText = `
 Hello ${data.recipientName},
 
-Your check-in has been confirmed. Your Virasaat vault remains secure and active.
+Your check-in has been confirmed. Your Virasat vault remains secure and active.
 
 CONFIRMATION DETAILS:
 - Confirmed At: ${data.confirmedAt}

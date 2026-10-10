@@ -11,9 +11,9 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions (Digital Custody Agreement) | Virasaat (विरासत)',
+  title: 'Terms & Conditions (Digital Custody Agreement) | Virasat (विरासत)',
   description:
-    'Terms of service, digital custody agreements, current check-in limitations, and testamentary legal disclaimers for the Virasaat mobile application and platform.',
+    'Terms of service, digital custody agreements, current check-in limitations, and testamentary legal disclaimers for the Virasat mobile application and platform.',
   alternates: {
     canonical: '/terms/',
   },
@@ -76,7 +76,7 @@ export default function TermsAndConditionsPage() {
                 fontWeight: 800,
               }}
             >
-              VIRASAAT
+              VIRASAT
             </span>
           </Link>
 
@@ -139,7 +139,7 @@ export default function TermsAndConditionsPage() {
               marginBottom: '18px',
             }}
           >
-            Please read this Digital Custody Agreement carefully before creating a vault on Virasaat. By creating an account, you enter into a legally binding contract with Virasaat Technologies Inc.
+            Please read this Digital Custody Agreement carefully before creating a vault on Virasat. By creating an account, you enter into a legally binding contract with Virasat Technologies Inc.
           </p>
 
           <div
@@ -192,13 +192,13 @@ export default function TermsAndConditionsPage() {
           </div>
 
           <p style={{ color: 'var(--warm-ivory)', fontSize: '0.94rem', lineHeight: 1.7, marginBottom: '12px' }}>
-            <strong>1. Not a Substitute for a Legal Will:</strong> Virasaat is a record organization platform with server-encrypted vault content. Automated family handover is planned and currently unavailable. <strong>Virasaat does not act as a law firm, wealth management fiduciary, or court of probate.</strong>
+            <strong>1. Not a Substitute for a Legal Will:</strong> Virasat is a record organization platform with server-encrypted vault content. Automated family handover is planned and currently unavailable. <strong>Virasat does not act as a law firm, wealth management fiduciary, or court of probate.</strong>
           </p>
           <p style={{ color: 'var(--warm-ivory)', fontSize: '0.94rem', lineHeight: 1.7, marginBottom: '12px' }}>
-            <strong>2. No Alteration of Statutory Heirship:</strong> Providing your bank details, insurance policies, or locker instructions to designated recipients via Virasaat does <em>not</em> legally substitute for a formal registered Last Will and Testament, nor does it override statutory succession rights governed by the <strong>Indian Succession Act, 1925</strong>, the <strong>Hindu Succession Act, 1956</strong>, <strong>Muslim Personal Law (Shariat)</strong>, or corresponding jurisdictional succession statutes.
+            <strong>2. No Alteration of Statutory Heirship:</strong> Providing your bank details, insurance policies, or locker instructions to designated recipients via Virasat does <em>not</em> legally substitute for a formal registered Last Will and Testament, nor does it override statutory succession rights governed by the <strong>Indian Succession Act, 1925</strong>, the <strong>Hindu Succession Act, 1956</strong>, <strong>Muslim Personal Law (Shariat)</strong>, or corresponding jurisdictional succession statutes.
           </p>
           <p style={{ color: 'var(--warm-ivory)', fontSize: '0.94rem', lineHeight: 1.7, margin: 0 }}>
-            <strong>3. Informational Roadmap:</strong> Virasaat helps you organize references to your accounts and important documents. Users are encouraged to execute their formal legal testamentary instruments in accordance with local statutes.
+            <strong>3. Informational Roadmap:</strong> Virasat helps you organize references to your accounts and important documents. Users are encouraged to execute their formal legal testamentary instruments in accordance with local statutes.
           </p>
         </div>
 
@@ -208,7 +208,7 @@ export default function TermsAndConditionsPage() {
             1. Eligibility & Account Creation
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '12px' }}>
-            To register an account on the Virasaat mobile app or website, you must:
+            To register an account on the Virasat mobile app or website, you must:
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px' }}>
             <li>Be at least 18 years of age or the age of majority in your jurisdiction.</li>
@@ -224,7 +224,7 @@ export default function TermsAndConditionsPage() {
             2. Server-Managed Encryption & Account Security
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            Virasaat uses server-managed encryption for vault descriptions and uploaded files. You acknowledge the following technical realities:
+            Virasat uses server-managed encryption for vault descriptions and uploaded files. You acknowledge the following technical realities:
           </p>
           <div
             style={{
@@ -236,7 +236,7 @@ export default function TermsAndConditionsPage() {
           >
             <ul style={{ color: 'var(--sage)', lineHeight: 1.7, paddingLeft: '20px', margin: 0 }}>
               <li><strong>Server Encryption:</strong> Descriptions and files reach the API before AES-256-GCM encryption. Basic item metadata is stored separately.</li>
-              <li><strong>Key Custody:</strong> Virasaat manages the server master key and authorized service processes can decrypt content. User-held encryption or recovery keys are not currently provided. Access depends on the supported account verification flow.</li>
+              <li><strong>Key Custody:</strong> Virasat manages the server master key and authorized service processes can decrypt content. User-held encryption or recovery keys are not currently provided. Access depends on the supported account verification flow.</li>
               <li><strong>Device Security:</strong> You are solely responsible for preventing unauthorized physical or biometric access to your smartphone.</li>
             </ul>
           </div>
@@ -255,7 +255,7 @@ export default function TermsAndConditionsPage() {
             <li><strong>Notifications:</strong> Scheduled reminders, SMS, push delivery and vacation pause are not currently available.</li>
             <li><strong>No Release Countdown:</strong> A missed check-in does not start an automatic 14-day or 30-day release workflow.</li>
             <li><strong>Release Unavailable:</strong> Invitation delivery, recipient verification and access to released vault items are disabled while verified controls are developed.</li>
-            <li><strong>Independent Arrangements:</strong> Keep a separate estate plan, emergency contact process and copies of important records. Do not rely on Virasaat for emergency delivery.</li>
+            <li><strong>Independent Arrangements:</strong> Keep a separate estate plan, emergency contact process and copies of important records. Do not rely on Virasat for emergency delivery.</li>
           </ul>
         </section>
 
@@ -269,7 +269,7 @@ export default function TermsAndConditionsPage() {
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px' }}>
             <li>You warrant that you have obtained their authorization to record their contact information on the platform.</li>
-            <li>Virasaat organizes the records you enter. It does not manage bank accounts, claim insurance proceeds, arbitrate inheritance disputes or currently deliver records to recipients.</li>
+            <li>Virasat organizes the records you enter. It does not manage bank accounts, claim insurance proceeds, arbitrate inheritance disputes or currently deliver records to recipients.</li>
             <li>Saving a trusted person or intended assignment does not verify their identity or grant access to your vault.</li>
           </ul>
         </section>
@@ -320,7 +320,7 @@ export default function TermsAndConditionsPage() {
             6. Acceptable Use & Prohibited Content
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '12px' }}>
-            You agree not to use Virasaat to store or transmit:
+            You agree not to use Virasat to store or transmit:
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px' }}>
             <li>Malicious code, spyware, or keyloggers.</li>
@@ -336,10 +336,10 @@ export default function TermsAndConditionsPage() {
             7. User Content Ownership & Intellectual Property
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            You retain <strong>100% intellectual property ownership</strong> of all notes, letters, images, videos, and documents you upload to your Virasaat vault. Virasaat claims zero copyright, ownership, or licensing rights over your personal memories.
+            You retain <strong>100% intellectual property ownership</strong> of all notes, letters, images, videos, and documents you upload to your Virasat vault. Virasat claims zero copyright, ownership, or licensing rights over your personal memories.
           </p>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            The Virasaat trademark, brand identity, UI design, server encryption implementation, and source code are the exclusive property of Virasaat Technologies Inc.
+            The Virasat trademark, brand identity, UI design, server encryption implementation, and source code are the exclusive property of Virasat Technologies Inc.
           </p>
         </section>
 
@@ -357,7 +357,7 @@ export default function TermsAndConditionsPage() {
             }}
           >
             <p style={{ color: 'var(--sage)', fontSize: '0.9rem', lineHeight: 1.7, margin: 0 }}>
-              TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VIRASAAT TECHNOLOGIES INC. AND ITS DIRECTORS, EMPLOYEES, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOSS OF BANK ASSETS, LOSS OF PROFITS, BANKING DISPUTES, SUCCESSION DISPUTES AMONG NOMINEES AND STATUTORY HEIRS, OR LOSS OF ACCESS TO STORED CONTENT. IN NO EVENT SHALL VIRASAAT&apos;S AGGREGATE LIABILITY EXCEED THE TOTAL FEES PAID BY YOU IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
+              TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VIRASAT TECHNOLOGIES INC. AND ITS DIRECTORS, EMPLOYEES, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOSS OF BANK ASSETS, LOSS OF PROFITS, BANKING DISPUTES, SUCCESSION DISPUTES AMONG NOMINEES AND STATUTORY HEIRS, OR LOSS OF ACCESS TO STORED CONTENT. IN NO EVENT SHALL VIRASAT&apos;S AGGREGATE LIABILITY EXCEED THE TOTAL FEES PAID BY YOU IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
             </p>
           </div>
         </section>
@@ -404,12 +404,12 @@ export default function TermsAndConditionsPage() {
             }}
           >
             <div style={{ fontWeight: 700, color: 'var(--warm-ivory)', marginBottom: '4px' }}>
-              Virasaat Technologies Inc. Legal Department
+              Virasat Technologies Inc. Legal Department
             </div>
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
               Legal Inquiries:{' '}
-              <a href="mailto:legal@virasaat.app" style={{ color: '#ECC862', textDecoration: 'none' }}>
-                legal@virasaat.app
+              <a href="mailto:legal@virasat.app" style={{ color: '#ECC862', textDecoration: 'none' }}>
+                legal@virasat.app
               </a>{' '}
               / <a href="mailto:mohansharma916@gmail.com" style={{ color: '#ECC862', textDecoration: 'none' }}>mohansharma916@gmail.com</a>
               <br />
@@ -449,7 +449,7 @@ export default function TermsAndConditionsPage() {
               fontSize: '0.86rem',
             }}
           >
-            &copy; {new Date().getFullYear()} Virasaat Technologies Inc. All rights reserved.
+            &copy; {new Date().getFullYear()} Virasat Technologies Inc. All rights reserved.
           </Link>
         </div>
       </main>

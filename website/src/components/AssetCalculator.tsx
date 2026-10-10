@@ -278,7 +278,7 @@ export default function AssetCalculator({ onOpenWaitlist }: AssetCalculatorProps
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.84rem', color: 'var(--sage)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Clock size={15} color="#D94A4A" />
-                    Without Virasaat:
+                    Without Virasat:
                   </span>
                   <span style={{ fontSize: '0.84rem', color: '#D94A4A', fontWeight: 600 }}>
                     {estimatedMonthsDelay} Months of stressful paperwork
@@ -288,7 +288,7 @@ export default function AssetCalculator({ onOpenWaitlist }: AssetCalculatorProps
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.84rem', color: 'var(--sage)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckCircle size={15} color="#35B86B" />
-                    With Virasaat:
+                    With Virasat:
                   </span>
                   <span style={{ fontSize: '0.84rem', color: '#35B86B', fontWeight: 700 }}>
                     Clear Step-by-Step Guide

@@ -145,7 +145,7 @@ export default function CrisisStats() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <ShieldCheck size={20} color="#35B86B" />
               <span style={{ fontSize: '0.82rem', color: '#35B86B', fontWeight: 700, letterSpacing: '0.08em' }}>
-                HOW VIRASAAT HELPS
+                HOW VIRASAT HELPS
               </span>
             </div>
             <h3
@@ -159,7 +159,7 @@ export default function CrisisStats() {
               One Simple List. Total Peace of Mind.
             </h3>
             <p style={{ fontSize: '0.94rem', color: 'var(--sage)', lineHeight: 1.6, margin: 0 }}>
-              Virasaat helps you organize account references, policies and personal messages. Automated family sharing is planned and currently unavailable.
+              Virasat helps you organize account references, policies and personal messages. Automated family sharing is planned and currently unavailable.
             </p>
           </div>
 

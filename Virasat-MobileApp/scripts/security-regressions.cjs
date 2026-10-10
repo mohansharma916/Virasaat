@@ -172,7 +172,7 @@ test('saved-file downloads match the API route and preserve bytes and cancellati
   const { load } = fixture();
   const { api } = load('src/api/client.ts');
   const { downloadLegacyItem } = load('src/api/vault.api.ts');
-  const controllerPath = resolve(__dirname, '../../virasaat-server/src/legacy-items/legacy-items.controller.ts');
+  const controllerPath = resolve(__dirname, '../../virasat-server/src/legacy-items/legacy-items.controller.ts');
   const controller = ts.createSourceFile(controllerPath, readFileSync(controllerPath, 'utf8'), ts.ScriptTarget.Latest, true);
   const controllerClass = controller.statements.find(ts.isClassDeclaration);
   const handler = controllerClass.members.find((member) => member.name?.getText(controller) === 'downloadFile');

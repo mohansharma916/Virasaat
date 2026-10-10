@@ -48,7 +48,7 @@ export default function CtaBanner({ onOpenWaitlist, registration }: CtaBannerPro
           >
             <Image
               src="/images/hero-vault.jpg"
-              alt="Virasaat"
+              alt="Virasat"
               fill
               style={{ objectFit: 'cover' }}
             />

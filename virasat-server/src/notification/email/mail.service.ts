@@ -208,10 +208,10 @@ export class MailService implements OnModuleInit {
       this.getConfig('MAIL_USER') ||
       this.getConfig('EMAIL_USER');
     if (user) {
-      return `"Virasaat" <${user}>`;
+      return `"Virasat" <${user}>`;
     }
 
-    return '"Virasaat" <noreply@virasaat.app>';
+    return '"Virasat" <noreply@virasat.app>';
   }
 
   /**

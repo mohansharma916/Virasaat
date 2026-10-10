@@ -24,7 +24,7 @@ export function renderSubscriptionReceiptTemplate(
     'Dual-approval release policy with step-up verification',
     'Priority concierge & estate support',
   ];
-  const subject = `Your Virasaat ${data.planName} Subscription Confirmation`;
+  const subject = `Your Virasat ${data.planName} Subscription Confirmation`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -116,7 +116,7 @@ export function renderSubscriptionReceiptTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: manageUrl, label: 'Open Virasaat App' })}
+          ${renderCtaButton({ url: manageUrl, label: 'Open Virasat App' })}
         </td>
       </tr>
     </table>
@@ -129,7 +129,7 @@ export function renderSubscriptionReceiptTemplate(
       `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
       contentHtml,
     securityNotice:
-      'This payment confirmation receipt was issued for your Virasaat subscription purchase.',
+      'This payment confirmation receipt was issued for your Virasat subscription purchase.',
   });
 
   const bodyText = `

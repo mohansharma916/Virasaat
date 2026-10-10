@@ -26,8 +26,8 @@ export function renderCheckInReminderTemplate(
 
   const subject =
     data.daysRemaining === 0
-      ? `Action Required: Your routine Virasaat check-in is due today`
-      : `Reminder: Your Virasaat check-in is ${daysText}`;
+      ? `Action Required: Your routine Virasat check-in is due today`
+      : `Reminder: Your Virasat check-in is ${daysText}`;
 
   const contentHtml = `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -39,7 +39,7 @@ export function renderCheckInReminderTemplate(
           </h1>
           <p style="font-family: 'Inter', sans-serif; font-size: 15px; color: ${BRAND_COLORS.textSecondary}; line-height: 24px; margin-bottom: 24px;">
             Hello ${escapeHtml(data.recipientName)},<br />
-            This is your friendly, scheduled check-in for your Virasaat account. Simply confirm you are safe to ensure that all vault items, documents, and release policies remain undisturbed and sealed.
+            This is your friendly, scheduled check-in for your Virasat account. Simply confirm you are safe to ensure that all vault items, documents, and release policies remain undisturbed and sealed.
           </p>
         </td>
       </tr>
@@ -89,7 +89,7 @@ export function renderCheckInReminderTemplate(
       <!-- CTA Button -->
       <tr>
         <td align="center">
-          ${renderCtaButton({ url: checkInUrl, label: 'Open Virasaat App' })}
+          ${renderCtaButton({ url: checkInUrl, label: 'Open Virasat App' })}
         </td>
       </tr>
 
@@ -114,7 +114,7 @@ export function renderCheckInReminderTemplate(
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `Friendly reminder: Your Virasaat check-in is ${daysText}. Confirm with one click.`,
+    preheader: `Friendly reminder: Your Virasat check-in is ${daysText}. Confirm with one click.`,
     title: subject,
     contentHtml:
       `<p><strong>Illustrative sample only. Scheduled reminders, invitations, verification, inheritance release, automatic delivery, and paid checkout are unavailable. This message performs no account action.</strong></p>` +
@@ -126,7 +126,7 @@ export function renderCheckInReminderTemplate(
   const bodyText = `
 Hello ${data.recipientName},
 
-This is your routine scheduled check-in for your Virasaat account (${cadence}).
+This is your routine scheduled check-in for your Virasat account (${cadence}).
 
 CHECK-IN DETAILS:
 - Status: Pending (${daysText})

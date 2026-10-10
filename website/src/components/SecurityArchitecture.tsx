@@ -22,7 +22,7 @@ export default function SecurityArchitecture() {
     {
       icon: EyeOff,
       title: 'Clear Key Custody',
-      desc: 'Virasaat operates the encryption keys. Authorized server processes can decrypt vault content.',
+      desc: 'Virasat operates the encryption keys. Authorized server processes can decrypt vault content.',
     },
     {
       icon: Fingerprint,
@@ -95,7 +95,7 @@ export default function SecurityArchitecture() {
             <div style={{ position: 'relative', height: '300px', borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(220, 235, 229, 0.15)' }}>
               <Image
                 src="/images/vault-security.jpg"
-                alt="Virasaat Security"
+                alt="Virasat Security"
                 fill
                 style={{ objectFit: 'cover' }}
               />
@@ -142,13 +142,13 @@ export default function SecurityArchitecture() {
                 }}
               >
                 Encryption at Rest. <br />
-                Keys Managed by Virasaat.
+                Keys Managed by Virasat.
               </h3>
               <p style={{ fontSize: '0.94rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '16px' }}>
                 Descriptions and uploaded files reach the authenticated API before AES-256-GCM encryption on the server. This is not end-to-end encryption.
               </p>
               <p style={{ fontSize: '0.94rem', color: 'var(--sage)', lineHeight: 1.65, margin: 0 }}>
-                Virasaat holds the server encryption key and can decrypt stored content through authorized server processes. Your phone’s biometrics protect app access, not encryption key custody.
+                Virasat holds the server encryption key and can decrypt stored content through authorized server processes. Your phone’s biometrics protect app access, not encryption key custody.
               </p>
             </div>
           </div>

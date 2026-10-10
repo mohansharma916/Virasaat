@@ -307,7 +307,7 @@ export class AuthService {
       return {
         status: result.status,
         message:
-          'No Virasaat account found with this email address. Please check your email or sign up.',
+          'No Virasat account found with this email address. Please check your email or sign up.',
       };
     if (result.status === 'GOOGLE_ACCOUNT')
       return {
@@ -408,7 +408,7 @@ export class AuthService {
           alertDescription:
             'Your account password was reset and all previous sessions were signed out. If you did not perform this action, contact support.',
           eventTime: new Date().toUTCString(),
-          deviceInfo: 'Virasaat Account Recovery',
+          deviceInfo: 'Virasat Account Recovery',
           reviewActivityUrl: getEmailAppLink(
             'security',
             {},

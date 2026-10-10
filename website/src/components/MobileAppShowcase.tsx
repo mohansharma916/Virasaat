@@ -35,7 +35,7 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
           <div style={{ maxWidth: '350px', width: '100%', margin: '0 auto', border: '8px solid #172d27', borderRadius: devicePlatform === 'ios' ? '44px' : '30px', background: '#04241e', overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.5)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '18px 22px 8px', color: 'var(--text-secondary)', fontSize: '0.75rem' }}><span>9:41</span><span>Sample screen</span></div>
             <div style={{ padding: '20px', minHeight: '460px' }}>
-              <div style={{ color: 'var(--gold-light)', fontSize: '0.7rem', letterSpacing: '0.12em', marginBottom: '10px' }}>VIRASAAT · DEMO</div>
+              <div style={{ color: 'var(--gold-light)', fontSize: '0.7rem', letterSpacing: '0.12em', marginBottom: '10px' }}>VIRASAT · DEMO</div>
               {activeScreen === 'home' && <>
                 <h3 style={{ fontSize: '1.5rem', marginBottom: '10px' }}>Your family records</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '22px' }}>Organize the details that matter to you.</p>
@@ -63,7 +63,7 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
               </>}
               {activeScreen === 'security' && <>
                 <h3 style={{ fontSize: '1.5rem', marginBottom: '18px' }}>Your security model</h3>
-                <div className="glass-card" style={{ padding: '22px' }}><ShieldCheck size={32} color="#D4AF37" style={{ marginBottom: '16px' }} /><p style={{ color: 'var(--sage)', fontSize: '0.9rem', lineHeight: 1.7 }}>The server encrypts descriptions and uploaded files before storage. Virasaat manages the decryption keys.</p></div>
+                <div className="glass-card" style={{ padding: '22px' }}><ShieldCheck size={32} color="#D4AF37" style={{ marginBottom: '16px' }} /><p style={{ color: 'var(--sage)', fontSize: '0.9rem', lineHeight: 1.7 }}>The server encrypts descriptions and uploaded files before storage. Virasat manages the decryption keys.</p></div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '22px' }}>Device biometrics help protect app access on supported phones. They do not provide end-to-end vault encryption. Titles and categories are stored as metadata.</p>
                 <a href="#security" style={{ display: 'inline-block', color: 'var(--gold-light)', marginTop: '20px' }}>Read the security details</a>
               </>}
