@@ -20,6 +20,7 @@ import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
+import { runWithSystemUi } from '@/src/components/SessionGate';
 
 type DocumentItem = {
   id: string;
@@ -50,8 +51,8 @@ export default function LegacyDocumentsScreen() {
   const pickDocument = async () => {
     if (transfer.current) return;
     try {
-      const result =
-        await DocumentPicker.getDocumentAsync({
+      const result = await runWithSystemUi(() =>
+        DocumentPicker.getDocumentAsync({
           type: isVideo ? ['video/mp4', 'video/quicktime'] : [
             'application/pdf',
             'image/*',
@@ -60,7 +61,7 @@ export default function LegacyDocumentsScreen() {
           ],
           copyToCacheDirectory: true,
           multiple: false,
-        });
+        }));
 
       if (result.canceled) {
         return;

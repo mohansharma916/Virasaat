@@ -21,6 +21,20 @@ const ACCOUNT_LIMITS: Record<AuthAction, [number, number]> = {
   'reset-verify': [20, 15 * 60],
 };
 
+// When the caller's address is known, a single client gets the strict limit for
+// an email, while the email itself gets a much higher ceiling. A stranger can
+// then no longer lock the owner out by sending a few wrong passwords.
+const CLIENT_LIMITS: Partial<Record<AuthAction, [number, number]>> = {
+  login: [10, 15 * 60],
+  'signup-send': [5, 60 * 60],
+  'reset-send': [5, 60 * 60],
+};
+const SHARED_ACCOUNT_LIMITS: Partial<Record<AuthAction, [number, number]>> = {
+  login: [100, 15 * 60],
+  'signup-send': [20, 60 * 60],
+  'reset-send': [20, 60 * 60],
+};
+
 /** PostgreSQL enforces limits across concurrent requests, restarts and API replicas. */
 @Injectable()
 export class AuthRateLimitService {
@@ -31,9 +45,50 @@ export class AuthRateLimitService {
     private readonly repository: Repository<AuthRateLimit>,
   ) {}
 
-  async checkAccount(action: AuthAction, email: string): Promise<void> {
+  async checkAccount(
+    action: AuthAction,
+    email: string,
+    client?: string,
+  ): Promise<void> {
+    const clientLimit = CLIENT_LIMITS[action];
+    const sharedLimit = SHARED_ACCOUNT_LIMITS[action];
+    if (client && clientLimit && sharedLimit) {
+      await this.consume(
+        `account-client:${action}`,
+        `${email}|${client}`,
+        ...clientLimit,
+      );
+      await this.consume(`account-shared:${action}`, email, ...sharedLimit);
+      return;
+    }
     const [limit, seconds] = ACCOUNT_LIMITS[action];
     await this.consume(`account:${action}`, email, limit, seconds);
+  }
+
+  /**
+   * One code email per address per minute, applied whether or not an account
+   * exists, so the cooldown response cannot reveal registered emails.
+   */
+  async checkSendCooldown(
+    action: 'signup-send' | 'reset-send',
+    email: string,
+  ): Promise<void> {
+    try {
+      await this.consume(`cooldown:${action}`, email, 1, 60);
+    } catch (error) {
+      if (!(error instanceof HttpException) || error.getStatus() !== 429)
+        throw error;
+      const body = error.getResponse() as { retryAfterSeconds?: number };
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          code: 'OTP_RESEND_COOLDOWN',
+          message: 'Please wait before requesting another verification code.',
+          retryAfterSeconds: body.retryAfterSeconds ?? 60,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
   }
 
   async consume(

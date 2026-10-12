@@ -153,7 +153,11 @@ export async function uploadLegacyItem(
   return response.data;
 }
 
-export async function assignLegacyItem(id: string, data: { recipientId: string; policyId: string; policyVersion: number }): Promise<LegacyItem> {
+// Changing an existing assignment also needs the password or a fresh Google sign-in.
+export async function assignLegacyItem(id: string, data: {
+  recipientId: string; policyId: string; policyVersion: number;
+  currentPassword?: string; googleIdToken?: string;
+}): Promise<LegacyItem> {
   const response = await api.patch<LegacyItem>(`/vault/items/${id}/assignment`, data);
   return response.data;
 }
@@ -169,8 +173,6 @@ export interface SyncToS3Response {
     title: string;
     type: string;
     action: 'MIGRATED_TO_S3' | 'ALREADY_ON_S3' | 'BACKED_UP_TO_S3';
-    s3Key: string;
-    s3Uri?: string;
     checksumSha256?: string;
   }[];
 }
@@ -186,8 +188,7 @@ export async function getVaultItemS3Status(id: string): Promise<{
   type: string;
   storageType: 'S3' | 'LOCAL' | 'INLINE_DB';
   s3Configured: boolean;
-  s3Key: string | null;
-  s3Uri: string | null;
+  storedInS3: boolean;
   checksumSha256: string | null;
   encryptionAlgorithm: string;
   encryptionKeyVersion: string;
@@ -200,8 +201,6 @@ export interface VaultS3Overview {
   vaultId: string;
   totalItems: number;
   s3Configured: boolean;
-  s3Bucket: string | null;
-  region: string | null;
   encryption: string;
   storageBreakdown: {
     s3Stored: number;

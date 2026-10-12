@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +17,8 @@ import { getReleasePolicy, type ReleasePolicy } from '@/src/api/release.api';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { signInWithGoogle } from '@/src/utils/google-auth';
+import { runWithSystemUi } from '@/src/components/SessionGate';
 
 export default function ItemSettingsScreen() {
   const params = useLocalSearchParams<{ itemId?: string }>();
@@ -29,6 +32,7 @@ export default function ItemSettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [retry, setRetry] = useState(0);
   const busy = useRef(false);
 
@@ -40,6 +44,8 @@ export default function ItemSettingsScreen() {
       .then(([saved, recipients, current]) => {
         if (active) {
           setItems(saved);
+          const opened = saved.find((item) => item.id === params.itemId);
+          if (opened?.assignment) setRecipientId((current) => current || opened.assignment!.recipientId);
           setPeople(recipients.filter((person) => person.status !== 'REVOKED'));
           setPolicy(current);
         }
@@ -53,10 +59,24 @@ export default function ItemSettingsScreen() {
     return () => {
       active = false;
     };
-  }, [retry]);
+  }, [retry, params.itemId]);
 
-  const save = async () => {
+  const selectedItem = items.find((item) => item.id === itemId);
+  // Moving an already-assigned item to someone else needs identity confirmation.
+  const needsReauth = Boolean(
+    selectedItem?.assignment && policy && (
+      selectedItem.assignment.recipientId !== recipientId ||
+      selectedItem.assignment.policyId !== policy.id ||
+      selectedItem.assignment.policyVersion !== policy.version
+    ),
+  );
+
+  const save = async (googleIdToken?: string) => {
     if (busy.current || !itemId || !recipientId) return;
+    if (needsReauth && !googleIdToken && !currentPassword) {
+      setError('Enter your password, or confirm with Google, to change who receives this item.');
+      return;
+    }
     if (!policy?.enabled) {
       setError('Please configure and enable a release policy before confirming assignment.');
       return;
@@ -70,10 +90,14 @@ export default function ItemSettingsScreen() {
         recipientId,
         policyId: policy.id,
         policyVersion: policy.version,
+        ...(needsReauth
+          ? googleIdToken ? { googleIdToken } : { currentPassword }
+          : {}),
       });
       setItems((current) =>
         current.map((item) => (item.id === saved.id ? saved : item)),
       );
+      setCurrentPassword('');
       setSuccess('Assignment saved successfully. No notifications were sent.');
     } catch (reason) {
       setError(getApiErrorMessage(reason));
@@ -83,7 +107,21 @@ export default function ItemSettingsScreen() {
     }
   };
 
-  const canSave = Boolean(itemId && recipientId && policy?.enabled && !saving && !loading);
+  const confirmWithGoogle = async () => {
+    if (busy.current) return;
+    setError('');
+    try {
+      const idToken = await runWithSystemUi(() => signInWithGoogle());
+      if (idToken) await save(idToken);
+    } catch (reason) {
+      setError(getApiErrorMessage(reason, 'Google confirmation failed. Try your password instead.'));
+    }
+  };
+
+  const canSave = Boolean(
+    itemId && recipientId && policy?.enabled && !saving && !loading &&
+    (!needsReauth || currentPassword),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -163,6 +201,8 @@ export default function ItemSettingsScreen() {
                     accessibilityState={{ checked: isSelected }}
                     onPress={() => {
                       setItemId(item.id);
+                      setRecipientId(item.assignment?.recipientId ?? '');
+                      setCurrentPassword('');
                       setSuccess('');
                     }}
                     style={({ pressed }) => [
@@ -183,7 +223,7 @@ export default function ItemSettingsScreen() {
                       <Text style={styles.itemTitle}>{item.title}</Text>
                       <Text style={styles.itemMeta}>
                         {item.assignment
-                          ? `Policy v${item.assignment.policyVersion} · Verification ${item.assignment.verificationRequired ? 'required' : 'optional'}`
+                          ? `${people.find((person) => person.id === item.assignment?.recipientId)?.name ?? 'Removed person'} · Policy v${item.assignment.policyVersion} · Verification ${item.assignment.verificationRequired ? 'required' : 'optional'}`
                           : 'No policy assigned yet'}
                       </Text>
                     </View>
@@ -274,6 +314,35 @@ export default function ItemSettingsScreen() {
                 </Pressable>
               </View>
             )}
+            {needsReauth ? (
+              <View style={styles.reauthCard}>
+                <Text style={styles.reauthTitle}>Confirm it's you</Text>
+                <Text style={styles.emptyText}>
+                  This item is already assigned. Changing who receives it needs your password.
+                </Text>
+                <TextInput
+                  accessibilityLabel="Current password"
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  textContentType="password"
+                  editable={!saving}
+                  placeholder="Current password"
+                  placeholderTextColor={colors.neutral.textMuted}
+                  style={styles.reauthInput}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={saving}
+                  onPress={() => void confirmWithGoogle()}
+                  style={styles.outlineButton}
+                >
+                  <Text style={styles.outlineButtonText}>Signed up with Google? Confirm with Google</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -421,6 +490,31 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     letterSpacing: 1.2,
     color: colors.neutral.textMuted,
+  },
+  reauthCard: {
+    backgroundColor: colors.neutral.white,
+    padding: 18,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.semantic.warning,
+    marginTop: 14,
+    marginBottom: 10,
+    gap: 10,
+  },
+  reauthTitle: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
+    color: colors.primary.deepForest,
+  },
+  reauthInput: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    paddingHorizontal: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 14,
+    color: colors.neutral.textPrimary,
   },
   emptyCard: {
     backgroundColor: colors.neutral.white,

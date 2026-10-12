@@ -192,7 +192,10 @@ async function fixture(environment = 'production') {
       deliveryResult: { success: true, mock: false },
     })),
   };
-  const limiter = { checkAccount: jest.fn(async () => undefined) };
+  const limiter = {
+    checkAccount: jest.fn(async () => undefined),
+    checkSendCooldown: jest.fn(async () => undefined),
+  };
   const users = {
     findById: async (id: string) =>
       structuredClone(state.users.find((row) => row.id === id)),
@@ -239,9 +242,9 @@ describe('Authentication security', () => {
       results.filter(
         (result) =>
           result.status === 'rejected' &&
-          result.reason.message.startsWith('Invalid verification'),
+          result.reason.message.startsWith('The reset code is invalid'),
       ),
-    ).toHaveLength(5);
+    ).toHaveLength(20);
     expect(state.users[0].sessionVersion).toBe(0);
     expect(locks).toHaveLength(20);
   });
@@ -390,5 +393,86 @@ describe('Authentication security', () => {
     await expect(
       service.login('owner@example.test', 'old-password-fixture'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('answers password recovery identically for unknown, Google-only and password accounts', async () => {
+    const { service, state, notifications } = await fixture();
+    state.users.push({
+      id: 'google-owner',
+      name: 'Google Owner',
+      email: 'google@example.test',
+      status: UserStatus.ACTIVE,
+      passwordHash: null,
+      sessionVersion: 0,
+      googleId: 'google-sub',
+    });
+    state.resets = [];
+    const responses = [
+      await service.forgotPassword('nobody@example.test'),
+      await service.forgotPassword('google@example.test'),
+      await service.forgotPassword('owner@example.test'),
+    ];
+    for (const response of responses) {
+      expect(response).toEqual({
+        status: 'OTP_SENT',
+        message: responses[0].message,
+      });
+      expect(JSON.stringify(response)).not.toMatch(/Owner|google@|owner@/);
+    }
+    // The Google owner is told by email instead of in the response.
+    await new Promise((resolve) => setImmediate(resolve));
+    const recipients = (
+      notifications.sendTemplatedEmail.mock.calls as unknown as [
+        { to: string },
+      ][]
+    ).map(([options]) => options.to);
+    expect(recipients).toEqual(
+      expect.arrayContaining(['google@example.test', 'owner@example.test']),
+    );
+    expect(recipients).not.toContain('nobody@example.test');
+  });
+
+  it('does not reveal existing accounts through signup or code verification', async () => {
+    const { service, state, notifications } = await fixture();
+    const fresh = await service.register(
+      'fresh@example.test',
+      'Fresh',
+      'password-fixture',
+    );
+    const taken = await service.register(
+      'owner@example.test',
+      'Someone',
+      'password-fixture',
+    );
+    expect(taken).toEqual(fresh);
+    expect(
+      state.signups.filter((row) => row.email === 'owner@example.test'),
+    ).toHaveLength(0);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(notifications.sendTemplatedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'owner@example.test' }),
+    );
+    const errors = await Promise.all(
+      ['owner@example.test', 'nobody@example.test'].map((email) =>
+        service.verifyEmail(email, '123456').catch((error: Error) => error),
+      ),
+    );
+    expect(errors[0]).toBeInstanceOf(UnauthorizedException);
+    expect((errors[0] as Error).message).toBe((errors[1] as Error).message);
+  });
+
+  it('passes the client address to account limits and flags new accounts', async () => {
+    const { service, limiter } = await fixture();
+    await service
+      .login('owner@example.test', 'wrong-password', '203.0.113.9')
+      .catch(() => undefined);
+    expect(limiter.checkAccount).toHaveBeenCalledWith(
+      'login',
+      'owner@example.test',
+      '203.0.113.9',
+    );
+    expect(
+      await service.verifyEmail('new@example.test', '123456'),
+    ).toMatchObject({ isNewUser: true });
   });
 });

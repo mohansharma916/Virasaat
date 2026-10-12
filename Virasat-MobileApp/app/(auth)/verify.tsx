@@ -214,7 +214,7 @@ export default function VerifyScreen() {
       const result = await verifyEmail(normalizedEmail, code.trim());
       await saveAccessToken(result.accessToken);
       dispatch(setSessionUser(result.user));
-      router.replace('/(auth)/security');
+      router.replace({ pathname: '/(auth)/security', params: { onboarding: 'true' } } as never);
     } catch (error) {
       setError(getApiErrorMessage(error, 'The verification code is incorrect. Please try again.'));
     } finally {

@@ -5,7 +5,9 @@ import {
   IsOptional,
   IsBoolean,
   IsString,
+  IsEnum,
 } from 'class-validator';
+import { RecipientNotificationMode } from '../entities/recipient.entity';
 
 export class CreateRecipientDto {
   @IsString()
@@ -25,6 +27,9 @@ export class CreateRecipientDto {
   @IsOptional()
   @IsBoolean()
   verificationRequired?: boolean;
+  @IsOptional()
+  @IsEnum(RecipientNotificationMode)
+  notificationMode?: RecipientNotificationMode;
   @IsOptional()
   @IsString()
   @MaxLength(128)

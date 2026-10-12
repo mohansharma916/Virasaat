@@ -2,6 +2,7 @@ jest.mock('../auth/guards/jwt-auth.guard', () => ({ JwtAuthGuard: class {} }));
 jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
+jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -44,6 +45,10 @@ describe('PRD 2.1 safety boundaries', () => {
       findOne: jest.fn().mockResolvedValue(null),
       create: jest.fn((value: unknown) => value),
       save: jest.fn((value: unknown) => Promise.resolve(value)),
+      manager: {
+        transaction: async (run: (manager: unknown) => unknown) =>
+          run({ query: async () => [], getRepository: () => repository }),
+      },
     };
     const service = new RecipientsService(repository as never);
     const person = await service.create('owner', {
@@ -215,7 +220,7 @@ describe('PRD 2.1 safety boundaries', () => {
     expect(fixture.items.save).toHaveBeenCalledTimes(1);
     await expect(
       fixture.service.assign('owner', 'item', { ...request, policyVersion: 3 }),
-    ).rejects.toThrow('re-authentication');
+    ).rejects.toThrow('Confirm your identity');
   });
 
   it('deletion availability never reports an accepted or completed deletion without backend support', () => {
@@ -245,8 +250,22 @@ describe('PRD 2.1 safety boundaries', () => {
     const repository = {
       create: (data: unknown) => data,
       save: jest.fn((data: unknown) => Promise.resolve(data)),
+      createQueryBuilder: () => ({
+        addSelect() {
+          return this;
+        },
+        where() {
+          return this;
+        },
+        getOne: async () => null,
+      }),
+      manager: {
+        transaction: async (run: (manager: unknown) => unknown) =>
+          run({ query: async () => [], getRepository: () => repository }),
+      },
     };
     const mockStorageService = {
+      deleteVaultItemFile: jest.fn(async () => undefined),
       saveVaultItemFile: jest.fn(async (params: any) => {
         const fileName = 'test-file.bin';
         await writeFile(join(directory, fileName), params.ciphertext);
@@ -267,7 +286,10 @@ describe('PRD 2.1 safety boundaries', () => {
       {} as never,
       {} as never,
       { getUserVault: async () => ({ id: 'vault' }) } as never,
-      { encrypt } as never,
+      {
+        encrypt,
+        decrypt: ({ ciphertext }: { ciphertext: Buffer }) => ciphertext,
+      } as never,
       mockStorageService as never,
     );
     try {
@@ -281,7 +303,8 @@ describe('PRD 2.1 safety boundaries', () => {
         },
         { buffer: original, mimetype: 'application/pdf' },
       );
-      expect(encrypt).toHaveBeenCalledTimes(1);
+      // One call for the file bytes, one for the title.
+      expect(encrypt).toHaveBeenCalledTimes(2);
       expect(encrypt.mock.calls[0][0]).toEqual(original);
       expect(await readFile(join(directory, saved.ciphertextRef!))).toEqual(
         original,
@@ -300,9 +323,13 @@ describe('PRD 2.1 safety boundaries', () => {
       where: jest.fn().mockReturnThis(),
       getOne: jest.fn(() => Promise.resolve(saved)),
     };
-    const repository = {
+    const repository: Record<string, unknown> = {
       create: (data: unknown) => data,
       createQueryBuilder: () => query,
+      manager: {
+        transaction: async (run: (manager: unknown) => unknown) =>
+          run({ query: async () => [], getRepository: () => repository }),
+      },
       save: jest
         .fn()
         .mockImplementationOnce((value: unknown) => {
@@ -315,12 +342,13 @@ describe('PRD 2.1 safety boundaries', () => {
       ciphertext: Buffer.from('encrypted'),
       keyVersion: 'test',
     });
+    const decrypt = ({ ciphertext }: { ciphertext: Buffer }) => ciphertext;
     const service = new LegacyItemsService(
       repository as never,
       {} as never,
       {} as never,
       { getUserVault: async () => ({ id: 'vault' }) } as never,
-      { encrypt } as never,
+      { encrypt, decrypt } as never,
     );
     const request = {
       type: LegacyItemType.TEXT,

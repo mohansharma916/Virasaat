@@ -106,7 +106,10 @@ export default function SignupScreen() {
       await saveAccessToken(result.accessToken);
       dispatch(setSessionUser(result.user));
 
-      router.replace('/(auth)/home');
+      // New Google accounts get the same onboarding as email signups.
+      router.replace(result.isNewUser
+        ? { pathname: '/(auth)/security', params: { onboarding: 'true' } } as never
+        : '/(auth)/home');
     } catch (error) {
       setSubmitError(getApiErrorMessage(error, 'Google sign-up failed. Please try again.'));
     } finally {

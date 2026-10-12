@@ -18,6 +18,11 @@ export enum RecipientStatus {
   REVOKED = 'REVOKED',
 }
 
+export enum RecipientNotificationMode {
+  INFORM_NOW = 'INFORM_NOW',
+  INFORM_ON_ACTIVATION = 'INFORM_ON_ACTIVATION',
+}
+
 export enum RecipientAccessLevel {
   FULL_VAULT = 'FULL_VAULT',
 }
@@ -71,6 +76,13 @@ export class Recipient {
 
   @Column({ default: true })
   verificationRequired!: boolean;
+
+  // The owner's saved preference. No notification is sent until delivery exists.
+  @Column({
+    type: 'text',
+    default: RecipientNotificationMode.INFORM_ON_ACTIVATION,
+  })
+  notificationMode!: RecipientNotificationMode;
 
   @Column({ type: 'text', nullable: true })
   requestKey!: string | null;

@@ -3,12 +3,19 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   AppState,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { router, usePathname } from 'expo-router';
+import {
+  allowScreenCaptureAsync,
+  disableAppSwitcherProtectionAsync,
+  enableAppSwitcherProtectionAsync,
+  preventScreenCaptureAsync,
+} from 'expo-screen-capture';
 import { isAxiosError } from 'axios';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { clearSession, hydrateSession } from '@/src/store/session.slice';
@@ -34,6 +41,22 @@ const publicRoutes = new Set([
   '/dev-screen',
 ]);
 
+// System sheets (document picker, share sheet) move the app to the background.
+// Returning from them shortly after should not demand another unlock.
+const SYSTEM_UI_GRACE_MS = 2 * 60 * 1000;
+const SCREEN_CAPTURE_KEY = 'vault-session';
+let systemUiDepth = 0;
+
+/** Runs a task that opens a system sheet without locking the vault on return. */
+export async function runWithSystemUi<T>(task: () => Promise<T>): Promise<T> {
+  systemUiDepth += 1;
+  try {
+    return await task();
+  } finally {
+    systemUiDepth -= 1;
+  }
+}
+
 export function SessionGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
@@ -44,6 +67,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   const [foreground, setForeground] = useState(AppState.currentState !== 'background');
   const [needsUnlock, setNeedsUnlock] = useState(false);
   const authenticating = useRef(false);
+  const backgroundedAt = useRef<number | null>(null);
   const contentOpened = useRef(false);
   const normalizedPath = pathname.replace(/^\/\(auth\)/, '') || '/';
   const isPublic = publicRoutes.has(pathname) || publicRoutes.has(normalizedPath);
@@ -58,7 +82,18 @@ export function SessionGate({ children }: { children: ReactNode }) {
       if (authenticating.current) return;
       const active = state === 'active';
       setForeground(active);
-      if (!active && userId) {
+      if (!active) {
+        backgroundedAt.current ??= Date.now();
+        if (systemUiDepth === 0 && userId) {
+          setValidated(false);
+          setNeedsUnlock(true);
+        }
+        return;
+      }
+      const away = backgroundedAt.current === null ? 0 : Date.now() - backgroundedAt.current;
+      backgroundedAt.current = null;
+      // Leaving the app from inside a system sheet still locks after the grace period.
+      if (userId && systemUiDepth > 0 && away > SYSTEM_UI_GRACE_MS) {
         setValidated(false);
         setNeedsUnlock(true);
       }
@@ -69,6 +104,18 @@ export function SessionGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId) contentOpened.current = false;
   }, [userId]);
+
+  // Keep vault content out of screenshots, screen recordings and the app switcher.
+  const protectScreen = Boolean(userId) && !isPublic && Platform.OS !== 'web';
+  useEffect(() => {
+    if (!protectScreen) return;
+    void preventScreenCaptureAsync(SCREEN_CAPTURE_KEY).catch(() => undefined);
+    if (Platform.OS === 'ios') void enableAppSwitcherProtectionAsync().catch(() => undefined);
+    return () => {
+      void allowScreenCaptureAsync(SCREEN_CAPTURE_KEY).catch(() => undefined);
+      if (Platform.OS === 'ios') void disableAppSwitcherProtectionAsync().catch(() => undefined);
+    };
+  }, [protectScreen]);
 
   useEffect(
     () =>

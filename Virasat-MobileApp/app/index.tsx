@@ -26,6 +26,7 @@ import { typography } from '@/src/theme/typography';
 export default function SplashScreen() {
   const dispatch = useAppDispatch();
   const [error, setError] = useState('');
+  const [errorTitle, setErrorTitle] = useState('Connection Issue');
   const [retry, setRetry] = useState(0);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.94)).current;
@@ -70,7 +71,13 @@ export default function SplashScreen() {
         const result = await authenticateWithBiometric();
 
         if (!result.success) {
-          return '/(auth)/welcome';
+          // The session is still stored on this device. Offer another unlock
+          // attempt, or an explicit sign-out, instead of a signed-in Welcome screen.
+          if (active) {
+            setErrorTitle('Vault Locked');
+            setError('Unlock was not completed. Try again, or sign out and sign in with your password.');
+          }
+          return null;
         }
       }
 
@@ -96,6 +103,7 @@ export default function SplashScreen() {
         }
 
         if (active) {
+          setErrorTitle('Connection Issue');
           const isNet =
             reason?.isNetworkError ||
             (isAxiosError(reason) && !reason.response);
@@ -157,14 +165,14 @@ export default function SplashScreen() {
           <View style={styles.errorIconCircle}>
             <Text style={styles.errorIcon}>!</Text>
           </View>
-          <Text style={styles.errorTitle}>Connection Issue</Text>
+          <Text style={styles.errorTitle}>{errorTitle}</Text>
           <Text style={styles.errorMessage} accessibilityRole="alert">
             {error}
           </Text>
 
           <View style={styles.errorActions}>
             <Button
-              title="Retry Connection"
+              title={errorTitle === 'Vault Locked' ? 'Unlock' : 'Retry Connection'}
               onPress={() => {
                 setError('');
                 setRetry((val) => val + 1);
@@ -179,7 +187,7 @@ export default function SplashScreen() {
               }}
             >
               <Text style={styles.switchAccountText}>
-                Sign in with another account
+                {errorTitle === 'Vault Locked' ? 'Sign out and use password' : 'Sign in with another account'}
               </Text>
             </Pressable>
           </View>

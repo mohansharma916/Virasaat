@@ -59,12 +59,13 @@ export default function LoginScreen() {
 
     void (async () => {
       try {
-        const [available, bioType, lastEmail, bioSession, enabled] = await Promise.all([
+        const [available, bioType, lastEmail, bioSession, enabled, token] = await Promise.all([
           isBiometricAvailable(),
           getBiometricType(),
           getLastEmail(),
           getBiometricSession(),
           getBiometricUnlockEnabled(),
+          getAccessToken(),
         ]);
 
         if (!active) return;
@@ -74,7 +75,7 @@ export default function LoginScreen() {
 
         if (lastEmail) setEmail((current) => current || lastEmail);
 
-        setHasSavedSession(enabled && available && Boolean(bioSession?.token));
+        setHasSavedSession(enabled && available && Boolean(bioSession) && Boolean(token));
       } catch {
         // Fallback gracefully
       }
@@ -97,14 +98,17 @@ export default function LoginScreen() {
       const existingBiometricSession = await getBiometricSession();
       if (await getBiometricUnlockEnabled() && existingBiometricSession?.email === finalEmail
           && await isBiometricAvailable()) {
-        await saveBiometricSession({ email: finalEmail, token: result.accessToken });
+        await saveBiometricSession({ email: finalEmail });
       } else {
         await clearBiometricSession();
       }
     }
 
     dispatch(setSessionUser(result.user));
-    router.replace('/(auth)/home');
+    // A Google sign-in can create a brand-new account; it gets the same onboarding as email signup.
+    router.replace(result.isNewUser
+      ? { pathname: '/(auth)/security', params: { onboarding: 'true' } } as never
+      : '/(auth)/home');
   };
 
   const handleBiometricLogin = async () => {
@@ -129,14 +133,10 @@ export default function LoginScreen() {
         return;
       }
 
-      // Biometric verified! Check if we have an active token or saved session
+      // Biometrics unlock the session already stored on this device; they never restore a signed-out one.
       const token = await getAccessToken();
-      const bioSession = await getBiometricSession();
 
-      if (token || bioSession?.token) {
-        if (!token && bioSession?.token) {
-          await saveAccessToken(bioSession.token);
-        }
+      if (token) {
         try {
           const hydrated = await dispatch(hydrateSession()).unwrap();
           if (hydrated) {

@@ -75,6 +75,27 @@ test('logout removes active and saved credentials', async () => {
   assert.equal(await auth.getBiometricUnlockEnabled(), false);
 });
 
+test('the biometric record never keeps a second token copy', async () => {
+  const { load, storage } = fixture();
+  const auth = load('src/storage/auth.storage.ts');
+  await auth.saveBiometricSession({ email: 'test@example.com', token: 'test-backup' });
+  assert.doesNotMatch(storage.get('biometric_saved_session'), /test-backup/);
+  // Records written by earlier versions are cleaned on first read.
+  storage.set('biometric_saved_session', JSON.stringify({ email: 'old@example.com', token: 'old-backup' }));
+  assert.deepEqual(await auth.getBiometricSession(), { email: 'old@example.com' });
+  assert.doesNotMatch(storage.get('biometric_saved_session'), /old-backup/);
+});
+
+test('trusted-person contact details are cleared with the session', () => {
+  const { load } = fixture();
+  const { store } = load('src/store/store.ts');
+  const { clearSession } = load('src/store/session.slice.ts');
+  const { setTrustedPersonDraft } = load('src/store/trusted-person-draft.slice.ts');
+  store.dispatch(setTrustedPersonDraft({ recipientId: null, name: 'Private', relationship: '', email: 'p@example.com', phone: '1', verificationRequired: true, notificationMode: 'INFORM_ON_ACTIVATION', fromOnboarding: false }));
+  store.dispatch(clearSession());
+  assert.equal(store.getState().trustedPersonDraft, null);
+});
+
 test('server explanations survive Axios errors, while authenticated 401s expire sessions', () => {
   const { load } = fixture();
   const { getApiErrorMessage } = load('src/utils/api-error.ts');

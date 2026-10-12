@@ -22,7 +22,6 @@ import {
   Mail,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react-native';
 
 import { colors } from '@/src/theme/colors';
@@ -39,7 +38,7 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { setSessionUser } from '@/src/store/session.slice';
 
-type Step = 'EMAIL_INPUT' | 'GOOGLE_ACCOUNT' | 'RESET_FORM' | 'SUCCESS';
+type Step = 'EMAIL_INPUT' | 'RESET_FORM' | 'SUCCESS';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
@@ -114,21 +113,11 @@ export default function ForgotPasswordScreen() {
     try {
       const response = await forgotPassword(trimmedEmail);
 
-      if (response.status === 'NOT_FOUND') {
-        setError(response.message || 'No account found with this email. Please check or sign up.');
-        return;
-      }
-
-      if (response.status === 'GOOGLE_ACCOUNT') {
-        // Smart Strategy: User has a Google-only account!
-        setStep('GOOGLE_ACCOUNT');
-        return;
-      }
-
-      // Status is OTP_SENT
+      // The response is the same whether or not the account exists. Google-only
+      // owners receive an email telling them to use Google Sign-In instead.
       setStep('RESET_FORM');
       setSecondsLeft(RESEND_COOLDOWN);
-      setInfoMessage(`We've sent a 6-digit verification code to ${trimmedEmail}`);
+      setInfoMessage(response.message || `If an account uses ${trimmedEmail}, we've sent a 6-digit code.`);
 
       if (response.developmentOtp) {
         setDevelopmentOtp(response.developmentOtp);
@@ -154,7 +143,9 @@ export default function ForgotPasswordScreen() {
       await saveAccessToken(result.accessToken);
       dispatch(setSessionUser(result.user));
 
-      router.replace('/(auth)/home');
+      router.replace(result.isNewUser
+        ? { pathname: '/(auth)/security', params: { onboarding: 'true' } } as never
+        : '/(auth)/home');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Google sign-in failed. Please try again.'));
     } finally {
@@ -265,7 +256,7 @@ export default function ForgotPasswordScreen() {
           <View style={styles.topBar}>
             <Pressable
               onPress={() => {
-                if (step === 'RESET_FORM' || step === 'GOOGLE_ACCOUNT') {
+                if (step === 'RESET_FORM') {
                   setStep('EMAIL_INPUT');
                   setError('');
                 } else {
@@ -344,47 +335,10 @@ export default function ForgotPasswordScreen() {
                 )}
               </Pressable>
 
-              <Pressable
-                onPress={() => router.back()}
-                style={styles.switchRow}
-                hitSlop={8}
-              >
-                <Text style={styles.switchTextMuted}>Remember your password? </Text>
-                <Text style={styles.switchTextLink}>Sign In</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {/* ==================================================== */}
-          {/* STEP 2A: SMART GOOGLE ACCOUNT SUGGESTION             */}
-          {/* ==================================================== */}
-          {step === 'GOOGLE_ACCOUNT' && (
-            <View style={styles.cardContainer}>
-              <View style={[styles.iconCircle, styles.googleIconCircle]}>
-                <Sparkles size={28} color="#EA4335" />
-              </View>
-
-              <View style={styles.googleBadge}>
-                <Text style={styles.googleBadgeText}>GOOGLE SIGN-IN ACCOUNT</Text>
-              </View>
-
-              <Text style={styles.title}>You Sign In with Google</Text>
-              <Text style={styles.subtitle}>
-                We found your account for <Text style={styles.boldText}>{email}</Text>! Since you
-                registered using Google, your account does not have or require a password.
-              </Text>
-
-              {error ? (
-                <View style={styles.errorAlert}>
-                  <Text style={styles.errorAlertText}>{error}</Text>
-                </View>
-              ) : null}
-
               <View style={styles.infoBox}>
                 <ShieldCheck size={20} color={colors.primary.forest} />
                 <Text style={styles.infoBoxText}>
-                  Your digital vault is securely linked with Google OAuth. Tap below to sign in
-                  directly.
+                  Signed up with Google? Your account has no separate password. Continue with Google instead.
                 </Text>
               </View>
 
@@ -409,14 +363,12 @@ export default function ForgotPasswordScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => {
-                  setStep('EMAIL_INPUT');
-                  setError('');
-                }}
+                onPress={() => router.back()}
                 style={styles.switchRow}
                 hitSlop={8}
               >
-                <Text style={styles.switchTextLink}>Try a different email address</Text>
+                <Text style={styles.switchTextMuted}>Remember your password? </Text>
+                <Text style={styles.switchTextLink}>Sign In</Text>
               </Pressable>
             </View>
           )}
@@ -432,8 +384,8 @@ export default function ForgotPasswordScreen() {
 
               <Text style={styles.title}>Reset Password</Text>
               <Text style={styles.subtitle}>
-                Enter the 6-digit code sent to <Text style={styles.boldText}>{email}</Text> and choose a
-                strong new password.
+                If an account uses <Text style={styles.boldText}>{email}</Text>, we sent it a 6-digit
+                code. Enter it and choose a strong new password.
               </Text>
 
               {infoMessage ? (
@@ -706,25 +658,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
-  googleIconCircle: {
-    backgroundColor: '#FDEAE8',
-  },
   successIconCircle: {
     backgroundColor: colors.semantic.successSoft,
-  },
-  googleBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FDEAE8',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  googleBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#D93025',
-    letterSpacing: 0.5,
   },
   title: {
     fontFamily: typography.fonts.display,

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import {
   authenticateWithBiometric,
@@ -31,6 +31,7 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
 export default function SecurityScreen() {
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
   const insets = useSafeAreaInsets();
   const [biometricAvailable, setBiometricAvailable] =
     useState(false);
@@ -114,7 +115,7 @@ export default function SecurityScreen() {
       if (result.success) {
         const [token, user] = await Promise.all([getAccessToken(), getCurrentUser()]);
         if (!token) throw new Error('Sign in again before enabling biometric unlock.');
-        await saveBiometricSession({ email: user.email, token });
+        await saveBiometricSession({ email: user.email });
         await saveBiometricUnlockEnabled(true);
         setBiometricEnabled(true);
       } else {
@@ -135,7 +136,8 @@ export default function SecurityScreen() {
 
   const handleContinue = async () => {
     await saveBiometricUnlockEnabled(biometricEnabled);
-    router.replace('/(auth)/home');
+    // New accounts continue to profile setup; settings visits return home.
+    router.replace(onboarding === 'true' ? '/(auth)/profile' : '/(auth)/home');
   };
 
   return (

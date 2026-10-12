@@ -2,6 +2,7 @@ jest.mock('../auth/guards/jwt-auth.guard', () => ({ JwtAuthGuard: class {} }));
 jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
+jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 
 import { EncryptionService } from '../encryption/encryption.service';
 import { LegacyItemsService } from './legacy-items.service';
@@ -36,7 +37,11 @@ describe('owner vault recovery', () => {
       params: {} as { itemId?: string; vaultId?: string },
       addSelect: jest.fn().mockReturnThis(),
       setLock: jest.fn().mockReturnThis(),
-      where: jest.fn(function (this: typeof query, _sql, params) {
+      where: jest.fn(function (
+        this: { params: { itemId?: string; vaultId?: string } },
+        _sql: string,
+        params: { itemId?: string; vaultId?: string },
+      ) {
         this.params = params;
         return this;
       }),
@@ -59,7 +64,8 @@ describe('owner vault recovery', () => {
       createQueryBuilder: () => query,
       find: jest.fn(async () => [...rows.values()]),
       manager: {
-        transaction: async (run) => run({ getRepository: () => repository }),
+        transaction: async (run) =>
+          run({ getRepository: () => repository, query: async () => [] }),
       },
     };
     const storage = {
@@ -76,6 +82,7 @@ describe('owner vault recovery', () => {
       readVaultItemCiphertext: jest.fn(async (ref: string) =>
         ciphertexts.get(ref),
       ),
+      deleteVaultItemFile: jest.fn(async () => undefined),
       migrateLocalFileToS3: jest.fn(),
       backupItemPayloadToS3: jest.fn(async (_input: unknown) => ({
         key: 'backup.enc',
@@ -151,7 +158,10 @@ describe('owner vault recovery', () => {
       title: 'Old',
       description: 'Old details',
     });
-    created.assignment = {
+    // The service returns a copy with the decrypted title; edit the stored row.
+    const stored = rows.get(created.id)!;
+    expect(stored.title).not.toContain('Old');
+    stored.assignment = {
       recipientId: 'person',
       policyId: 'policy',
       policyVersion: 2,
@@ -161,7 +171,7 @@ describe('owner vault recovery', () => {
       escalationConfig: { manualReviewRequired: true },
       assignedAt: '2026-10-10',
     };
-    const original = structuredClone(created.assignment);
+    const original = structuredClone(stored.assignment);
     const detail = await service.update('owner', created.id, {
       title: 'Updated',
       description: 'New private details',

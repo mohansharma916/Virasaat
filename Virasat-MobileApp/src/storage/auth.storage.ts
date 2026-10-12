@@ -5,14 +5,16 @@ const ACCESS_TOKEN_KEY = 'access_token';
 const BIOMETRIC_UNLOCK_ENABLED_KEY = 'biometric_unlock_enabled';
 
 // Temporary web-development adapter. Native devices continue using SecureStore.
-// If browser persistence is blocked, keep the session only for this page lifetime.
+// sessionStorage ends the session with the tab instead of keeping a bearer
+// token in the browser indefinitely. If it is blocked, keep the session only
+// for this page lifetime.
 const browserSession = new Map<string, string>();
 let browserStorageFailed = false;
 
 function getBrowserStorage(): Storage | null {
   if (typeof window === 'undefined' || browserStorageFailed) return null;
   try {
-    return window.localStorage;
+    return window.sessionStorage;
   } catch {
     browserStorageFailed = true;
     return null;
@@ -97,15 +99,22 @@ export const getLastEmail = async () => {
   return readValue(LAST_EMAIL_KEY);
 };
 
-export const saveBiometricSession = async (sessionData: { email: string; token: string; user?: any }) => {
-  await writeValue(BIOMETRIC_SAVED_SESSION_KEY, JSON.stringify(sessionData));
+// Records which account enabled biometric unlock. It never holds a token: the
+// access token has exactly one stored copy, removed on logout.
+export const saveBiometricSession = async (sessionData: { email: string }) => {
+  await writeValue(BIOMETRIC_SAVED_SESSION_KEY, JSON.stringify({ email: sessionData.email }));
 };
 
-export const getBiometricSession = async (): Promise<{ email: string; token: string; user?: any } | null> => {
+export const getBiometricSession = async (): Promise<{ email: string } | null> => {
   const data = await readValue(BIOMETRIC_SAVED_SESSION_KEY);
   if (!data) return null;
   try {
-    return JSON.parse(data);
+    const parsed: unknown = JSON.parse(data);
+    if (!parsed || typeof parsed !== 'object' || typeof (parsed as { email?: unknown }).email !== 'string') return null;
+    const { email } = parsed as { email: string; token?: unknown };
+    // Earlier versions kept a second token copy here; drop it on first read.
+    if ('token' in parsed) await saveBiometricSession({ email });
+    return { email };
   } catch {
     return null;
   }

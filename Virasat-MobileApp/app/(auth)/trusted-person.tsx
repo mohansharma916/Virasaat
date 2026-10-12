@@ -16,11 +16,13 @@ import { Input } from '@/src/components/Input';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { useAppSelector } from '@/src/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { setTrustedPersonDraft } from '@/src/store/trusted-person-draft.slice';
 
 export default function TrustedPersonScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ recipientId?: string }>();
+  const dispatch = useAppDispatch();
+  const params = useLocalSearchParams<{ recipientId?: string; onboarding?: string }>();
   const existingRecipient = useAppSelector((state) =>
     state.vault.recipients.find((recipient) => recipient.id === params.recipientId),
   );
@@ -97,17 +99,17 @@ export default function TrustedPersonScreen() {
      * First we'll show a Review screen.
      */
 
-    router.push({
-      pathname: '/(auth)/trusted-person-review',
-      params: {
-        recipientId: existingRecipient?.id ?? '',
-        name: name.trim(),
-        relationship,
-        email: email.trim(),
-        phone: phone.trim(),
-        verificationRequired: String(existingRecipient?.verificationRequired ?? true),
-      },
-    });
+    dispatch(setTrustedPersonDraft({
+      recipientId: existingRecipient?.id ?? null,
+      name: name.trim(),
+      relationship,
+      email: email.trim(),
+      phone: phone.trim(),
+      verificationRequired: existingRecipient?.verificationRequired ?? true,
+      notificationMode: existingRecipient?.notificationMode ?? 'INFORM_ON_ACTIVATION',
+      fromOnboarding: params.onboarding === 'true',
+    }));
+    router.push('/(auth)/trusted-person-review');
   };
 
   return (

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -27,6 +26,17 @@ import { EmailSignup } from './entities/email-signup.entity';
 import { PasswordReset } from './entities/password-reset.entity';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 
+// Account recovery and signup must answer the same way whether or not an
+// account exists, so these endpoints cannot be used to look up who has a vault.
+const SIGNUP_SENT_MESSAGE =
+  'If this email can be used for a new account, a verification code has been sent. Check your inbox.';
+const RESET_SENT_MESSAGE =
+  'If a Virasat account uses this email, a 6-digit reset code has been sent. Check your inbox.';
+const INVALID_SIGNUP_CODE =
+  'The verification code is invalid or has expired. Request a new code if needed.';
+const INVALID_RESET_CODE =
+  'The reset code is invalid or has expired. Request a new code if needed.';
+
 @Injectable()
 export class AuthService {
   private readonly googleClient: OAuth2Client;
@@ -50,23 +60,26 @@ export class AuthService {
     );
   }
 
-  async register(email: string, name: string, password: string) {
+  async register(
+    email: string,
+    name: string,
+    password: string,
+    client?: string,
+  ) {
     const normalizedEmail = this.normalizeEmail(email);
-    await this.rateLimiter.checkAccount('signup-send', normalizedEmail);
+    await this.rateLimiter.checkAccount('signup-send', normalizedEmail, client);
+    await this.rateLimiter.checkSendCooldown('signup-send', normalizedEmail);
     const passwordHash = await bcrypt.hash(password, 12);
     const otp = this.generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
-    await this.withAccountLock(
+    const existingAccount = await this.withAccountLock(
       this.emailSignupRepository,
       normalizedEmail,
       async (manager) => {
         const existingUser = await manager
           .getRepository(User)
           .findOne({ where: { email: normalizedEmail } });
-        if (existingUser)
-          throw new ConflictException(
-            'An account already exists with this email. Please login.',
-          );
+        if (existingUser) return existingUser;
         const signups = manager.getRepository(EmailSignup);
         const existing = await signups.findOne({
           where: { email: normalizedEmail, verified: false },
@@ -86,13 +99,21 @@ export class AuthService {
           attempts: 0,
         });
         await signups.save(signup);
+        return null;
       },
     );
+    if (existingAccount) {
+      this.sendAccountNotice(existingAccount, {
+        alertTitle: 'Sign-up attempted with your email',
+        alertDescription:
+          'Someone tried to create a new Virasat account with this email address. You already have an account, so nothing was changed. Sign in or reset your password if you need access. If this was not you, no action is needed.',
+      });
+      return { success: true, message: SIGNUP_SENT_MESSAGE };
+    }
     await this.sendSignupOtp(normalizedEmail, name, otp);
     return {
       success: true,
-      message:
-        'OTP sent to your email. Please verify your email to complete signup.',
+      message: SIGNUP_SENT_MESSAGE,
       ...this.developmentOtp(otp),
     };
   }
@@ -106,30 +127,24 @@ export class AuthService {
       async (manager) => {
         const users = manager.getRepository(User);
         if (await users.findOne({ where: { email: normalizedEmail } }))
-          throw new ConflictException(
-            'An account already exists with this email.',
-          );
+          throw new UnauthorizedException(INVALID_SIGNUP_CODE);
         const signups = manager.getRepository(EmailSignup);
         const signup = await signups.findOne({
           where: { email: normalizedEmail, verified: false },
           order: { createdAt: 'DESC' },
           lock: { mode: 'pessimistic_write' },
         });
-        if (!signup)
-          throw new UnauthorizedException(
-            'Signup session not found or expired.',
-          );
-        if (signup.otpExpiresAt <= new Date())
-          throw new UnauthorizedException(
-            'OTP has expired. Please request signup again.',
-          );
-        if (signup.attempts >= 5)
-          throw new UnauthorizedException('Too many OTP attempts.');
+        if (
+          !signup ||
+          signup.otpExpiresAt <= new Date() ||
+          signup.attempts >= 5
+        )
+          throw new UnauthorizedException(INVALID_SIGNUP_CODE);
         signup.attempts += 1;
         if (!(await bcrypt.compare(otp, signup.otpHash))) {
           await signups.save(signup);
           // Commit failed attempts; throwing here would roll the counter back.
-          return { error: new UnauthorizedException('Invalid OTP.') };
+          return { error: new UnauthorizedException(INVALID_SIGNUP_CODE) };
         }
         const user = await users.save(
           users.create({
@@ -160,15 +175,19 @@ export class AuthService {
       const reason: unknown = result.error;
       throw reason instanceof Error
         ? reason
-        : new UnauthorizedException('Invalid OTP.');
+        : new UnauthorizedException(INVALID_SIGNUP_CODE);
     }
     await this.sendWelcome(result.user, result.vault.id);
-    return this.loginPayload(result.user, result.vault);
+    return {
+      ...(await this.loginPayload(result.user, result.vault)),
+      isNewUser: true,
+    };
   }
 
-  async resendVerification(email: string) {
+  async resendVerification(email: string, client?: string) {
     const normalizedEmail = this.normalizeEmail(email);
-    await this.rateLimiter.checkAccount('signup-send', normalizedEmail);
+    await this.rateLimiter.checkAccount('signup-send', normalizedEmail, client);
+    await this.rateLimiter.checkSendCooldown('signup-send', normalizedEmail);
     const otp = this.generateOtp();
     const result = await this.withAccountLock(
       this.emailSignupRepository,
@@ -199,9 +218,9 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, client?: string) {
     const normalizedEmail = this.normalizeEmail(email);
-    await this.rateLimiter.checkAccount('login', normalizedEmail);
+    await this.rateLimiter.checkAccount('login', normalizedEmail, client);
     const user =
       await this.usersService.findByEmailWithPassword(normalizedEmail);
     if (
@@ -257,12 +276,13 @@ export class AuthService {
     });
     const vault = await this.vaultService.createForUser(user.id);
     await this.sendWelcome(user, vault.id);
-    return this.loginPayload(user, vault);
+    return { ...(await this.loginPayload(user, vault)), isNewUser: true };
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, client?: string) {
     const normalizedEmail = this.normalizeEmail(email);
-    await this.rateLimiter.checkAccount('reset-send', normalizedEmail);
+    await this.rateLimiter.checkAccount('reset-send', normalizedEmail, client);
+    await this.rateLimiter.checkSendCooldown('reset-send', normalizedEmail);
     const otp = this.generateOtp();
     const result = await this.withAccountLock(
       this.passwordResetRepository,
@@ -304,20 +324,16 @@ export class AuthService {
       },
     );
     if (result.status === 'NOT_FOUND')
-      return {
-        status: result.status,
-        message:
-          'No Virasat account found with this email address. Please check your email or sign up.',
-      };
-    if (result.status === 'GOOGLE_ACCOUNT')
-      return {
-        status: result.status,
-        authMethod: 'GOOGLE',
-        message:
-          'This account was created with Google Sign-In. You do not have a separate password.',
-        email: result.user.email,
-        name: result.user.name,
-      };
+      return { status: 'OTP_SENT', message: RESET_SENT_MESSAGE };
+    if (result.status === 'GOOGLE_ACCOUNT') {
+      // Tell the owner by email instead of in the response.
+      this.sendAccountNotice(result.user, {
+        alertTitle: 'Password reset requested',
+        alertDescription:
+          'Someone asked to reset the password for your Virasat account. Your account uses Google Sign-In and has no separate password, so nothing was changed. Use "Continue with Google" to sign in. If this was not you, no action is needed.',
+      });
+      return { status: 'OTP_SENT', message: RESET_SENT_MESSAGE };
+    }
     await this.sendOtpEmail({
       to: normalizedEmail,
       templateType: EmailTemplateType.PASSWORD_RESET,
@@ -334,9 +350,7 @@ export class AuthService {
     });
     return {
       status: 'OTP_SENT',
-      authMethod: 'PASSWORD',
-      message: 'A 6-digit password reset code has been sent to your email.',
-      email: result.user.email,
+      message: RESET_SENT_MESSAGE,
       ...this.developmentOtp(otp),
     };
   }
@@ -353,34 +367,19 @@ export class AuthService {
           where: { email: normalizedEmail, status: UserStatus.ACTIVE },
           lock: { mode: 'pessimistic_write' },
         });
-        if (!user)
-          throw new BadRequestException('No account found with this email.');
+        if (!user) throw new BadRequestException(INVALID_RESET_CODE);
         const resets = manager.getRepository(PasswordReset);
         const reset = await resets.findOne({
           where: { email: normalizedEmail, used: false },
           order: { createdAt: 'DESC' },
           lock: { mode: 'pessimistic_write' },
         });
-        if (!reset)
-          throw new BadRequestException(
-            'No active password reset request found. Please request a new code.',
-          );
-        if (reset.expiresAt <= new Date())
-          throw new BadRequestException(
-            'Password reset code has expired. Please request a new code.',
-          );
-        if (reset.attempts >= 5)
-          throw new BadRequestException(
-            'Too many failed attempts. Please request a new reset code.',
-          );
+        if (!reset || reset.expiresAt <= new Date() || reset.attempts >= 5)
+          throw new BadRequestException(INVALID_RESET_CODE);
         if (!(await bcrypt.compare(otp, reset.otpHash))) {
           reset.attempts += 1;
           await resets.save(reset);
-          return {
-            error: new BadRequestException(
-              'Invalid verification code. Please check and try again.',
-            ),
-          };
+          return { error: new BadRequestException(INVALID_RESET_CODE) };
         }
         user.passwordHash = await bcrypt.hash(newPassword, 12);
         user.emailVerified = true;
@@ -395,7 +394,7 @@ export class AuthService {
       const reason: unknown = result.error;
       throw reason instanceof Error
         ? reason
-        : new BadRequestException('Invalid verification code.');
+        : new BadRequestException(INVALID_RESET_CODE);
     }
     await this.notificationsService
       ?.sendTemplatedEmail({
@@ -428,8 +427,8 @@ export class AuthService {
     };
   }
 
-  async resendPasswordReset(email: string) {
-    return this.forgotPassword(email);
+  async resendPasswordReset(email: string, client?: string) {
+    return this.forgotPassword(email, client);
   }
 
   async logout(userId: string) {
@@ -535,6 +534,31 @@ export class AuthService {
       throw new ServiceUnavailableException(
         'Authentication email delivery is unavailable. Please try again later.',
       );
+  }
+
+  /** Best-effort account notice. Failures are logged, never returned to the caller. */
+  private sendAccountNotice(
+    user: User,
+    alert: { alertTitle: string; alertDescription: string },
+  ) {
+    void this.notificationsService
+      ?.sendTemplatedEmail({
+        to: user.email,
+        userId: user.id,
+        templateType: EmailTemplateType.SECURITY_ALERT,
+        data: {
+          recipientName: user.name,
+          ...alert,
+          eventTime: new Date().toUTCString(),
+          deviceInfo: 'Virasat account services',
+          reviewActivityUrl: getEmailAppLink(
+            'security',
+            {},
+            this.configService,
+          ),
+        },
+      })
+      .catch(() => this.logger.warn('Account notice could not be delivered.'));
   }
 
   private async sendWelcome(user: User, vaultId: string) {

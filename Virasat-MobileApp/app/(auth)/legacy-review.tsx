@@ -79,8 +79,8 @@ export default function LegacyReviewScreen() {
           </Text>
 
           <Text style={styles.subtitle}>
-            Review everything before you activate
-            Virasat.
+            Review what you have saved. Reminders
+            and release are not active yet.
           </Text>
         </View>
 

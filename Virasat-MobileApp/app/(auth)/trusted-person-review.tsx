@@ -8,49 +8,36 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { updateTrustedPersonDraft } from '@/src/store/trusted-person-draft.slice';
 
-type NotificationMode =
-  | 'INFORM_NOW'
-  | 'INFORM_ON_ACTIVATION';
+import type { RecipientNotificationMode as NotificationMode } from '@/src/api/recipients.api';
 
 export default function TrustedPersonReviewScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{
-    recipientId?: string;
-    name?: string;
-    relationship?: string;
-    email?: string;
-    phone?: string;
-    verificationRequired?: string;
-  }>();
+  const dispatch = useAppDispatch();
+  const draft = useAppSelector((state) => state.trustedPersonDraft);
 
   const [notificationMode, setNotificationMode] =
-    useState<NotificationMode | null>('INFORM_ON_ACTIVATION');
+    useState<NotificationMode | null>(draft?.notificationMode ?? 'INFORM_ON_ACTIVATION');
 
-  const [verificationRequired, setVerificationRequired] = useState(params.verificationRequired !== 'false');
+  const [verificationRequired, setVerificationRequired] = useState(draft?.verificationRequired ?? true);
 
   const handleContinue = () => {
     if (!notificationMode) {
       return;
     }
 
-    router.push({
-      pathname: '/(auth)/trusted-person-confirmation',
-      params: {
-        recipientId: params.recipientId ?? '',
-        name: params.name ?? '',
-        relationship: params.relationship ?? '',
-        email: params.email ?? '',
-        phone: params.phone ?? '',
-        notificationMode,
-        verificationRequired: String(verificationRequired),
-      },
-    });
+    dispatch(updateTrustedPersonDraft({ notificationMode, verificationRequired }));
+    router.push('/(auth)/trusted-person-confirmation');
   };
+
+  // Opened without the form (e.g. after a restart): start again from the people list.
+  if (!draft) return <Redirect href="/(auth)/people" />;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -108,7 +95,7 @@ export default function TrustedPersonReviewScreen() {
           <View style={styles.personRow}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {params.name
+                {draft.name
                   ?.charAt(0)
                   .toUpperCase() || '?'}
               </Text>
@@ -116,11 +103,11 @@ export default function TrustedPersonReviewScreen() {
 
             <View style={styles.personDetails}>
               <Text style={styles.personName}>
-                {params.name || 'Trusted Person'}
+                {draft.name || 'Trusted Person'}
               </Text>
 
               <Text style={styles.relationship}>
-                {params.relationship?.trim() ||
+                {draft.relationship?.trim() ||
                   'Relationship not specified'}
               </Text>
             </View>
@@ -132,7 +119,7 @@ export default function TrustedPersonReviewScreen() {
             </Text>
 
             <Text style={styles.contactText}>
-              {params.email || 'No email provided'}
+              {draft.email || 'No email provided'}
             </Text>
           </View>
 
@@ -142,7 +129,7 @@ export default function TrustedPersonReviewScreen() {
             </Text>
 
             <Text style={styles.contactText}>
-              {params.phone || 'No phone provided'}
+              {draft.phone || 'No phone provided'}
             </Text>
           </View>
         </View>

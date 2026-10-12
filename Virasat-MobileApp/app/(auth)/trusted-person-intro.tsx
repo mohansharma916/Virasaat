@@ -16,7 +16,7 @@ import { typography } from '@/src/theme/typography';
 export default function TrustedPersonIntroScreen() {
   const insets = useSafeAreaInsets();
   const handleContinue = () => {
-    router.replace('/(auth)/trusted-person');
+    router.replace({ pathname: '/(auth)/trusted-person', params: { onboarding: 'true' } } as never);
   };
 
   const handleSkip = () => {

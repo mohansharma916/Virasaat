@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -9,7 +10,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 
-import { Recipient, RecipientStatus } from './entities/recipient.entity';
+import {
+  Recipient,
+  RecipientNotificationMode,
+  RecipientStatus,
+} from './entities/recipient.entity';
 
 import { CreateRecipientDto } from './dto/create-recipient.dto';
 import { UpdateRecipientDto } from './dto/update-recipient.dto';
@@ -26,79 +31,72 @@ export class RecipientsService {
   ) {}
 
   async create(userId: string, dto: CreateRecipientDto) {
-    const existing = await this.recipientRepository.findOne({
-      where: {
-        userId,
-        email: dto.email,
-      },
-    });
+    const email = this.normalizeEmail(dto.email);
+    const matches = (saved: Recipient) =>
+      saved.email === email &&
+      saved.name === dto.name &&
+      saved.phone === (dto.phone ?? null) &&
+      saved.relationship === (dto.relationship ?? null) &&
+      saved.verificationRequired === (dto.verificationRequired ?? true) &&
+      saved.notificationMode ===
+        (dto.notificationMode ??
+          RecipientNotificationMode.INFORM_ON_ACTIVATION);
 
-    if (existing) {
-      if (
-        dto.requestKey &&
-        existing.requestKey === dto.requestKey &&
-        existing.name === dto.name &&
-        existing.phone === (dto.phone ?? null) &&
-        existing.relationship === (dto.relationship ?? null) &&
-        existing.verificationRequired === (dto.verificationRequired ?? true)
-      )
-        return existing;
-      throw new ConflictException(
-        'Recipient already exists. Review the saved person before making changes.',
-      );
-    }
-
-    if (this.planEntitlementService) {
-      const activeCount = await this.recipientRepository.count({
-        where: {
-          userId,
-          status: Not(RecipientStatus.REVOKED),
-        },
-      });
-      await this.planEntitlementService.assertWithinLimit(
-        userId,
-        PlanLimit.TRUSTED_PERSONS,
-        activeCount,
-      );
-    }
-
-    const recipient = this.recipientRepository.create({
-      userId,
-      requestKey: dto.requestKey ?? null,
-
-      name: dto.name,
-      email: dto.email,
-
-      phone: dto.phone ?? null,
-
-      relationship: dto.relationship ?? null,
-
-      verificationRequired: dto.verificationRequired ?? true,
-      status: RecipientStatus.PRIVATE,
-    });
-
-    try {
-      return await this.recipientRepository.save(recipient);
-    } catch (error) {
-      if (dto.requestKey && (error as { code?: string }).code === '23505') {
-        const saved = await this.recipientRepository.findOne({
+    // One owner's writes are serialized so parallel requests cannot all pass
+    // the plan limit or the duplicate-email check.
+    return this.recipientRepository.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `recipients:${userId}`,
+      ]);
+      const recipients = manager.getRepository(Recipient);
+      if (dto.requestKey) {
+        const saved = await recipients.findOne({
           where: { userId, requestKey: dto.requestKey },
         });
-        if (
-          saved &&
-          saved.email === dto.email &&
-          saved.name === dto.name &&
-          saved.phone === (dto.phone ?? null) &&
-          saved.relationship === (dto.relationship ?? null) &&
-          saved.verificationRequired === (dto.verificationRequired ?? true)
-        )
-          return saved;
+        if (saved) {
+          if (matches(saved)) return saved;
+          throw new ConflictException(
+            'This request already saved a different recipient. Review your people list.',
+          );
+        }
+      }
+
+      const existing = await recipients.findOne({ where: { userId, email } });
+      if (existing)
         throw new ConflictException(
-          'This request already saved a different recipient. Review your people list.',
+          'Recipient already exists. Review the saved person before making changes.',
+        );
+
+      if (this.planEntitlementService) {
+        const activeCount = await recipients.count({
+          where: {
+            userId,
+            status: Not(RecipientStatus.REVOKED),
+          },
+        });
+        await this.planEntitlementService.assertWithinLimit(
+          userId,
+          PlanLimit.TRUSTED_PERSONS,
+          activeCount,
         );
       }
-      throw error;
-    }
+
+      return recipients.save(
+        recipients.create({
+          userId,
+          requestKey: dto.requestKey ?? null,
+          name: dto.name,
+          email,
+          phone: dto.phone ?? null,
+          relationship: dto.relationship ?? null,
+          verificationRequired: dto.verificationRequired ?? true,
+          notificationMode:
+            dto.notificationMode ??
+            RecipientNotificationMode.INFORM_ON_ACTIVATION,
+          status: RecipientStatus.PRIVATE,
+        }),
+      );
+    });
   }
 
   async invite(userId: string, recipientId: string) {
@@ -138,11 +136,41 @@ export class RecipientsService {
   }
 
   async update(userId: string, recipientId: string, dto: UpdateRecipientDto) {
-    const recipient = await this.findOne(userId, recipientId);
+    return this.recipientRepository.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `recipients:${userId}`,
+      ]);
+      const recipients = manager.getRepository(Recipient);
+      const recipient = await recipients.findOne({
+        where: { id: recipientId, userId },
+      });
+      if (!recipient) throw new NotFoundException('Recipient not found');
 
-    Object.assign(recipient, dto);
+      const { email: requestedEmail, ...changes } = dto;
+      if (requestedEmail !== undefined) {
+        const email = this.normalizeEmail(requestedEmail);
+        if (email !== recipient.email) {
+          if (recipient.status !== RecipientStatus.PRIVATE)
+            throw new BadRequestException(
+              'This person has already been contacted, so their email cannot be changed. Add them again with the new email instead.',
+            );
+          const duplicate = await recipients.findOne({
+            where: { userId, email },
+          });
+          if (duplicate)
+            throw new ConflictException(
+              'Another saved person already uses this email.',
+            );
+          recipient.email = email;
+        }
+      }
+      Object.assign(recipient, changes);
+      return recipients.save(recipient);
+    });
+  }
 
-    return this.recipientRepository.save(recipient);
+  private normalizeEmail(email: string) {
+    return email.trim().toLowerCase();
   }
 
   async revoke(userId: string, recipientId: string) {

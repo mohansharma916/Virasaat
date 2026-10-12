@@ -11,30 +11,27 @@ import {
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  router,
-  useLocalSearchParams,
-} from 'expo-router';
+import { Redirect, router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { createRecipient, updateRecipient } from '@/src/api/recipients.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
-import { useAppDispatch } from '@/src/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { updateTrustedPersonDraft } from '@/src/store/trusted-person-draft.slice';
 import { addRecipient, refreshVaultData } from '@/src/store/vault.slice';
 
 export default function TrustedPersonConfirmationScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
-  const params = useLocalSearchParams<{
-    name?: string;
-    relationship?: string;
-    email?: string;
-    phone?: string;
-    notificationMode?: string;
-    recipientId?: string;
-    verificationRequired?: string;
-  }>();
+  const draft = useAppSelector((state) => state.trustedPersonDraft);
+  const params = {
+    name: draft?.name,
+    relationship: draft?.relationship,
+    email: draft?.email,
+    phone: draft?.phone,
+    recipientId: draft?.recipientId ?? undefined,
+  };
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -56,22 +53,22 @@ export default function TrustedPersonConfirmationScreen() {
       busy.current = true;
       setSaving(true);
       setError('');
+      const preferences = {
+        verificationRequired: draft?.verificationRequired ?? true,
+        notificationMode: draft?.notificationMode ?? 'INFORM_ON_ACTIVATION',
+        phone: params.phone?.trim() ?? '',
+        relationship: params.relationship?.trim() ?? '',
+      } as const;
       const recipient = savedId.current
-        ? await updateRecipient(savedId.current, {
-            name,
-            verificationRequired: params.verificationRequired !== 'false',
-            phone: params.phone?.trim() ?? '',
-            relationship: params.relationship?.trim() ?? '',
-          })
+        ? await updateRecipient(savedId.current, { name, email, ...preferences })
         : await createRecipient({
             requestKey: requestKey.current,
             name,
-            verificationRequired: params.verificationRequired !== 'false',
             email,
-            phone: params.phone?.trim() ?? '',
-            relationship: params.relationship?.trim() ?? '',
+            ...preferences,
           });
       savedId.current = recipient.id;
+      dispatch(updateTrustedPersonDraft({ recipientId: recipient.id, name: recipient.name }));
       if (params.recipientId) {
         await dispatch(refreshVaultData()).unwrap();
       } else {
@@ -79,13 +76,7 @@ export default function TrustedPersonConfirmationScreen() {
       }
 
 
-      router.replace({
-        pathname: '/(auth)/trusted-person-success',
-        params: {
-          notificationMode: 'INFORM_ON_ACTIVATION',
-          name: recipient.name,
-        },
-      });
+      router.replace('/(auth)/trusted-person-success');
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'We could not add this trusted person. Please try again.'));
     } finally {
@@ -97,6 +88,9 @@ export default function TrustedPersonConfirmationScreen() {
   const handleEditNotification = () => {
     router.back();
   };
+
+  // Opened without the form (e.g. after a restart): start again from the people list.
+  if (!draft) return <Redirect href="/(auth)/people" />;
 
   return (
     <SafeAreaView style={styles.safeArea}>

@@ -12,6 +12,7 @@ import { VaultModule } from '../vault/vault.module';
 import { EncryptionModule } from '../encryption/encryption.module';
 import { StorageModule } from '../storage/storage.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     EncryptionModule,
     StorageModule,
     SubscriptionsModule,
+    UsersModule,
   ],
 
   providers: [LegacyItemsService],

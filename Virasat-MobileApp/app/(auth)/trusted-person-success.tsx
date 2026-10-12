@@ -7,30 +7,24 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  router,
-  useLocalSearchParams,
-} from 'expo-router';
+import { router } from 'expo-router';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { clearTrustedPersonDraft } from '@/src/store/trusted-person-draft.slice';
 
 export default function TrustedPersonSuccessScreen() {
-  const params = useLocalSearchParams<{
-    notificationMode?: string;
-    name?: string;
-  }>();
+  const dispatch = useAppDispatch();
+  const draft = useAppSelector((state) => state.trustedPersonDraft);
 
-
-  const personName = params.name?.trim() || 'Your trusted person';
+  const personName = draft?.name.trim() || 'Your trusted person';
 
   const handleContinue = () => {
-    /*
-     * Later this will move the user into
-     * the next part of Virasat setup.
-     */
-
-    router.replace('/(auth)/home');
+    // During onboarding the next step is adding the first vault items.
+    const next = draft?.fromOnboarding ? '/(auth)/legacy-setup' : '/(auth)/home';
+    dispatch(clearTrustedPersonDraft());
+    router.replace(next);
   };
 
   return (

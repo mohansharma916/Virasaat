@@ -1,6 +1,7 @@
 import { api } from './client';
 
 export type RecipientStatus = 'PRIVATE' | 'INVITED' | 'ACTIVE' | 'REVOKED';
+export type RecipientNotificationMode = 'INFORM_NOW' | 'INFORM_ON_ACTIVATION';
 
 export interface Recipient {
   id: string;
@@ -10,6 +11,7 @@ export interface Recipient {
   relationship: string | null;
   status: RecipientStatus;
   verificationRequired: boolean;
+  notificationMode?: RecipientNotificationMode;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,6 +23,7 @@ export interface RecipientInput {
   phone?: string;
   relationship?: string;
   verificationRequired?: boolean;
+  notificationMode?: RecipientNotificationMode;
 }
 
 export async function createRecipient(data: RecipientInput): Promise<Recipient> {
@@ -40,7 +43,7 @@ export async function getRecipient(id: string): Promise<Recipient> {
 
 export async function updateRecipient(
   id: string,
-  data: Partial<Pick<RecipientInput, 'name' | 'phone' | 'relationship' | 'verificationRequired'>>,
+  data: Partial<Pick<RecipientInput, 'name' | 'email' | 'phone' | 'relationship' | 'verificationRequired' | 'notificationMode'>>,
 ): Promise<Recipient> {
   const response = await api.patch<Recipient>(`/recipients/${id}`, data);
   return response.data;

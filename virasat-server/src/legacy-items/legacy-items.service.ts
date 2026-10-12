@@ -8,12 +8,13 @@ import { AssignItemDto } from './dto/assign-item.dto';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 
 import {
   LegacyItem,
@@ -30,8 +31,48 @@ import { createHash } from 'node:crypto';
 import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
 import { PlanLimit } from '../subscriptions/subscription.constants';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
+import { ReauthService } from '../users/reauth.service';
 
 type PayloadStorageType = 'INLINE_DB' | 'S3' | 'LOCAL';
+
+// Titles are encrypted at rest. Older rows without this prefix are plaintext.
+const SEALED_TITLE_PREFIX = 'enc1:';
+
+// Stored file types are limited to formats the app can export safely. Anything
+// else (HTML, SVG, scripts) is kept as opaque bytes.
+const ALLOWED_MIME_TYPES = [
+  /^image\/(png|jpe?g|gif|webp|heic|heif|bmp|tiff)$/,
+  /^video\/[\w.+-]+$/,
+  /^audio\/[\w.+-]+$/,
+  /^text\/(plain|csv)$/,
+  /^application\/(pdf|rtf|zip|msword|vnd\.ms-excel|vnd\.ms-powerpoint)$/,
+  /^application\/vnd\.openxmlformats-officedocument\.[\w.+-]+$/,
+  /^application\/vnd\.oasis\.opendocument\.[\w.+-]+$/,
+];
+
+// ISO-BMFF brands that are still images or audio rather than video.
+const NON_VIDEO_BRANDS = new Set([
+  'heic',
+  'heix',
+  'heim',
+  'heis',
+  'mif1',
+  'msf1',
+  'avif',
+  'M4A ',
+  'M4B ',
+]);
+
+interface CapacityUsage {
+  isText: boolean;
+  isVideo: boolean;
+  bytes: number;
+}
+
+function positiveSetting(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 interface StoredEnvelope {
   encryptedDataKey: string;
   keyIv: string;
@@ -51,6 +92,7 @@ interface ItemKeyRef extends StoredEnvelope {
   mimeType?: string;
   description?: StoredEnvelope;
   fileMetadata?: StoredEnvelope;
+  contentKind?: 'VIDEO';
 }
 
 @Injectable()
@@ -72,6 +114,8 @@ export class LegacyItemsService {
     @Optional() storageService?: StorageService,
     @Optional()
     private readonly planEntitlementService?: PlanEntitlementService,
+    @Optional()
+    private readonly reauthService?: ReauthService,
   ) {
     this.storageService =
       storageService ?? new StorageService(new S3StorageService());
@@ -90,34 +134,6 @@ export class LegacyItemsService {
     // Get vault belonging to authenticated user
     const vault = await this.vaultService.getUserVault(userId);
 
-    // Limit check for personal messages
-    if (
-      this.planEntitlementService &&
-      (data.type === LegacyItemType.TEXT ||
-        data.category === 'PERSONAL_MESSAGES')
-    ) {
-      const isExistingRetry = data.requestKey
-        ? await this.itemRepository.findOne({
-            where: { vaultId: vault.id, requestKey: data.requestKey },
-          })
-        : null;
-
-      if (!isExistingRetry) {
-        const textCount = await this.itemRepository.count({
-          where: {
-            vaultId: vault.id,
-            type: LegacyItemType.TEXT,
-            status: LegacyItemStatus.ACTIVE,
-          },
-        });
-        await this.planEntitlementService.assertWithinLimit(
-          userId,
-          PlanLimit.PERSONAL_MESSAGES,
-          textCount,
-        );
-      }
-    }
-
     const encryptedDescription = data.description
       ? this.encryptionService.encrypt(Buffer.from(data.description, 'utf8'))
       : null;
@@ -129,7 +145,7 @@ export class LegacyItemsService {
 
       type: data.type,
       category: data.category,
-      title: data.title,
+      title: this.sealTitle(data.title),
       // Sensitive item details are encrypted before persistence. The list
       // endpoint intentionally returns metadata only, not plaintext.
       description: null,
@@ -157,7 +173,13 @@ export class LegacyItemsService {
       status: LegacyItemStatus.ACTIVE,
     });
 
-    return this.saveIdempotent(item);
+    return this.withPlainTitle(
+      await this.saveWithinCapacity(userId, item, {
+        isText: data.type === LegacyItemType.TEXT,
+        isVideo: data.type === LegacyItemType.VIDEO,
+        bytes: 0,
+      }),
+    );
   }
 
   async createEncryptedUpload(
@@ -191,32 +213,10 @@ export class LegacyItemsService {
     const mimeType = this.safeMimeType(file?.mimetype);
     const vault = await this.vaultService.getUserVault(userId);
 
-    // Limit check for video messages
-    if (
-      this.planEntitlementService &&
-      (data.type === LegacyItemType.VIDEO || data.category === 'VIDEO_MESSAGES')
-    ) {
-      const isExistingRetry = data.requestKey
-        ? await this.itemRepository.findOne({
-            where: { vaultId: vault.id, requestKey: data.requestKey },
-          })
-        : null;
-
-      if (!isExistingRetry) {
-        const videoCount = await this.itemRepository.count({
-          where: {
-            vaultId: vault.id,
-            type: LegacyItemType.VIDEO,
-            status: LegacyItemStatus.ACTIVE,
-          },
-        });
-        await this.planEntitlementService.assertWithinLimit(
-          userId,
-          PlanLimit.VIDEO_MESSAGES,
-          videoCount,
-        );
-      }
-    }
+    const isVideo =
+      data.type === LegacyItemType.VIDEO ||
+      mimeType.startsWith('video/') ||
+      this.looksLikeVideo(fileBuffer);
 
     const encryptedFile = this.encryptionService.encrypt(fileBuffer);
 
@@ -224,11 +224,8 @@ export class LegacyItemsService {
       vaultId: vault.id,
       ciphertext: encryptedFile.ciphertext,
       mimeType,
-      metadata: {
-        itemType: data.type,
-        itemCategory: data.category,
-        itemTitle: data.title,
-      },
+      // Object metadata is not encrypted: never place titles or categories here.
+      metadata: { itemType: data.type },
     });
 
     const encryptedDescription = data.description
@@ -246,7 +243,7 @@ export class LegacyItemsService {
       requestHash: this.requestHash(data, fileBuffer),
       type: data.type,
       category: data.category,
-      title: data.title,
+      title: this.sealTitle(data.title),
       description: null,
       ciphertextRef: savedStorage.storageKey,
       encryptionKeyRef: JSON.stringify({
@@ -265,6 +262,7 @@ export class LegacyItemsService {
         sizeBytes: savedStorage.sizeBytes,
         description: encryptedDescription || undefined,
         fileMetadata,
+        contentKind: isVideo ? 'VIDEO' : undefined,
       }),
       encryptionKeyVersion: encryptedFile.keyVersion,
       payloadStorageType: savedStorage.storageType,
@@ -272,11 +270,15 @@ export class LegacyItemsService {
     });
 
     try {
-      const saved = await this.saveIdempotent(item);
+      const saved = await this.saveWithinCapacity(userId, item, {
+        isText: data.type === LegacyItemType.TEXT,
+        isVideo,
+        bytes: fileBuffer.length,
+      });
       if (saved.ciphertextRef !== savedStorage.storageKey) {
         await this.storageService.deleteVaultItemFile(savedStorage.storageKey);
       }
-      return saved;
+      return this.withPlainTitle(saved);
     } catch (error) {
       await this.storageService.deleteVaultItemFile(savedStorage.storageKey);
       throw error;
@@ -304,30 +306,150 @@ export class LegacyItemsService {
     return hash.digest('hex');
   }
 
-  private async saveIdempotent(item: LegacyItem) {
+  /**
+   * Saves a new item after checking plan limits and vault quotas. The vault
+   * lock makes the count and insert atomic, so parallel requests cannot all
+   * pass the same check.
+   */
+  private async saveWithinCapacity(
+    userId: string,
+    item: LegacyItem,
+    usage: CapacityUsage,
+  ) {
+    return this.itemRepository.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `vault-items:${item.vaultId}`,
+      ]);
+      const repository = manager.getRepository(LegacyItem);
+      if (item.requestKey) {
+        const saved = await repository
+          .createQueryBuilder('item')
+          .addSelect(['item.requestHash', 'item.ciphertextRef'])
+          .where('item.vaultId = :vaultId AND item.requestKey = :requestKey', {
+            vaultId: item.vaultId,
+            requestKey: item.requestKey,
+          })
+          .getOne();
+        if (saved) {
+          if (saved.requestHash !== item.requestHash)
+            throw new ConflictException(
+              'This request already saved different content. Start a new item to save changes.',
+            );
+          return saved;
+        }
+      }
+      await this.assertCapacity(manager, userId, item.vaultId, usage);
+      return repository.save(item);
+    });
+  }
+
+  private async assertCapacity(
+    manager: EntityManager,
+    userId: string,
+    vaultId: string,
+    usage: CapacityUsage,
+  ) {
+    const rows: Array<{
+      items: number | string;
+      bytes: number | string;
+      texts: number | string;
+      videos: number | string;
+    }> = await manager.query(
+      `SELECT COUNT(*)::int AS "items",
+         COALESCE(SUM(COALESCE(substring("encryptionKeyRef" from '"sizeBytes":([0-9]+)')::bigint, 0)), 0)::bigint AS "bytes",
+         COUNT(*) FILTER (WHERE "type" = 'TEXT')::int AS "texts",
+         COUNT(*) FILTER (WHERE "type" = 'VIDEO'
+           OR "encryptionKeyRef" LIKE '%"contentKind":"VIDEO"%'
+           OR "encryptionKeyRef" LIKE '%"mimeType":"video/%')::int AS "videos"
+       FROM legacy_items
+       WHERE "vaultId" = $1 AND "status" <> 'ARCHIVED'`,
+      [vaultId],
+    );
+    const current = rows[0] ?? { items: 0, bytes: 0, texts: 0, videos: 0 };
+    const maxItems = positiveSetting(process.env.VAULT_MAX_ITEMS, 500);
+    const maxBytes =
+      positiveSetting(process.env.VAULT_STORAGE_QUOTA_MB, 1024) * 1024 * 1024;
+    if (Number(current.items) >= maxItems)
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'VAULT_ITEM_LIMIT_REACHED',
+        message: `Your vault can hold up to ${maxItems} items. Remove an item before adding another.`,
+      });
+    if (Number(current.bytes) + usage.bytes > maxBytes)
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'VAULT_STORAGE_LIMIT_REACHED',
+        message: `Your vault storage limit of ${Math.round(maxBytes / 1024 / 1024)} MB has been reached.`,
+      });
+    if (!this.planEntitlementService) return;
+    if (usage.isText)
+      await this.planEntitlementService.assertWithinLimit(
+        userId,
+        PlanLimit.PERSONAL_MESSAGES,
+        Number(current.texts),
+      );
+    if (usage.isVideo)
+      await this.planEntitlementService.assertWithinLimit(
+        userId,
+        PlanLimit.VIDEO_MESSAGES,
+        Number(current.videos),
+      );
+  }
+
+  /** Detects common video containers so a relabelled video still counts as video. */
+  private looksLikeVideo(buffer: Buffer) {
+    if (buffer.length < 12) return false;
+    if (buffer.readUInt32BE(0) === 0x1a45dfa3) return true; // WebM / Matroska
+    if (
+      buffer.toString('latin1', 0, 4) === 'RIFF' &&
+      buffer.toString('latin1', 8, 12) === 'AVI '
+    )
+      return true;
+    if (buffer.toString('latin1', 4, 8) === 'ftyp')
+      return !NON_VIDEO_BRANDS.has(buffer.toString('latin1', 8, 12));
+    return false;
+  }
+
+  private sealTitle(title: string) {
+    return (
+      SEALED_TITLE_PREFIX +
+      Buffer.from(JSON.stringify(this.encryptInline(title)), 'utf8').toString(
+        'base64',
+      )
+    );
+  }
+
+  private openTitle(stored: string) {
+    if (!stored?.startsWith(SEALED_TITLE_PREFIX)) return stored;
     try {
-      return await this.itemRepository.save(item);
-    } catch (error) {
-      if (!item.requestKey || (error as { code?: string }).code !== '23505')
-        throw error;
-      const saved = await this.itemRepository
-        .createQueryBuilder('item')
-        .addSelect(['item.requestHash', 'item.ciphertextRef'])
-        .where('item.vaultId = :vaultId AND item.requestKey = :requestKey', {
-          vaultId: item.vaultId,
-          requestKey: item.requestKey,
-        })
-        .getOne();
-      if (!saved || saved.requestHash !== item.requestHash)
-        throw new ConflictException(
-          'This request already saved different content. Start a new item to save changes.',
-        );
-      return saved;
+      const envelope = JSON.parse(
+        Buffer.from(
+          stored.slice(SEALED_TITLE_PREFIX.length),
+          'base64',
+        ).toString('utf8'),
+      ) as StoredEnvelope;
+      return this.decryptInline(envelope, null);
+    } catch {
+      throw new BadRequestException('Invalid encrypted item title.');
     }
+  }
+
+  private withPlainTitle<T extends LegacyItem>(item: T): T {
+    return { ...item, title: this.openTitle(item.title) };
   }
 
   async assign(userId: string, itemId: string, dto: AssignItemDto) {
     const vault = await this.vaultService.getUserVault(userId);
+    // Verify before locking so a slow identity check does not hold the row.
+    const reauthenticated =
+      (dto.currentPassword || dto.googleIdToken) && this.reauthService
+        ? await this.reauthService
+            .verify(userId, {
+              currentPassword: dto.currentPassword,
+              googleIdToken: dto.googleIdToken,
+            })
+            .then(() => true)
+        : false;
     return this.itemRepository.manager.transaction(async (manager) => {
       const items = manager.getRepository(LegacyItem);
       const item = await items.findOne({
@@ -339,16 +461,23 @@ export class LegacyItemsService {
         lock: { mode: 'pessimistic_write' },
       });
       if (!item) throw new NotFoundException('Item not found.');
+      const previousRecipientId = item.assignment?.recipientId ?? null;
       if (item.assignment) {
         if (
           item.assignment.recipientId === dto.recipientId &&
           item.assignment.policyId === dto.policyId &&
           item.assignment.policyVersion === dto.policyVersion
         )
-          return item;
-        throw new BadRequestException(
-          'Changing an existing assignment requires re-authentication, which is not available yet. Your saved assignment is unchanged.',
-        );
+          return this.withPlainTitle(item);
+        // Redirecting an item to someone else is the most sensitive vault
+        // change, so it needs proof beyond the bearer token.
+        if (!reauthenticated)
+          throw new ForbiddenException({
+            statusCode: 403,
+            code: 'REAUTH_REQUIRED',
+            message:
+              'Confirm your identity to change who receives this item. Your saved assignment is unchanged.',
+          });
       }
       const recipient = await manager.getRepository(Recipient).findOne({
         where: { id: dto.recipientId, userId },
@@ -381,16 +510,20 @@ export class LegacyItemsService {
         targetType: 'legacy_item',
         targetId: item.id,
         result: AuditResult.SUCCESS,
-        metadata: { policyId: policy.id, policyVersion: policy.version },
+        metadata: {
+          policyId: policy.id,
+          policyVersion: policy.version,
+          replacedRecipientId: previousRecipientId,
+        },
       });
-      return saved;
+      return this.withPlainTitle(saved);
     });
   }
 
   async findAll(userId: string) {
     const vault = await this.vaultService.getUserVault(userId);
 
-    return this.itemRepository.find({
+    const items = await this.itemRepository.find({
       where: {
         vaultId: vault.id,
         status: LegacyItemStatus.ACTIVE,
@@ -400,6 +533,7 @@ export class LegacyItemsService {
         updatedAt: 'DESC',
       },
     });
+    return items.map((item) => this.withPlainTitle(item));
   }
 
   async findOne(userId: string, itemId: string) {
@@ -522,8 +656,9 @@ export class LegacyItemsService {
   }
 
   private safeMimeType(value?: string): string {
-    return value && /^[\w.+-]+\/[\w.+-]+$/.test(value)
-      ? value
+    const mimeType = value?.toLowerCase();
+    return mimeType && ALLOWED_MIME_TYPES.some((type) => type.test(mimeType))
+      ? mimeType
       : 'application/octet-stream';
   }
 
@@ -549,9 +684,8 @@ export class LegacyItemsService {
       );
     }
     const hasFile = storageType !== 'INLINE_DB' && Boolean(item.ciphertextRef);
-    let fileName: string | null = hasFile
-      ? this.safeFileName(item.title)
-      : null;
+    const title = this.openTitle(item.title);
+    let fileName: string | null = hasFile ? this.safeFileName(title) : null;
     if (hasFile && keyRef.fileMetadata) {
       const metadata: unknown = JSON.parse(
         this.decryptInline(keyRef.fileMetadata, item.encryptionKeyVersion),
@@ -571,7 +705,7 @@ export class LegacyItemsService {
       vaultId: item.vaultId,
       type: item.type,
       category: item.category,
-      title: item.title,
+      title,
       description: description ?? null,
       status: item.status,
       createdAt: item.createdAt,
@@ -595,7 +729,8 @@ export class LegacyItemsService {
       const item = await this.loadItem(repository, vault.id, itemId, true);
       const keyRef = this.keyRef(item);
       item.payloadStorageType = this.storageType(item, keyRef);
-      if (dto.title !== undefined) item.title = dto.title.trim();
+      if (dto.title !== undefined)
+        item.title = this.sealTitle(dto.title.trim());
       if (dto.description !== undefined) {
         if (item.payloadStorageType === 'INLINE_DB') {
           const encrypted = this.encryptInline(dto.description);
@@ -708,7 +843,7 @@ export class LegacyItemsService {
           this.decryptEnvelope(keyRef, ciphertext, item.encryptionKeyVersion);
           results.push({
             itemId: item.id,
-            title: item.title,
+            title: this.openTitle(item.title),
             type: item.type,
             action: 'ALREADY_ON_S3',
             s3Key: item.ciphertextRef,
@@ -747,7 +882,7 @@ export class LegacyItemsService {
             if (currentStorage === 'S3') {
               return {
                 itemId: current.id,
-                title: current.title,
+                title: this.openTitle(current.title),
                 type: current.type,
                 action: 'ALREADY_ON_S3' as const,
                 s3Key: current.ciphertextRef!,
@@ -773,7 +908,7 @@ export class LegacyItemsService {
             await repository.save(current);
             return {
               itemId: current.id,
-              title: current.title,
+              title: this.openTitle(current.title),
               type: current.type,
               action: 'MIGRATED_TO_S3' as const,
               s3Key: migration.storageKey,
@@ -836,7 +971,7 @@ export class LegacyItemsService {
 
         results.push({
           itemId: item.id,
-          title: item.title,
+          title: this.openTitle(item.title),
           type: item.type,
           action: 'BACKED_UP_TO_S3',
           s3Key: backupResult.key,
@@ -852,7 +987,14 @@ export class LegacyItemsService {
       totalItems: items.length,
       syncedItemsCount: results.length,
       s3Configured: true,
-      items: results,
+      // Storage keys and URIs stay server-side.
+      items: results.map((result) => ({
+        itemId: result.itemId,
+        title: result.title,
+        type: result.type,
+        action: result.action,
+        checksumSha256: result.checksumSha256,
+      })),
     };
   }
 
@@ -867,12 +1009,12 @@ export class LegacyItemsService {
 
     return {
       itemId: fullItem.id,
-      title: fullItem.title,
+      title: this.openTitle(fullItem.title),
       type: fullItem.type,
       storageType,
       s3Configured: this.storageService.isS3Enabled(),
-      s3Key: isS3 ? fullItem.ciphertextRef : null,
-      s3Uri: keyRef.s3Uri || null,
+      // Bucket keys and URIs are infrastructure details, not owner data.
+      storedInS3: isS3,
       checksumSha256: keyRef.checksumSha256 || null,
       encryptionAlgorithm: keyRef.algorithm || 'aes-256-gcm',
       encryptionKeyVersion: fullItem.encryptionKeyVersion || 'v1',
@@ -917,8 +1059,6 @@ export class LegacyItemsService {
       vaultId: vault.id,
       totalItems: items.length,
       s3Configured: s3Details.configured,
-      s3Bucket: s3Details.configured ? s3Details.bucketName : null,
-      region: s3Details.configured ? s3Details.region : null,
       encryption: 'AES-256-GCM Envelope + AWS S3 SSE',
       storageBreakdown: {
         s3Stored,

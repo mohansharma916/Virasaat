@@ -10,6 +10,7 @@ import { useAppDispatch } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
 import { vaultScreenStyles as styles } from '@/src/theme/vault-screen';
 import { createTemporaryVaultExport } from '@/src/storage/vault-export.storage';
+import { runWithSystemUi } from '@/src/components/SessionGate';
 
 export default function SavedItemScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -82,7 +83,8 @@ export default function SavedItemScreen() {
       } else {
         temporaryFile = createTemporaryVaultExport(`${item.id}-${name}`);
         temporaryFile.write(new Uint8Array(data));
-        await Sharing.shareAsync(temporaryFile.uri, { mimeType: item.mimeType ?? 'application/octet-stream', dialogTitle: 'Save or open your vault file' });
+        const exported = temporaryFile;
+        await runWithSystemUi(() => Sharing.shareAsync(exported.uri, { mimeType: item.mimeType ?? 'application/octet-stream', dialogTitle: 'Save or open your vault file' }));
       }
     } catch (reason) {
       if (!signal?.aborted) setError(getApiErrorMessage(reason, 'Could not export the file.'));

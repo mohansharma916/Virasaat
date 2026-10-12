@@ -3,11 +3,13 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import sessionReducer, { clearSession, setSessionUser } from './session.slice';
 import vaultReducer from './vault.slice';
 import subscriptionReducer from './subscription.slice';
+import trustedPersonDraftReducer from './trusted-person-draft.slice';
 
 const appReducer = combineReducers({
   session: sessionReducer,
   vault: vaultReducer,
   subscription: subscriptionReducer,
+  trustedPersonDraft: trustedPersonDraftReducer,
 });
 
 export const store = configureStore({

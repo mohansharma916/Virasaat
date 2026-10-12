@@ -13,7 +13,7 @@ import { refreshVaultData } from '@/src/store/vault.slice';
 import { fetchSubscription } from '@/src/store/subscription.slice';
 import { BottomNavBar } from '@/src/components/BottomNavBar';
 
-const emptySummary = { documents: 0, investments: 0, messages: 0, videos: 0 };
+const emptySummary = { documents: 0, investments: 0, messages: 0, videos: 0, other: 0 };
 
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
@@ -46,15 +46,18 @@ export default function HomeScreen() {
     }, [loadOverview]),
   );
 
+  // Count by category so each card matches the list it opens.
   const legacySummary = useMemo(() => items.reduce((summary, item) => {
-    if (item.type === 'DOCUMENT' || item.type === 'IMAGE' || item.type === 'OTHER') {
+    if (item.category === 'DOCUMENTS') {
       summary.documents += 1;
-    } else if (item.type === 'FINANCIAL') {
+    } else if (item.category === 'INVESTMENTS') {
       summary.investments += 1;
-    } else if (item.type === 'TEXT') {
+    } else if (item.category === 'MESSAGES') {
       summary.messages += 1;
-    } else if (item.type === 'VIDEO') {
+    } else if (item.category === 'VIDEOS') {
       summary.videos += 1;
+    } else {
+      summary.other += 1;
     }
 
     return summary;
@@ -66,10 +69,7 @@ export default function HomeScreen() {
     ?? checkInStatus?.policy.nextCheckInAt
     ?? null;
 
-  const totalItems = useMemo(
-    () => legacySummary.documents + legacySummary.investments + legacySummary.messages + legacySummary.videos,
-    [legacySummary],
-  );
+  const totalItems = items.length;
 
 
   const openLegacy = (category?: string) => {
@@ -293,6 +293,7 @@ export default function HomeScreen() {
           <LegacyCard icon="₹" title="Investments" count={legacySummary.investments} onPress={() => openLegacy('INVESTMENTS')} />
           <LegacyCard icon="✎" title="Messages" count={legacySummary.messages} onPress={() => openLegacy('MESSAGES')} />
           <LegacyCard icon="▶" title="Videos" count={legacySummary.videos} onPress={() => openLegacy('VIDEOS')} />
+          <LegacyCard icon="◇" title="Other" count={legacySummary.other} onPress={() => openLegacy('OTHER')} />
         </View>
 
         <View style={styles.sectionHeader}>

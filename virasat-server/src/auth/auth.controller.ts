@@ -18,6 +18,13 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthRateLimitGuard } from './guards/auth-rate-limit.guard';
 
+type ClientRequest = { ip?: string; socket?: { remoteAddress?: string } };
+
+/** The proxy-aware peer address; used to scope per-account limits to one client. */
+function clientOf(req: ClientRequest) {
+  return req.ip || req.socket?.remoteAddress || undefined;
+}
+
 @Controller('auth')
 @UseGuards(AuthRateLimitGuard)
 export class AuthController {
@@ -27,8 +34,13 @@ export class AuthController {
    * Email + Password Signup
    */
   @Post('register')
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.email, dto.name, dto.password);
+  async register(@Body() dto: RegisterDto, @Req() req: ClientRequest) {
+    return this.authService.register(
+      dto.email,
+      dto.name,
+      dto.password,
+      clientOf(req),
+    );
   }
 
   /**
@@ -46,16 +58,19 @@ export class AuthController {
    * The response deliberately stays generic to avoid account enumeration.
    */
   @Post('resend-verification')
-  async resendVerification(@Body() dto: ResendVerificationDto) {
-    return this.authService.resendVerification(dto.email);
+  async resendVerification(
+    @Body() dto: ResendVerificationDto,
+    @Req() req: ClientRequest,
+  ) {
+    return this.authService.resendVerification(dto.email, clientOf(req));
   }
 
   /**
    * Email + Password Login
    */
   @Post('login')
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  async login(@Body() dto: LoginDto, @Req() req: ClientRequest) {
+    return this.authService.login(dto.email, dto.password, clientOf(req));
   }
 
   /**
@@ -67,12 +82,15 @@ export class AuthController {
   }
 
   /**
-   * Smart Forgot Password - checks account type (Email vs Google)
-   * and initiates recovery OTP.
+   * Forgot Password. The response is the same whether or not the account
+   * exists; Google-only owners are told by email to use Google Sign-In.
    */
   @Post('forgot-password')
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.email);
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() req: ClientRequest,
+  ) {
+    return this.authService.forgotPassword(dto.email, clientOf(req));
   }
 
   /**
@@ -87,8 +105,11 @@ export class AuthController {
    * Resend password reset OTP.
    */
   @Post('resend-password-reset')
-  async resendPasswordReset(@Body() dto: ForgotPasswordDto) {
-    return this.authService.resendPasswordReset(dto.email);
+  async resendPasswordReset(
+    @Body() dto: ForgotPasswordDto,
+    @Req() req: ClientRequest,
+  ) {
+    return this.authService.resendPasswordReset(dto.email, clientOf(req));
   }
 
   /**

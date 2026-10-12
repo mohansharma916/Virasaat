@@ -67,4 +67,40 @@ describe('Authentication rate limiting', () => {
     await guard.canActivate(context('POST', 'logout') as never);
     expect(limiter.consume).not.toHaveBeenCalled();
   });
+
+  it('stops one client guessing a password without locking the owner out elsewhere', async () => {
+    const buckets = new Map<string, number>();
+    const query = jest.fn(async (sql: string, params: [string, number]) => {
+      if (sql.startsWith('DELETE')) return [];
+      const count = (buckets.get(params[0]) ?? 0) + 1;
+      buckets.set(params[0], count);
+      return [{ count, expiresAt: new Date(Date.now() + 60000) }];
+    });
+    const service = new AuthRateLimitService({ query } as never);
+    for (let index = 0; index < 10; index++)
+      await service.checkAccount('login', 'owner@example.test', '198.51.100.7');
+    await expect(
+      service.checkAccount('login', 'owner@example.test', '198.51.100.7'),
+    ).rejects.toMatchObject({ status: 429 });
+    await expect(
+      service.checkAccount('login', 'owner@example.test', '203.0.113.20'),
+    ).resolves.toBeUndefined();
+  });
+
+  it('applies the code cooldown to every address, registered or not', async () => {
+    let count = 0;
+    const query = jest.fn(async (sql: string) =>
+      sql.startsWith('DELETE')
+        ? []
+        : [{ count: ++count, expiresAt: new Date(Date.now() + 30000) }],
+    );
+    const service = new AuthRateLimitService({ query } as never);
+    await service.checkSendCooldown('reset-send', 'nobody@example.test');
+    await expect(
+      service.checkSendCooldown('reset-send', 'nobody@example.test'),
+    ).rejects.toMatchObject({
+      status: 429,
+      response: expect.objectContaining({ code: 'OTP_RESEND_COOLDOWN' }),
+    });
+  });
 });

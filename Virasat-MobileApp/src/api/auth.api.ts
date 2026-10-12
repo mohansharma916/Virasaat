@@ -31,6 +31,8 @@ export interface AuthResponse {
     id: string;
     readinessScore: number;
   } | null;
+  /** Set when this sign-in created the account, so onboarding should run. */
+  isNewUser?: boolean;
 }
 
 export interface RegisterResponse {
@@ -100,12 +102,10 @@ export async function logout(): Promise<void> {
   await api.post('/auth/logout');
 }
 
+// The server answers the same way whether or not an account exists.
 export interface ForgotPasswordResponse {
-  status: 'OTP_SENT' | 'GOOGLE_ACCOUNT' | 'NOT_FOUND';
-  authMethod?: 'PASSWORD' | 'GOOGLE';
+  status: 'OTP_SENT';
   message: string;
-  email?: string;
-  name?: string;
   developmentOtp?: string;
 }
 

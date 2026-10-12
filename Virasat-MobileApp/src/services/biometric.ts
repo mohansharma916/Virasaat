@@ -42,11 +42,13 @@ export async function authenticateWithBiometric(
   const prompt = customPrompt || `Sign in to Virasat with ${bioType}`;
 
   try {
+    // Biometrics only: a device passcode is easier to observe or share, and
+    // anyone who cannot pass biometrics can still sign in with their password.
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage: prompt,
-      fallbackLabel: 'Use device passcode',
+      fallbackLabel: '',
       cancelLabel: 'Cancel',
-      disableDeviceFallback: false,
+      disableDeviceFallback: true,
     });
 
     return {

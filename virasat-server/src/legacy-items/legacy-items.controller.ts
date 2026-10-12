@@ -20,6 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 
 import { LegacyItemsService } from './legacy-items.service';
+import { UploadSlotInterceptor } from './upload-slot.interceptor';
 
 import { CreateLegacyItemDto } from './dto/create-legacy-item.dto';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
@@ -40,10 +41,13 @@ export class LegacyItemsController {
 
   @Post('upload')
   @UseInterceptors(
+    UploadSlotInterceptor,
     FileInterceptor('file', {
       storage: memoryStorage(),
       limits: {
         fileSize: 25 * 1024 * 1024,
+        files: 1,
+        fields: 10,
       },
     }),
   )
@@ -66,50 +70,9 @@ export class LegacyItemsController {
     )
     dto: CreateLegacyItemDto,
   ) {
-    let resolvedFile = file;
-
-    // Fallback if file was not captured by multer directly (e.g. data URI, buffer, or base64 in body)
-    if (!resolvedFile?.buffer?.length && req.body?.file) {
-      if (Buffer.isBuffer(req.body.file)) {
-        resolvedFile = {
-          buffer: req.body.file,
-          mimetype:
-            req.body.mimeType ||
-            req.body.mimetype ||
-            'application/octet-stream',
-        };
-      } else if (
-        typeof req.body.file === 'string' &&
-        req.body.file.startsWith('data:')
-      ) {
-        const matches = req.body.file.match(/^data:([^;]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          resolvedFile = {
-            buffer: Buffer.from(matches[2], 'base64'),
-            mimetype: matches[1],
-          };
-        }
-      } else if (
-        typeof req.body.file === 'string' &&
-        req.body.file.length > 50
-      ) {
-        try {
-          const buf = Buffer.from(req.body.file, 'base64');
-          if (buf.length > 0) {
-            resolvedFile = {
-              buffer: buf,
-              mimetype:
-                req.body.mimeType ||
-                req.body.mimetype ||
-                'application/octet-stream',
-            };
-          }
-        } catch {
-          // ignore
-        }
-      }
-    }
-
+    // Only multipart files are accepted. Body-encoded files would bypass the
+    // multipart size limit and let the client choose the stored MIME type.
+    const resolvedFile = file?.buffer?.length ? file : undefined;
     if (resolvedFile && !resolvedFile.originalname && dto.fileName) {
       resolvedFile.originalname = dto.fileName;
     }
