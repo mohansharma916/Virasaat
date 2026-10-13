@@ -38,7 +38,7 @@ describe('Storage and S3 Security', () => {
         ciphertext: testCiphertext,
         mimeType: 'application/pdf',
       }),
-    ).rejects.toThrow('AWS S3 is not configured');
+    ).rejects.toThrow('File storage is temporarily unavailable');
   });
 
   it('supports IAM credential providers without static AWS keys', () => {

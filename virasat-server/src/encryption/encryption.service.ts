@@ -2,6 +2,21 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
+// GCM must always verify a full 128-bit tag; shorter tags make forgery cheap.
+const AUTH_TAG_BYTES = 16;
+const IV_BYTES = 12;
+// Envelopes written with associated data record this marker. Older envelopes
+// without it were encrypted before records were bound to their context.
+export const AAD_VERSION = 1;
+
+/**
+ * Binds a ciphertext to where it is stored, so it cannot be decrypted after
+ * being copied into another vault or used for a different purpose.
+ */
+export function encryptionContext(vaultId: string, purpose: string) {
+  return `virasat:${vaultId}:${purpose}`;
+}
+
 @Injectable()
 export class EncryptionService {
   private readonly algorithm = 'aes-256-gcm';
@@ -56,12 +71,17 @@ export class EncryptionService {
   /**
    * Encrypt data using a random DEK.
    */
-  encrypt(data: Buffer) {
+  encrypt(data: Buffer, context?: string) {
     const dataEncryptionKey = randomBytes(32);
 
-    const iv = randomBytes(12);
+    const iv = randomBytes(IV_BYTES);
 
-    const cipher = createCipheriv(this.algorithm, dataEncryptionKey, iv);
+    const aad = context ? Buffer.from(context, 'utf8') : null;
+
+    const cipher = createCipheriv(this.algorithm, dataEncryptionKey, iv, {
+      authTagLength: AUTH_TAG_BYTES,
+    });
+    if (aad) cipher.setAAD(aad);
 
     const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
 
@@ -78,9 +98,12 @@ export class EncryptionService {
     const keyVersion = process.env.ENCRYPTION_MASTER_KEY_VERSION || 'v1';
     const masterKey = this.getMasterKey(keyVersion);
 
-    const keyIv = randomBytes(12);
+    const keyIv = randomBytes(IV_BYTES);
 
-    const keyCipher = createCipheriv(this.algorithm, masterKey, keyIv);
+    const keyCipher = createCipheriv(this.algorithm, masterKey, keyIv, {
+      authTagLength: AUTH_TAG_BYTES,
+    });
+    if (aad) keyCipher.setAAD(aad);
 
     const encryptedKey = Buffer.concat([
       keyCipher.update(dataEncryptionKey),
@@ -105,21 +128,42 @@ export class EncryptionService {
       algorithm: this.algorithm,
 
       keyVersion,
+
+      ...(aad ? { aad: AAD_VERSION } : {}),
     };
   }
 
   /**
    * Decrypt data.
    */
-  decrypt(input: {
-    ciphertext: Buffer;
-    encryptedDataKey: string;
-    keyIv: string;
-    keyAuthTag: string;
-    iv: string;
-    authTag: string;
-    keyVersion?: string | null;
-  }) {
+  decrypt(
+    input: {
+      ciphertext: Buffer;
+      encryptedDataKey: string;
+      keyIv: string;
+      keyAuthTag: string;
+      iv: string;
+      authTag: string;
+      keyVersion?: string | null;
+      aad?: number;
+    },
+    context?: string,
+  ) {
+    const keyIv = this.decode(input.keyIv, IV_BYTES);
+    const keyAuthTag = this.decode(input.keyAuthTag, AUTH_TAG_BYTES);
+    const iv = this.decode(input.iv, IV_BYTES);
+    const authTag = this.decode(input.authTag, AUTH_TAG_BYTES);
+    // A bound envelope only opens in the context it was written for. Legacy
+    // envelopes (no marker) were written without associated data.
+    let aad: Buffer | null = null;
+    if (input.aad !== undefined && input.aad !== null) {
+      if (input.aad !== AAD_VERSION || !context)
+        throw new InternalServerErrorException(
+          'Encrypted record context is invalid',
+        );
+      aad = Buffer.from(context, 'utf8');
+    }
+
     // Records written before key versioning use v1. Never try the current key
     // against a historical version: retain the old key until migration finishes.
     const masterKey = this.getMasterKey(input.keyVersion || 'v1');
@@ -127,13 +171,12 @@ export class EncryptionService {
     /**
      * Recover DEK.
      */
-    const keyDecipher = createDecipheriv(
-      this.algorithm,
-      masterKey,
-      Buffer.from(input.keyIv, 'base64'),
-    );
+    const keyDecipher = createDecipheriv(this.algorithm, masterKey, keyIv, {
+      authTagLength: AUTH_TAG_BYTES,
+    });
+    if (aad) keyDecipher.setAAD(aad);
 
-    keyDecipher.setAuthTag(Buffer.from(input.keyAuthTag, 'base64'));
+    keyDecipher.setAuthTag(keyAuthTag);
 
     const dataEncryptionKey = Buffer.concat([
       keyDecipher.update(Buffer.from(input.encryptedDataKey, 'base64')),
@@ -143,14 +186,23 @@ export class EncryptionService {
     /**
      * Decrypt actual data.
      */
-    const decipher = createDecipheriv(
-      this.algorithm,
-      dataEncryptionKey,
-      Buffer.from(input.iv, 'base64'),
-    );
+    const decipher = createDecipheriv(this.algorithm, dataEncryptionKey, iv, {
+      authTagLength: AUTH_TAG_BYTES,
+    });
+    if (aad) decipher.setAAD(aad);
 
-    decipher.setAuthTag(Buffer.from(input.authTag, 'base64'));
+    decipher.setAuthTag(authTag);
 
     return Buffer.concat([decipher.update(input.ciphertext), decipher.final()]);
+  }
+
+  private decode(value: string, bytes: number): Buffer {
+    const buffer =
+      typeof value === 'string'
+        ? Buffer.from(value, 'base64')
+        : Buffer.alloc(0);
+    if (buffer.length !== bytes)
+      throw new InternalServerErrorException('Encrypted record is malformed');
+    return buffer;
   }
 }

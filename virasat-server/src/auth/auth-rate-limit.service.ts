@@ -35,6 +35,15 @@ const SHARED_ACCOUNT_LIMITS: Partial<Record<AuthAction, [number, number]>> = {
   'reset-send': [20, 60 * 60],
 };
 
+// Long-window ceilings per account. Six-digit codes allow 10^6 guesses, so a
+// slow attacker rotating fresh codes must not get thousands of tries a month;
+// the same applies to passwords guessed from many addresses.
+const DAILY_ACCOUNT_LIMITS: Partial<Record<AuthAction, [number, number]>> = {
+  login: [300, 24 * 60 * 60],
+  'signup-verify': [10, 24 * 60 * 60],
+  'reset-verify': [10, 24 * 60 * 60],
+};
+
 /** PostgreSQL enforces limits across concurrent requests, restarts and API replicas. */
 @Injectable()
 export class AuthRateLimitService {
@@ -52,6 +61,7 @@ export class AuthRateLimitService {
   ): Promise<void> {
     const clientLimit = CLIENT_LIMITS[action];
     const sharedLimit = SHARED_ACCOUNT_LIMITS[action];
+    const dailyLimit = DAILY_ACCOUNT_LIMITS[action];
     if (client && clientLimit && sharedLimit) {
       await this.consume(
         `account-client:${action}`,
@@ -59,10 +69,15 @@ export class AuthRateLimitService {
         ...clientLimit,
       );
       await this.consume(`account-shared:${action}`, email, ...sharedLimit);
+      if (dailyLimit)
+        await this.consume(`account-daily:${action}`, email, ...dailyLimit);
       return;
     }
     const [limit, seconds] = ACCOUNT_LIMITS[action];
     await this.consume(`account:${action}`, email, limit, seconds);
+    // Code verification is never scoped to a client, so it always has a daily cap.
+    if (dailyLimit && action !== 'login')
+      await this.consume(`account-daily:${action}`, email, ...dailyLimit);
   }
 
   /**
@@ -118,7 +133,7 @@ export class AuthRateLimitService {
         {
           statusCode: HttpStatus.TOO_MANY_REQUESTS,
           code: 'AUTH_RATE_LIMITED',
-          message: 'Too many authentication requests. Please try again later.',
+          message: 'Too many requests. Please try again later.',
           retryAfterSeconds: bucket
             ? Math.max(
                 1,

@@ -1,11 +1,16 @@
 import {
+  IsByteLength,
   IsEmail,
   IsNotEmpty,
   IsString,
   Length,
   Matches,
-  MinLength,
 } from 'class-validator';
+import {
+  PASSWORD_LENGTH_MESSAGE,
+  PASSWORD_MAX_BYTES,
+  PASSWORD_MIN_BYTES,
+} from '../password-policy';
 
 export class ResetPasswordDto {
   @IsNotEmpty({ message: 'Email address is required.' })
@@ -19,7 +24,9 @@ export class ResetPasswordDto {
   otp!: string;
 
   @IsNotEmpty({ message: 'New password is required.' })
-  @MinLength(8, { message: 'New password must be at least 8 characters long.' })
+  @IsByteLength(PASSWORD_MIN_BYTES, PASSWORD_MAX_BYTES, {
+    message: PASSWORD_LENGTH_MESSAGE,
+  })
   @IsString()
   newPassword!: string;
 }

@@ -1,8 +1,18 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { WaitlistService } from './waitlist.service';
 import { CreateWaitlistDto } from './dto/create-waitlist.dto';
+import { WaitlistRateLimitGuard } from './waitlist-rate-limit.guard';
 
 @Controller(['waitlist', 'api/waitlist'])
+@UseGuards(WaitlistRateLimitGuard)
 export class WaitlistController {
   constructor(private readonly waitlistService: WaitlistService) {}
 

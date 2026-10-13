@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EncryptionService } from './encryption.service';
+import { EncryptionService, encryptionContext } from './encryption.service';
 
 describe('EncryptionService', () => {
   let service: EncryptionService;
@@ -64,5 +64,49 @@ describe('EncryptionService', () => {
     expect(() => service.encrypt(Buffer.from('new'))).toThrow(
       'keyring is invalid',
     );
+  });
+
+  it('rejects truncated authentication tags', () => {
+    const encrypted = service.encrypt(Buffer.from('confidential'));
+    const tag = Buffer.from(encrypted.authTag, 'base64');
+    expect(() =>
+      service.decrypt({
+        ...encrypted,
+        authTag: tag.subarray(0, 4).toString('base64'),
+      }),
+    ).toThrow('malformed');
+    expect(() =>
+      service.decrypt({
+        ...encrypted,
+        keyAuthTag: tag.subarray(0, 12).toString('base64'),
+      }),
+    ).toThrow('malformed');
+  });
+
+  it('binds ciphertext to the vault and purpose it was written for', () => {
+    const context = encryptionContext('vault-a', 'description');
+    const encrypted = service.encrypt(Buffer.from('bank PIN'), context);
+    expect(encrypted.aad).toBe(1);
+    expect(service.decrypt(encrypted, context).toString()).toBe('bank PIN');
+    // Copied into another vault, used for another purpose, or stripped of its
+    // marker, the record no longer opens.
+    expect(() =>
+      service.decrypt(encrypted, encryptionContext('vault-b', 'description')),
+    ).toThrow();
+    expect(() =>
+      service.decrypt(encrypted, encryptionContext('vault-a', 'title')),
+    ).toThrow();
+    expect(() => service.decrypt(encrypted)).toThrow('context is invalid');
+    expect(() =>
+      service.decrypt({ ...encrypted, aad: undefined }, context),
+    ).toThrow();
+  });
+
+  it('still opens envelopes written before context binding', () => {
+    const legacy = service.encrypt(Buffer.from('older record'));
+    expect(legacy).not.toHaveProperty('aad');
+    expect(
+      service.decrypt(legacy, encryptionContext('vault-a', 'title')).toString(),
+    ).toBe('older record');
   });
 });

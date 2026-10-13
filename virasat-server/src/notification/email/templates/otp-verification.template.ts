@@ -22,7 +22,8 @@ export function renderOtpVerificationTemplate(
         ? 'sign in verification'
         : 'account registration';
 
-  const subject = `${data.otpCode} is your Virasat verification code`;
+  // Never put the code in the subject: subjects appear in logs and lock screens.
+  const subject = 'Your Virasat verification code';
 
   // HTML content
   const contentHtml = `
@@ -98,7 +99,7 @@ export function renderOtpVerificationTemplate(
   `;
 
   const html = wrapInEmailLayout({
-    preheader: `Your Virasat verification code is ${data.otpCode}. It expires in ${expiryMinutes} minutes.`,
+    preheader: `Enter this code in the Virasat app. It expires in ${expiryMinutes} minutes.`,
     title: subject,
     contentHtml,
     securityNotice:

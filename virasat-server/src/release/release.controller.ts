@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -14,6 +15,11 @@ import { UpdatePolicyDto } from './dto/update-policy.dto';
 import { ReleaseService } from './release.service';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserRateLimit } from '../auth/guards/user-rate-limit.guard';
+
+// Release actions are unavailable and only record a denied audit event; bound
+// how many events one account can write.
+const releaseDenials = () => UserRateLimit('release-denied', 30, 60 * 60);
 
 import { CreateReleaseCaseDto } from './dto/create-release-case.dto';
 import { ReviewReleaseCaseDto } from './dto/review-release-case.dto';
@@ -53,7 +59,7 @@ export class ReleaseController {
   }
 
   @Get('cases/:id')
-  async getCase(@Req() req: any, @Param('id') caseId: string) {
+  async getCase(@Req() req: any, @Param('id', ParseUUIDPipe) caseId: string) {
     return this.releaseService.getCase(req.user.id, caseId);
   }
 
@@ -62,9 +68,10 @@ export class ReleaseController {
   // -----------------------------
 
   @Patch('cases/:id/review')
+  @releaseDenials()
   async reviewCase(
     @Req() req: any,
-    @Param('id') caseId: string,
+    @Param('id', ParseUUIDPipe) caseId: string,
     @Body() dto: ReviewReleaseCaseDto,
   ) {
     return this.releaseService.reviewCase(req.user.id, caseId, dto);
@@ -75,9 +82,10 @@ export class ReleaseController {
   // -----------------------------
 
   @Post('cases/:id/authorize')
+  @releaseDenials()
   async authorize(
     @Req() req: any,
-    @Param('id') caseId: string,
+    @Param('id', ParseUUIDPipe) caseId: string,
     @Body() dto: AuthorizeReleaseDto,
   ) {
     return this.releaseService.authorizeRelease(req.user.id, caseId, dto);
@@ -88,8 +96,9 @@ export class ReleaseController {
   // -----------------------------
 
   @Get('authorization/:recipientId')
+  @releaseDenials()
   async verifyAuthorization(
-    @Param('recipientId')
+    @Param('recipientId', ParseUUIDPipe)
     recipientId: string,
   ) {
     return this.releaseService.verifyAuthorization(recipientId);
@@ -100,7 +109,7 @@ export class ReleaseController {
   // -----------------------------
 
   @Patch('cases/:id/close')
-  async closeCase(@Req() req: any, @Param('id') caseId: string) {
+  async closeCase(@Req() req: any, @Param('id', ParseUUIDPipe) caseId: string) {
     return this.releaseService.closeCase(req.user.id, caseId);
   }
 }

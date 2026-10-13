@@ -58,7 +58,9 @@ export class StorageService {
       const errorMsg =
         'AWS S3 is not configured. Direct S3 storage is required for all vault files. Configure AWS_S3_BUCKET_NAME and an AWS credential provider or a complete access key pair.';
       this.logger.error(errorMsg);
-      throw new ServiceUnavailableException(errorMsg);
+      throw new ServiceUnavailableException(
+        'File storage is temporarily unavailable. Please try again later.',
+      );
     }
 
     const fileId = randomUUID();
@@ -97,8 +99,9 @@ export class StorageService {
     } catch (error: any) {
       const failureMsg = `Direct S3 upload failed for key '${s3Key}': ${error?.message || error}`;
       this.logger.error(failureMsg, error?.stack);
+      // Storage details stay in server logs; clients get a generic message.
       throw new BadGatewayException(
-        `AWS S3 Upload Failed: ${error?.message || 'Unable to store file in AWS S3. Please verify bucket permissions.'}`,
+        'The file could not be stored. Please try again later.',
       );
     }
   }
@@ -119,8 +122,11 @@ export class StorageService {
           await this.s3StorageService.downloadEncryptedCiphertext(cleanKey);
         return s3Result.ciphertext;
       } catch (error: any) {
+        this.logger.error(
+          `S3 download failed for '${cleanKey}': ${error?.message || error}`,
+        );
         throw new BadGatewayException(
-          `Failed to retrieve document from AWS S3: ${error?.message || 'S3 download failed'}`,
+          'The file could not be retrieved. Please try again later.',
         );
       }
     }

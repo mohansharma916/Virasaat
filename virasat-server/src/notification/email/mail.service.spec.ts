@@ -99,7 +99,9 @@ describe('MailService', () => {
     });
 
     it('should handle sendMail failure gracefully', async () => {
-      mockSendMail.mockRejectedValueOnce(new Error('SMTP connection timed out'));
+      mockSendMail.mockRejectedValueOnce(
+        new Error('SMTP connection timed out'),
+      );
 
       const result = await service.sendMail({
         to: 'recipient@example.com',

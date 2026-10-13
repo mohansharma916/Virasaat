@@ -103,4 +103,26 @@ describe('Authentication rate limiting', () => {
       response: expect.objectContaining({ code: 'OTP_RESEND_COOLDOWN' }),
     });
   });
+
+  it('caps reset-code guesses per day so a slow attacker cannot rotate codes indefinitely', async () => {
+    const buckets = new Map<string, number>();
+    const query = jest.fn(async (sql: string, params: [string, number]) => {
+      if (sql.startsWith('DELETE')) return [];
+      const count = (buckets.get(params[0]) ?? 0) + 1;
+      buckets.set(params[0], count);
+      return [{ count, expiresAt: new Date(Date.now() + 60000) }];
+    });
+    const service = new AuthRateLimitService({ query } as never);
+    for (let index = 0; index < 10; index++)
+      await service.checkAccount('reset-verify', 'owner@example.test');
+    // The 15-minute window still allows 20, but the daily ceiling is reached.
+    await expect(
+      service.checkAccount('reset-verify', 'owner@example.test'),
+    ).rejects.toMatchObject({ status: 429 });
+    const daily = query.mock.calls.find(
+      ([sql, params]: [string, [string, number]]) =>
+        sql.startsWith('INSERT') && params[1] === 86400,
+    );
+    expect(daily).toBeDefined();
+  });
 });

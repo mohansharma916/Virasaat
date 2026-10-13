@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -28,7 +29,10 @@ export class RecipientsController {
   }
 
   @Post(':id/invite')
-  async invite(@Req() req: { user: { id: string } }, @Param('id') id: string) {
+  async invite(
+    @Req() req: { user: { id: string } },
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.recipientsService.invite(req.user.id, id);
   }
 
@@ -38,21 +42,21 @@ export class RecipientsController {
   }
 
   @Get(':id')
-  async findOne(@Req() req: any, @Param('id') id: string) {
+  async findOne(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.recipientsService.findOne(req.user.id, id);
   }
 
   @Patch(':id')
   async update(
     @Req() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateRecipientDto,
   ) {
     return this.recipientsService.update(req.user.id, id, dto);
   }
 
   @Delete(':id')
-  async revoke(@Req() req: any, @Param('id') id: string) {
+  async revoke(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.recipientsService.revoke(req.user.id, id);
   }
 }

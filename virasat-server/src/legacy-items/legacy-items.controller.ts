@@ -5,6 +5,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -26,6 +27,7 @@ import { CreateLegacyItemDto } from './dto/create-legacy-item.dto';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserRateLimit } from '../auth/guards/user-rate-limit.guard';
 
 @Controller('vault/items')
 @UseGuards(JwtAuthGuard)
@@ -91,6 +93,8 @@ export class LegacyItemsController {
    * Migrates local disk files and creates encrypted backups of all items in S3.
    */
   @Post('sync-s3')
+  // Re-reads and decrypts the whole vault, so each account may run it rarely.
+  @UserRateLimit('vault-sync-s3', 3, 60 * 60)
   async syncAllToS3(@Req() req: any) {
     return this.legacyItemsService.syncAllVaultItemsToS3(req.user.id);
   }
@@ -124,7 +128,7 @@ export class LegacyItemsController {
   @Patch(':id/assignment')
   async assign(
     @Req() req: { user: { id: string } },
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignItemDto,
   ) {
     return this.safeItem(
@@ -153,7 +157,7 @@ export class LegacyItemsController {
   @Get(':id/file')
   async downloadFile(
     @Req() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Res() res: Response,
   ) {
     const fileResult = await this.legacyItemsService.downloadFile(
@@ -177,19 +181,19 @@ export class LegacyItemsController {
    * Get S3 storage status, location, and checksum integrity info for a vault item.
    */
   @Get(':id/s3-status')
-  async getS3Status(@Req() req: any, @Param('id') id: string) {
+  async getS3Status(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.legacyItemsService.getItemS3Status(req.user.id, id);
   }
 
   @Get(':id')
-  async findOne(@Req() req: any, @Param('id') id: string) {
+  async findOne(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
     return this.legacyItemsService.findOne(req.user.id, id);
   }
 
   @Patch(':id')
   async update(
     @Req() req: { user: { id: string } },
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateLegacyItemDto,
   ) {
     return this.legacyItemsService.update(req.user.id, id, dto);

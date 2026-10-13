@@ -98,8 +98,21 @@ jobs:
       - name: Build
         run: npm run build
 
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan history for committed secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.18.4 \
+            detect --source /repo --redact --no-banner
+
   deploy:
-    needs: [test, test-mobile, test-website]
+    needs: [test, test-mobile, test-website, secret-scan]
     runs-on: ubuntu-latest
 
     steps:
@@ -111,14 +124,20 @@ jobs:
 
           chmod 600 ~/.ssh/deploy_key
 
-          ssh-keyscan -H \
-            "${{ secrets.SERVER_HOST }}" \
-            >> ~/.ssh/known_hosts
+          # Pin the server's host key so a spoofed host cannot receive the
+          # deploy session. Generate the value once with: ssh-keyscan -H <host>
+          if [ -n "${{ secrets.SERVER_SSH_KNOWN_HOSTS }}" ]; then
+            echo "${{ secrets.SERVER_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          else
+            echo "::warning::SERVER_SSH_KNOWN_HOSTS is not set; trusting the host key on first use."
+            ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+          fi
 
       - name: Deploy
         run: |
           ssh \
             -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" << 'EOF'
 
               set -e

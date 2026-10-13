@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /virasat-server
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /Virasat-MobileApp
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Expo pins compatible versions; upgrade the SDK deliberately instead.
+    ignore:
+      - dependency-name: "expo*"
+      - dependency-name: "react-native*"
+      - dependency-name: "react"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

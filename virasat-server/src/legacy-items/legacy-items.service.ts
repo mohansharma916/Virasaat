@@ -11,6 +11,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,7 +24,10 @@ import {
 } from './entities/legacy-item.entity';
 
 import { VaultService } from '../vault/vault.service';
-import { EncryptionService } from '../encryption/encryption.service';
+import {
+  EncryptionService,
+  encryptionContext,
+} from '../encryption/encryption.service';
 import { StorageService } from '../storage/storage.service';
 import { S3StorageService } from '../storage/s3-storage.service';
 import { Optional } from '@nestjs/common';
@@ -82,6 +86,7 @@ interface StoredEnvelope {
   algorithm?: string;
   keyVersion?: string;
   ciphertext?: string;
+  aad?: number;
 }
 interface ItemKeyRef extends StoredEnvelope {
   storageType?: PayloadStorageType;
@@ -135,7 +140,10 @@ export class LegacyItemsService {
     const vault = await this.vaultService.getUserVault(userId);
 
     const encryptedDescription = data.description
-      ? this.encryptionService.encrypt(Buffer.from(data.description, 'utf8'))
+      ? this.encryptionService.encrypt(
+          Buffer.from(data.description, 'utf8'),
+          encryptionContext(vault.id, 'description'),
+        )
       : null;
 
     const item = this.itemRepository.create({
@@ -145,7 +153,7 @@ export class LegacyItemsService {
 
       type: data.type,
       category: data.category,
-      title: this.sealTitle(data.title),
+      title: this.sealTitle(data.title, vault.id),
       // Sensitive item details are encrypted before persistence. The list
       // endpoint intentionally returns metadata only, not plaintext.
       description: null,
@@ -164,6 +172,7 @@ export class LegacyItemsService {
             iv: encryptedDescription.iv,
             authTag: encryptedDescription.authTag,
             algorithm: encryptedDescription.algorithm,
+            aad: encryptedDescription.aad,
           })
         : null,
 
@@ -218,7 +227,10 @@ export class LegacyItemsService {
       mimeType.startsWith('video/') ||
       this.looksLikeVideo(fileBuffer);
 
-    const encryptedFile = this.encryptionService.encrypt(fileBuffer);
+    const encryptedFile = this.encryptionService.encrypt(
+      fileBuffer,
+      encryptionContext(vault.id, 'file'),
+    );
 
     const savedStorage = await this.storageService.saveVaultItemFile({
       vaultId: vault.id,
@@ -229,11 +241,13 @@ export class LegacyItemsService {
     });
 
     const encryptedDescription = data.description
-      ? this.encryptInline(data.description)
+      ? this.encryptInline(data.description, vault.id, 'description')
       : null;
     const fileMetadata = file?.originalname
       ? this.encryptInline(
           JSON.stringify({ fileName: this.safeFileName(file.originalname) }),
+          vault.id,
+          'file-metadata',
         )
       : undefined;
 
@@ -243,7 +257,7 @@ export class LegacyItemsService {
       requestHash: this.requestHash(data, fileBuffer),
       type: data.type,
       category: data.category,
-      title: this.sealTitle(data.title),
+      title: this.sealTitle(data.title, vault.id),
       description: null,
       ciphertextRef: savedStorage.storageKey,
       encryptionKeyRef: JSON.stringify({
@@ -254,6 +268,7 @@ export class LegacyItemsService {
         iv: encryptedFile.iv,
         authTag: encryptedFile.authTag,
         algorithm: encryptedFile.algorithm,
+        aad: encryptedFile.aad,
         mimeType,
         storageType: savedStorage.storageType,
         storageKey: savedStorage.storageKey,
@@ -410,16 +425,17 @@ export class LegacyItemsService {
     return false;
   }
 
-  private sealTitle(title: string) {
+  private sealTitle(title: string, vaultId: string) {
     return (
       SEALED_TITLE_PREFIX +
-      Buffer.from(JSON.stringify(this.encryptInline(title)), 'utf8').toString(
-        'base64',
-      )
+      Buffer.from(
+        JSON.stringify(this.encryptInline(title, vaultId, 'title')),
+        'utf8',
+      ).toString('base64')
     );
   }
 
-  private openTitle(stored: string) {
+  private openTitle(stored: string, vaultId: string) {
     if (!stored?.startsWith(SEALED_TITLE_PREFIX)) return stored;
     try {
       const envelope = JSON.parse(
@@ -428,14 +444,14 @@ export class LegacyItemsService {
           'base64',
         ).toString('utf8'),
       ) as StoredEnvelope;
-      return this.decryptInline(envelope, null);
+      return this.decryptInline(envelope, null, vaultId, 'title');
     } catch {
       throw new BadRequestException('Invalid encrypted item title.');
     }
   }
 
   private withPlainTitle<T extends LegacyItem>(item: T): T {
-    return { ...item, title: this.openTitle(item.title) };
+    return { ...item, title: this.openTitle(item.title, item.vaultId) };
   }
 
   async assign(userId: string, itemId: string, dto: AssignItemDto) {
@@ -604,9 +620,14 @@ export class LegacyItemsService {
     return 'LOCAL';
   }
 
-  private encryptInline(value: string): StoredEnvelope {
+  private encryptInline(
+    value: string,
+    vaultId: string,
+    purpose: string,
+  ): StoredEnvelope {
     const encrypted = this.encryptionService.encrypt(
       Buffer.from(value, 'utf8'),
+      encryptionContext(vaultId, purpose),
     );
     return {
       ...encrypted,
@@ -618,17 +639,24 @@ export class LegacyItemsService {
     envelope: StoredEnvelope,
     ciphertext: Buffer,
     fallbackVersion: string | null,
+    vaultId: string,
+    purpose: string,
   ): Buffer {
-    return this.encryptionService.decrypt({
-      ...envelope,
-      ciphertext,
-      keyVersion: envelope.keyVersion || fallbackVersion || 'v1',
-    });
+    return this.encryptionService.decrypt(
+      {
+        ...envelope,
+        ciphertext,
+        keyVersion: envelope.keyVersion || fallbackVersion || 'v1',
+      },
+      encryptionContext(vaultId, purpose),
+    );
   }
 
   private decryptInline(
     envelope: StoredEnvelope,
     fallbackVersion: string | null,
+    vaultId: string,
+    purpose: string,
   ): string {
     if (typeof envelope.ciphertext !== 'string')
       throw new BadRequestException('Invalid encrypted item details.');
@@ -636,6 +664,8 @@ export class LegacyItemsService {
       envelope,
       Buffer.from(envelope.ciphertext, 'base64'),
       fallbackVersion,
+      vaultId,
+      purpose,
     ).toString('utf8');
   }
 
@@ -676,19 +706,28 @@ export class LegacyItemsService {
         keyRef,
         Buffer.from(item.ciphertextRef, 'base64'),
         item.encryptionKeyVersion,
+        item.vaultId,
+        'description',
       ).toString('utf8');
     } else if (keyRef.description) {
       description = this.decryptInline(
         keyRef.description,
         item.encryptionKeyVersion,
+        item.vaultId,
+        'description',
       );
     }
     const hasFile = storageType !== 'INLINE_DB' && Boolean(item.ciphertextRef);
-    const title = this.openTitle(item.title);
+    const title = this.openTitle(item.title, item.vaultId);
     let fileName: string | null = hasFile ? this.safeFileName(title) : null;
     if (hasFile && keyRef.fileMetadata) {
       const metadata: unknown = JSON.parse(
-        this.decryptInline(keyRef.fileMetadata, item.encryptionKeyVersion),
+        this.decryptInline(
+          keyRef.fileMetadata,
+          item.encryptionKeyVersion,
+          item.vaultId,
+          'file-metadata',
+        ),
       );
       if (
         metadata &&
@@ -730,10 +769,14 @@ export class LegacyItemsService {
       const keyRef = this.keyRef(item);
       item.payloadStorageType = this.storageType(item, keyRef);
       if (dto.title !== undefined)
-        item.title = this.sealTitle(dto.title.trim());
+        item.title = this.sealTitle(dto.title.trim(), item.vaultId);
       if (dto.description !== undefined) {
         if (item.payloadStorageType === 'INLINE_DB') {
-          const encrypted = this.encryptInline(dto.description);
+          const encrypted = this.encryptInline(
+            dto.description,
+            item.vaultId,
+            'description',
+          );
           item.ciphertextRef = encrypted.ciphertext!;
           item.encryptionKeyVersion = encrypted.keyVersion || 'v1';
           item.encryptionKeyRef = JSON.stringify({
@@ -742,7 +785,11 @@ export class LegacyItemsService {
             storageType: 'INLINE_DB',
           });
         } else {
-          keyRef.description = this.encryptInline(dto.description);
+          keyRef.description = this.encryptInline(
+            dto.description,
+            item.vaultId,
+            'description',
+          );
           item.encryptionKeyRef = JSON.stringify(keyRef);
         }
         item.description = null;
@@ -779,6 +826,8 @@ export class LegacyItemsService {
       keyRef,
       ciphertext,
       item.encryptionKeyVersion,
+      item.vaultId,
+      'file',
     );
     const detail = this.ownerDetail(item);
 
@@ -801,8 +850,8 @@ export class LegacyItemsService {
     const vault = await this.vaultService.getUserVault(userId);
 
     if (!this.storageService.isS3Enabled()) {
-      throw new BadRequestException(
-        'AWS S3 is not configured. Set AWS_S3_BUCKET_NAME and an AWS credential provider or a complete access key pair.',
+      throw new ServiceUnavailableException(
+        'Cloud backup is temporarily unavailable. Please try again later.',
       );
     }
 
@@ -840,10 +889,16 @@ export class LegacyItemsService {
           const ciphertext = await this.storageService.readVaultItemCiphertext(
             item.ciphertextRef,
           );
-          this.decryptEnvelope(keyRef, ciphertext, item.encryptionKeyVersion);
+          this.decryptEnvelope(
+            keyRef,
+            ciphertext,
+            item.encryptionKeyVersion,
+            item.vaultId,
+            'file',
+          );
           results.push({
             itemId: item.id,
-            title: this.openTitle(item.title),
+            title: this.openTitle(item.title, item.vaultId),
             type: item.type,
             action: 'ALREADY_ON_S3',
             s3Key: item.ciphertextRef,
@@ -878,11 +933,13 @@ export class LegacyItemsService {
               currentRef,
               ciphertext,
               current.encryptionKeyVersion,
+              current.vaultId,
+              'file',
             );
             if (currentStorage === 'S3') {
               return {
                 itemId: current.id,
-                title: this.openTitle(current.title),
+                title: this.openTitle(current.title, current.vaultId),
                 type: current.type,
                 action: 'ALREADY_ON_S3' as const,
                 s3Key: current.ciphertextRef!,
@@ -908,7 +965,7 @@ export class LegacyItemsService {
             await repository.save(current);
             return {
               itemId: current.id,
-              title: this.openTitle(current.title),
+              title: this.openTitle(current.title, current.vaultId),
               type: current.type,
               action: 'MIGRATED_TO_S3' as const,
               s3Key: migration.storageKey,
@@ -940,9 +997,13 @@ export class LegacyItemsService {
           'utf8',
         );
 
-        const encryptedBackup = this.encryptionService.encrypt(itemSnapshot);
+        const backupContext = encryptionContext(vault.id, `backup:${item.id}`);
+        const encryptedBackup = this.encryptionService.encrypt(
+          itemSnapshot,
+          backupContext,
+        );
         // A completed sync must retain everything needed to unwrap its data key.
-        this.encryptionService.decrypt(encryptedBackup);
+        this.encryptionService.decrypt(encryptedBackup, backupContext);
         const backupResult = await this.storageService.backupItemPayloadToS3({
           vaultId: vault.id,
           itemId: item.id,
@@ -966,12 +1027,13 @@ export class LegacyItemsService {
             algorithm: encryptedBackup.algorithm,
             keyVersion: encryptedBackup.keyVersion,
             formatVersion: '1',
+            aad: String(encryptedBackup.aad),
           },
         });
 
         results.push({
           itemId: item.id,
-          title: this.openTitle(item.title),
+          title: this.openTitle(item.title, item.vaultId),
           type: item.type,
           action: 'BACKED_UP_TO_S3',
           s3Key: backupResult.key,
@@ -1009,7 +1071,7 @@ export class LegacyItemsService {
 
     return {
       itemId: fullItem.id,
-      title: this.openTitle(fullItem.title),
+      title: this.openTitle(fullItem.title, fullItem.vaultId),
       type: fullItem.type,
       storageType,
       s3Configured: this.storageService.isS3Enabled(),

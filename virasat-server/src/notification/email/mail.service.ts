@@ -1,12 +1,8 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  Optional,
-} from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { maskEmail } from './log-redaction';
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -46,7 +42,8 @@ export class MailService implements OnModuleInit {
    * Initialize nodemailer transport based on environment configuration.
    */
   private initTransporter(): boolean {
-    const service = this.getConfig('SMTP_SERVICE') || this.getConfig('MAIL_SERVICE');
+    const service =
+      this.getConfig('SMTP_SERVICE') || this.getConfig('MAIL_SERVICE');
     const host =
       this.getConfig('SMTP_HOST') ||
       this.getConfig('MAIL_HOST') ||
@@ -146,7 +143,10 @@ export class MailService implements OnModuleInit {
 
     try {
       await this.transporter.verify();
-      return { success: true, message: 'SMTP connection verified successfully' };
+      return {
+        success: true,
+        message: 'SMTP connection verified successfully',
+      };
     } catch (err) {
       return {
         success: false,
@@ -186,7 +186,9 @@ export class MailService implements OnModuleInit {
       service: service || null,
       host: host || null,
       port,
-      user: user ? `${user.substring(0, 3)}***@${user.split('@')[1] || ''}` : null,
+      user: user
+        ? `${user.substring(0, 3)}***@${user.split('@')[1] || ''}`
+        : null,
       defaultFrom: this.getDefaultFrom(),
     };
   }
@@ -218,14 +220,13 @@ export class MailService implements OnModuleInit {
    * Send an email via Nodemailer if configured, or log in mock mode.
    */
   async sendMail(options: SendEmailOptions): Promise<SendEmailResult> {
-    const toAddress = Array.isArray(options.to) ? options.to.join(', ') : options.to;
+    // Subjects can carry codes or names; log only a masked destination.
+    const toAddress = maskEmail(options.to);
     const fromAddress = options.from || this.getDefaultFrom();
 
     // If transporter is not configured or failed to create, log mock dispatch
     if (!this.transporter) {
-      this.logger.log(
-        `📬 [MOCK EMAIL] (SMTP not configured) To: ${toAddress} | Subject: "${options.subject}"`,
-      );
+      this.logger.log(`📬 [MOCK EMAIL] (SMTP not configured) To: ${toAddress}`);
       return {
         success: true,
         mock: true,
@@ -233,9 +234,7 @@ export class MailService implements OnModuleInit {
     }
 
     try {
-      this.logger.log(
-        `🚀 [MailService] Sending email to ${toAddress} | Subject: "${options.subject}" | From: ${fromAddress}`,
-      );
+      this.logger.log(`🚀 [MailService] Sending email to ${toAddress}`);
 
       const info = await this.transporter.sendMail({
         from: fromAddress,
@@ -274,9 +273,7 @@ export class MailService implements OnModuleInit {
 
   private getConfig(key: string): string | undefined {
     return (
-      this.configService?.get<string>(key) ||
-      process.env[key] ||
-      undefined
+      this.configService?.get<string>(key) || process.env[key] || undefined
     );
   }
 }

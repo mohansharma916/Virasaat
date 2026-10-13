@@ -12,10 +12,10 @@ async function main() {
   for (const key of ['DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE']) {
     if (!process.env[key]) throw new Error(`Missing ${key}`);
   }
-  const { EncryptionService } = require('../dist/encryption/encryption.service');
+  const { EncryptionService, encryptionContext } = require('../dist/encryption/encryption.service');
   const encryption = new EncryptionService();
-  const seal = (title) => {
-    const encrypted = encryption.encrypt(Buffer.from(title, 'utf8'));
+  const seal = (title, vaultId) => {
+    const encrypted = encryption.encrypt(Buffer.from(title, 'utf8'), encryptionContext(vaultId, 'title'));
     const envelope = { ...encrypted, ciphertext: encrypted.ciphertext.toString('base64') };
     return SEALED_TITLE_PREFIX + Buffer.from(JSON.stringify(envelope), 'utf8').toString('base64');
   };
@@ -33,10 +33,10 @@ async function main() {
     await client.connect();
     await client.query('BEGIN');
     const { rows } = await client.query(
-      `SELECT id, title FROM legacy_items WHERE title NOT LIKE '${SEALED_TITLE_PREFIX}%' FOR UPDATE`,
+      `SELECT id, "vaultId", title FROM legacy_items WHERE title NOT LIKE '${SEALED_TITLE_PREFIX}%' FOR UPDATE`,
     );
     for (const row of rows) {
-      await client.query('UPDATE legacy_items SET title = $1 WHERE id = $2', [seal(row.title), row.id]);
+      await client.query('UPDATE legacy_items SET title = $1 WHERE id = $2', [seal(row.title, row.vaultId), row.id]);
     }
     await client.query('COMMIT');
     console.log(`Encrypted ${rows.length} vault item title(s).`);

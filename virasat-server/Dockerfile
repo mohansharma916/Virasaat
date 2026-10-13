@@ -27,4 +27,7 @@ COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 3000
 
+# Run without root privileges inside the container.
+USER node
+
 CMD ["node", "dist/main.js"]

@@ -1,6 +1,8 @@
 import {
+  HttpException,
   Injectable,
   Logger,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,8 +11,18 @@ import { ConfigService } from '@nestjs/config';
 
 import { Waitlist } from './entities/waitlist.entity';
 import { CreateWaitlistDto } from './dto/create-waitlist.dto';
-import { MailService } from '../notification/email/mail.service';
+import {
+  MailService,
+  type SendEmailResult,
+} from '../notification/email/mail.service';
 import { escapeHtml } from '../notification/email/email-layout';
+import { maskEmail } from '../notification/email/log-redaction';
+import { AuthRateLimitService } from '../auth/auth-rate-limit.service';
+
+// Outbound waitlist mail per hour across all clients. Beyond this, signups are
+// still recorded but no email is sent, so a botnet cannot burn the sender's
+// reputation (which would also block sign-in codes).
+const WAITLIST_MAIL_PER_HOUR = 200;
 
 @Injectable()
 export class WaitlistService {
@@ -21,6 +33,8 @@ export class WaitlistService {
     private readonly waitlistRepo: Repository<Waitlist>,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
+    @Optional()
+    private readonly rateLimiter?: AuthRateLimitService,
   ) {}
 
   async joinWaitlist(dto: CreateWaitlistDto) {
@@ -77,7 +91,9 @@ export class WaitlistService {
     const savedRecord = registration.record;
     const queueNumber = savedRecord.queueNumber;
     if (registration.alreadyRegistered) {
-      this.logger.log(`User already on waitlist: ${email} (#${queueNumber})`);
+      this.logger.log(
+        `User already on waitlist: ${maskEmail(email)} (#${queueNumber})`,
+      );
       return {
         success: true,
         alreadyRegistered: true,
@@ -88,7 +104,7 @@ export class WaitlistService {
     }
 
     this.logger.log(
-      `New waitlist entry created in DB: ${email} (#${queueNumber})`,
+      `New waitlist entry created in DB: ${maskEmail(email)} (#${queueNumber})`,
     );
 
     const htmlEmail = escapeHtml(email);
@@ -101,17 +117,29 @@ export class WaitlistService {
       fullName ? fullName.split(' ')[0] : 'friend',
     );
 
+    if (!(await this.withinMailBudget())) {
+      this.logger.warn(
+        'Waitlist email budget reached; registration saved without email.',
+      );
+      return {
+        success: true,
+        queueNumber,
+        message: 'You have been added to the waitlist!',
+      };
+    }
+
     // 4. Dispatch Email Notifications
-    const adminEmail =
-      this.configService.get<string>('ADMIN_EMAIL') ||
-      'mohansharma916@gmail.com';
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL')?.trim();
+    if (!adminEmail)
+      this.logger.warn('ADMIN_EMAIL is not set; skipping admin notification.');
 
     // 4a. Notification to Admin
-    const adminMailPromise = this.mailService
-      .sendMail({
-        to: adminEmail,
-        subject: `🎉 New Waitlist Signup #${queueNumber}: ${email}`,
-        html: `
+    const adminMailPromise = (
+      adminEmail
+        ? this.mailService.sendMail({
+            to: adminEmail,
+            subject: `🎉 New Waitlist Signup #${queueNumber}: ${email}`,
+            html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #d4e3dc; border-radius: 12px; background: #ffffff;">
             <div style="background: #0B5D4B; padding: 18px; border-radius: 8px; text-align: center; color: #ffffff;">
               <h2 style="margin: 0; font-size: 22px;">New Waitlist Signup!</h2>
@@ -154,9 +182,11 @@ export class WaitlistService {
             </div>
           </div>
         `,
-      })
-      .then((res) => {
-        if (res.success && !res.mock) savedRecord.emailSentToAdmin = true;
+          })
+        : Promise.resolve(null)
+    )
+      .then((res: SendEmailResult | null) => {
+        if (res?.success && !res.mock) savedRecord.emailSentToAdmin = true;
       })
       .catch((err: unknown) => {
         this.logger.error(
@@ -234,6 +264,23 @@ export class WaitlistService {
       queueNumber,
       message: 'You have been added to the waitlist!',
     };
+  }
+
+  private async withinMailBudget(): Promise<boolean> {
+    if (!this.rateLimiter) return true;
+    try {
+      await this.rateLimiter.consume(
+        'waitlist-mail',
+        'global',
+        WAITLIST_MAIL_PER_HOUR,
+        60 * 60,
+      );
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() === 429)
+        return false;
+      throw error;
+    }
   }
 
   private baseStart(): number {

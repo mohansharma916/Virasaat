@@ -4,7 +4,10 @@ jest.mock('@nestjs/typeorm', () => ({
 }));
 jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 
-import { EncryptionService } from '../encryption/encryption.service';
+import {
+  EncryptionService,
+  encryptionContext,
+} from '../encryption/encryption.service';
 import { LegacyItemsService } from './legacy-items.service';
 import { LegacyItemsController } from './legacy-items.controller';
 import { LegacyItem, LegacyItemType } from './entities/legacy-item.entity';
@@ -259,12 +262,23 @@ describe('owner vault recovery', () => {
     expect(request.encryptedPayload.toString('utf8')).not.toContain(
       'Sensitive reference',
     );
+    const backup = {
+      ...backupEnvelope,
+      ciphertext: Buffer.from(backupEnvelope.ciphertext, 'base64'),
+    };
+    // Backups are bound to their vault and item.
+    expect(() =>
+      encryption.decrypt(
+        backup,
+        encryptionContext('another-vault', `backup:${created.id}`),
+      ),
+    ).toThrow();
     const restored = JSON.parse(
       encryption
-        .decrypt({
-          ...backupEnvelope,
-          ciphertext: Buffer.from(backupEnvelope.ciphertext, 'base64'),
-        })
+        .decrypt(
+          backup,
+          encryptionContext(created.vaultId, `backup:${created.id}`),
+        )
         .toString('utf8'),
     );
     expect(restored).toMatchObject({
@@ -274,11 +288,14 @@ describe('owner vault recovery', () => {
     const envelope = JSON.parse(restored.encryptionKeyRef);
     expect(
       encryption
-        .decrypt({
-          ...envelope,
-          ciphertext: Buffer.from(restored.ciphertextRef, 'base64'),
-          keyVersion: restored.encryptionKeyVersion,
-        })
+        .decrypt(
+          {
+            ...envelope,
+            ciphertext: Buffer.from(restored.ciphertextRef, 'base64'),
+            keyVersion: restored.encryptionKeyVersion,
+          },
+          encryptionContext(created.vaultId, 'description'),
+        )
         .toString(),
     ).toBe('Sensitive reference');
   });

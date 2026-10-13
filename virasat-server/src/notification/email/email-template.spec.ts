@@ -33,9 +33,16 @@ describe('EmailTemplateService', () => {
         purpose: 'SIGNUP',
       });
 
-      expect(rendered.subject).toContain('654321');
+      // The code is in the body only, never in the subject or inbox preview.
+      expect(rendered.subject).not.toContain('654321');
       expect(rendered.subject).toContain('Virasat verification code');
-      expect(rendered.html).toContain('654321');
+      expect(rendered.text).toContain('654321');
+      const digits = [
+        ...rendered.html.matchAll(/class="otp-digit"[^>]*>\s*(\d)\s*</g),
+      ].map((match) => match[1]);
+      expect(digits.join('')).toBe('654321');
+      expect(rendered.html).not.toMatch(/<title>[^<]*654321/);
+      expect(rendered.html).not.toContain('verification code is 654321');
       expect(rendered.html).toContain('Aarav Patel');
       expect(rendered.html).toContain('10 minutes');
       expect(rendered.html).toContain('Server-Managed Encryption');

@@ -3,6 +3,7 @@ jest.mock('@nestjs/typeorm', () => ({
 }));
 jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 
+import { HttpException } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { WaitlistService } from './waitlist.service';
 import { Waitlist } from './entities/waitlist.entity';
@@ -10,7 +11,10 @@ import { CreateWaitlistDto } from './dto/create-waitlist.dto';
 import type { SendEmailOptions } from '../notification/email/mail.service';
 import { wrapInEmailLayout } from '../notification/email/email-layout';
 
-function fixture(mockMail = false) {
+function fixture(
+  mockMail = false,
+  options: { adminEmail?: string | null; rateLimiter?: unknown } = {},
+) {
   const rows = new Map<string, Waitlist>();
   const locks: string[] = [];
   let tail = Promise.resolve();
@@ -96,8 +100,13 @@ function fixture(mockMail = false) {
     { sendMail } as never,
     {
       get: (key: string) =>
-        key === 'ADMIN_EMAIL' ? 'admin@example.test' : undefined,
+        key === 'ADMIN_EMAIL'
+          ? options.adminEmail === undefined
+            ? 'admin@example.test'
+            : (options.adminEmail ?? undefined)
+          : undefined,
     } as never,
+    options.rateLimiter as never,
   );
   return {
     service,
@@ -111,6 +120,26 @@ function fixture(mockMail = false) {
 }
 
 describe('Waitlist registration and email safety', () => {
+  it('records signups without email once the hourly mail budget is spent', async () => {
+    const f = fixture(false, {
+      rateLimiter: {
+        consume: () => Promise.reject(new HttpException('limited', 429)),
+      },
+    });
+    const result = await f.service.joinWaitlist({ email: 'late@example.test' });
+    expect(result.success).toBe(true);
+    expect(f.rows.size).toBe(1);
+    expect(f.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('skips the admin notice when no admin address is configured', async () => {
+    const f = fixture(false, { adminEmail: null });
+    await f.service.joinWaitlist({ email: 'new@example.test' });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(f.sendMail).toHaveBeenCalledTimes(1);
+    expect(f.sendMail.mock.calls[0][0].to).toBe('new@example.test');
+  });
+
   it('allocates separate positions for concurrent registrations under the shared database lock', async () => {
     const f = fixture();
     const results = await Promise.all([

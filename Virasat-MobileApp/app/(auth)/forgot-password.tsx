@@ -37,6 +37,7 @@ import { saveAccessToken } from '@/src/storage/auth.storage';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { setSessionUser } from '@/src/store/session.slice';
+import { passwordTooLong } from '@/src/utils/password';
 
 type Step = 'EMAIL_INPUT' | 'RESET_FORM' | 'SUCCESS';
 
@@ -215,6 +216,11 @@ export default function ForgotPasswordScreen() {
 
     if (newPassword.length < 8) {
       setError('Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (passwordTooLong(newPassword)) {
+      setError('Password must be 72 characters or fewer.');
       return;
     }
 

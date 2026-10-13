@@ -53,3 +53,6 @@ tmp/
 # Expo / React Native generated native projects
 Virasat-MobileApp/ios/
 Virasat-MobileApp/android/
+
+# Local security review reports
+/SECURITY_REVIEW_*.md

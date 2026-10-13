@@ -25,6 +25,7 @@ import { getEmailAppLink } from '../notification/email/email-links';
 import { EmailSignup } from './entities/email-signup.entity';
 import { PasswordReset } from './entities/password-reset.entity';
 import { AuthRateLimitService } from './auth-rate-limit.service';
+import { assertPasswordPolicy } from './password-policy';
 
 // Account recovery and signup must answer the same way whether or not an
 // account exists, so these endpoints cannot be used to look up who has a vault.
@@ -67,6 +68,7 @@ export class AuthService {
     client?: string,
   ) {
     const normalizedEmail = this.normalizeEmail(email);
+    assertPasswordPolicy(password, normalizedEmail);
     await this.rateLimiter.checkAccount('signup-send', normalizedEmail, client);
     await this.rateLimiter.checkSendCooldown('signup-send', normalizedEmail);
     const passwordHash = await bcrypt.hash(password, 12);
@@ -263,6 +265,12 @@ export class AuthService {
           avatar: user.avatar ?? payload.picture ?? null,
           emailVerified: true,
         })) ?? user;
+      // Linking changes how the account can be entered; tell the owner.
+      this.sendAccountNotice(user, {
+        alertTitle: 'Google Sign-In linked to your account',
+        alertDescription:
+          'A Google account using this email address was just used to sign in to Virasat, and it can now be used to access your vault. If this was not you, reset your password and contact support immediately.',
+      });
       return this.loginWithUser(user);
     }
     user = await this.usersService.create({
@@ -357,6 +365,7 @@ export class AuthService {
 
   async resetPassword(email: string, otp: string, newPassword: string) {
     const normalizedEmail = this.normalizeEmail(email);
+    assertPasswordPolicy(newPassword, normalizedEmail);
     await this.rateLimiter.checkAccount('reset-verify', normalizedEmail);
     const result = await this.withAccountLock(
       this.passwordResetRepository,

@@ -14,6 +14,7 @@ import {
   NotificationType,
 } from './entities/notification.entity';
 import { EmailTemplateService } from './email/email-template.service';
+import { maskEmail } from './email/log-redaction';
 import {
   EmailTemplateDataMap,
   EmailTemplateType,
@@ -86,7 +87,7 @@ export class NotificationsService {
     const rendered = service.render(options.templateType, options.data);
 
     this.logger.log(
-      `[Email Dispatch] Sending ${options.templateType} to ${options.to} | Subject: "${rendered.subject}"`,
+      `[Email Dispatch] Sending ${options.templateType} to ${maskEmail(options.to)}`,
     );
 
     let deliveryResult: SendEmailResult | undefined;
@@ -164,21 +165,15 @@ export class NotificationsService {
 
   private async sendEmail(notification: Notification) {
     // In development or when transport is not yet provisioned, log gracefully
-    this.logger.log(
-      `[MOCK EMAIL SENT] User ${notification.userId} | Subject: "${notification.subject}"`,
-    );
+    this.logger.log(`[MOCK EMAIL SENT] User ${notification.userId}`);
   }
 
   private async sendPush(notification: Notification) {
-    this.logger.log(
-      `[MOCK PUSH SENT] User ${notification.userId} | Subject: "${notification.subject}"`,
-    );
+    this.logger.log(`[MOCK PUSH SENT] User ${notification.userId}`);
   }
 
   private async sendSms(notification: Notification) {
-    this.logger.log(
-      `[MOCK SMS SENT] User ${notification.userId} | Subject: "${notification.subject}"`,
-    );
+    this.logger.log(`[MOCK SMS SENT] User ${notification.userId}`);
   }
 
   private mapTemplateTypeToNotificationType(
@@ -203,4 +198,3 @@ export class NotificationsService {
     }
   }
 }
-

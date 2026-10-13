@@ -40,12 +40,14 @@ async function bootstrap() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  if (corsOrigins.length === 0 && process.env.NODE_ENV === 'production')
-    console.warn(
-      'CORS_ORIGINS is not set; any browser origin can call the API. Set it to the website origin.',
+  const production = process.env.NODE_ENV === 'production';
+  if (corsOrigins.length === 0 && production)
+    console.error(
+      'CORS_ORIGINS is not set; browser requests are refused. Set it to the website origin.',
     );
   app.enableCors({
-    origin: corsOrigins.length > 0 ? corsOrigins : true,
+    // Fail closed in production; allow any origin only during development.
+    origin: corsOrigins.length > 0 ? corsOrigins : !production,
     credentials: false,
   });
 

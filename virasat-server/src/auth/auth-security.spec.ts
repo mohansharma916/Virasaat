@@ -475,4 +475,60 @@ describe('Authentication security', () => {
       await service.verifyEmail('new@example.test', '123456'),
     ).toMatchObject({ isNewUser: true });
   });
+
+  it('alerts the owner when Google Sign-In is linked to an existing account', async () => {
+    const owner = {
+      id: 'owner-id',
+      email: 'owner@example.test',
+      name: 'Owner',
+      status: UserStatus.ACTIVE,
+      googleId: null,
+      avatar: null,
+      sessionVersion: 0,
+    };
+    const notifications = {
+      sendTemplatedEmail: jest.fn(() => Promise.resolve({})),
+    };
+    const service = new AuthService(
+      {
+        findByGoogleId: () => Promise.resolve(null),
+        findByEmail: () => Promise.resolve(owner),
+        update: (_id: string, changes: object) =>
+          Promise.resolve({ ...owner, ...changes }),
+      } as never,
+      {
+        findByUserId: async () => ({ id: 'vault', readinessScore: 0 }),
+      } as never,
+      new JwtService({ secret: 'local-security-tests-only' }),
+      {
+        getOrThrow: () => 'local-google-client',
+        get: () => undefined,
+      } as never,
+      {} as never,
+      {} as never,
+      { checkAccount: () => Promise.resolve() } as never,
+      notifications as never,
+    );
+    Object.assign(service, {
+      googleClient: {
+        verifyIdToken: () =>
+          Promise.resolve({
+            getPayload: () => ({
+              sub: 'google-sub',
+              email: 'owner@example.test',
+              email_verified: true,
+            }),
+          }),
+      },
+    });
+    await service.googleLogin('id-token');
+    expect(notifications.sendTemplatedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'owner@example.test',
+        data: expect.objectContaining({
+          alertTitle: 'Google Sign-In linked to your account',
+        }),
+      }),
+    );
+  });
 });

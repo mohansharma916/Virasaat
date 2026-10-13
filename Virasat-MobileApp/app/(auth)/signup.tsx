@@ -27,6 +27,7 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { useAppDispatch } from '@/src/store/hooks';
 import { setSessionUser } from '@/src/store/session.slice';
+import { passwordTooLong } from '@/src/utils/password';
 
 export default function SignupScreen() {
   const dispatch = useAppDispatch();
@@ -76,6 +77,8 @@ export default function SignupScreen() {
     } else if (password.length < 8) {
       newErrors.password =
         'Password must contain at least 8 characters.';
+    } else if (passwordTooLong(password)) {
+      newErrors.password = 'Password must be 72 characters or fewer.';
     }
 
     if (!acceptedTerms) {

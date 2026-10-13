@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
 import { ReleaseReason } from '../entities/release-case.entity';
 
@@ -8,5 +8,6 @@ export class CreateReleaseCaseDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(5000)
   evidence?: string;
 }

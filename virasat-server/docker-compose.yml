@@ -34,8 +34,14 @@ services:
       - PORT=${PORT:-3000}
       - DB_PORT=5432
       - DB_SYNCHRONIZE=false
+    # Reachable only through the host's reverse proxy. Exposing the port
+    # publicly would bypass TLS and let callers spoof X-Forwarded-For.
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:${PORT:-3000}"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   postgres_data:
