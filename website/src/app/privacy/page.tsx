@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPolicyPage() {
-  const lastUpdated = 'October 10, 2026';
+  const lastUpdated = 'October 14, 2026';
 
   return (
     <div style={{ background: '#021713', color: 'var(--text-primary)', minHeight: '100vh' }}>
@@ -385,10 +385,10 @@ export default function PrivacyPolicyPage() {
         {/* Section 7 */}
         <section style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '1.45rem', color: 'var(--warm-ivory)', marginBottom: '14px', fontWeight: 700 }}>
-            7. Privacy Requests & Unavailable Account Deletion
+            7. Privacy Requests & Account Deletion
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            You can contact the privacy address below about access, correction, consent withdrawal or deletion. <strong>Automated account deletion is not currently available.</strong> The app does not accept a deletion request it cannot execute.
+            You can contact the privacy address below about access, correction or consent withdrawal. <strong>You can delete your account at any time</strong> in the app under Profile → Delete Account, after confirming your password or Google account. See <Link href="/delete-account/" style={{ color: 'var(--gold-light)' }}>how to delete your account</Link> if you no longer have the app.
           </p>
           <div
             style={{
@@ -401,11 +401,11 @@ export default function PrivacyPolicyPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <Trash2 size={16} color="#D94A4A" />
               <strong style={{ color: '#FFBABA', fontSize: '0.92rem' }}>
-                Account Deletion Is Unavailable
+                What Account Deletion Removes
               </strong>
             </div>
             <p style={{ color: 'var(--warm-ivory)', fontSize: '0.88rem', lineHeight: 1.6, margin: 0 }}>
-              The app currently reports that the deletion lifecycle is not configured and leaves your account unchanged. Contact the privacy address below to discuss a privacy request. A complete deletion workflow must address account records, stored files, retention and backups. The shared server master key is not a per-user key. No automatic purge or immediate cryptographic erasure is currently provided.
+              Deletion is immediate and permanent. It removes your account, profile, vault items and uploaded files, descriptions, trusted people, check-in and release settings, subscription records, notifications and related security records. Each file&apos;s encryption key is stored only with the deleted records, so any copy that remains in storage during cleanup can no longer be decrypted. We keep no backup of deleted vault content. Copies you downloaded or shared yourself are not affected.
             </p>
           </div>
         </section>

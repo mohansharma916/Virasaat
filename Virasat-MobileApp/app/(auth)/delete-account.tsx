@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,54 +15,79 @@ import { api } from '@/src/api/client';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { signInWithGoogle } from '@/src/utils/google-auth';
+import { runWithSystemUi } from '@/src/components/SessionGate';
+import { removeAccessToken } from '@/src/storage/auth.storage';
+import { useAppDispatch } from '@/src/store/hooks';
+import { clearSession } from '@/src/store/session.slice';
+import { clearVaultData } from '@/src/store/vault.slice';
+
+const CONFIRMATION_WORD = 'DELETE';
 
 export default function DeleteAccountScreen() {
   const insets = useSafeAreaInsets();
-  const [loading, setLoading] = useState(true);
+  const dispatch = useAppDispatch();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [retry, setRetry] = useState(0);
+  const busy = useRef(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
+  const confirmed = confirmation.trim().toUpperCase() === CONFIRMATION_WORD;
+
+  const goBack = () =>
+    router.replace({ pathname: '/(auth)/profile', params: { mode: 'edit' } });
+
+  const deleteAccount = async (googleIdToken?: string) => {
+    if (busy.current) return;
+    if (!confirmed) {
+      setError(`Type ${CONFIRMATION_WORD} to confirm.`);
+      return;
+    }
+    if (!googleIdToken && !currentPassword) {
+      setError('Enter your password, or confirm with Google, to delete your account.');
+      return;
+    }
+    busy.current = true;
+    setDeleting(true);
     setError('');
-    setMessage('');
-    api
-      .get<{ status: 'UNAVAILABLE'; message: string }>('/users/me/deletion', {
-        signal: controller.signal,
-      })
-      .then(({ data }) => {
-        if (!controller.signal.aborted) {
-          setMessage(
-            data.status === 'UNAVAILABLE'
-              ? data.message
-              : 'Deletion eligibility could not be confirmed. Your account has not been changed.',
-          );
-        }
-      })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) setError(getApiErrorMessage(reason));
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+    try {
+      await api.post('/users/me/deletion', {
+        confirmation: CONFIRMATION_WORD,
+        ...(googleIdToken ? { googleIdToken } : { currentPassword }),
       });
-    return () => controller.abort();
-  }, [retry]);
+      // The account no longer exists; clear everything stored on this device.
+      await removeAccessToken().catch(() => undefined);
+      dispatch(clearSession());
+      dispatch(clearVaultData());
+      router.replace('/(auth)/welcome' as never);
+    } catch (reason) {
+      setError(getApiErrorMessage(reason, 'Your account could not be deleted. Nothing was changed. Please try again.'));
+    } finally {
+      busy.current = false;
+      setDeleting(false);
+    }
+  };
+
+  const confirmWithGoogle = async () => {
+    if (busy.current) return;
+    if (!confirmed) {
+      setError(`Type ${CONFIRMATION_WORD} to confirm.`);
+      return;
+    }
+    setError('');
+    try {
+      const idToken = await runWithSystemUi(() => signInWithGoogle());
+      if (idToken) await deleteAccount(idToken);
+    } catch (reason) {
+      setError(getApiErrorMessage(reason, 'Google confirmation failed. Try your password instead.'));
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable
-          onPress={() =>
-            router.replace({
-              pathname: '/(auth)/profile',
-              params: { mode: 'edit' },
-            })
-          }
-          hitSlop={12}
-          style={styles.backButton}
-        >
+        <Pressable onPress={goBack} hitSlop={12} style={styles.backButton} accessibilityLabel="Back">
           <Text style={styles.backArrow}>‹</Text>
         </Pressable>
         <Text style={styles.brand}>VIRASAT</Text>
@@ -70,12 +96,13 @@ export default function DeleteAccountScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>CRITICAL ACTION</Text>
           <Text style={styles.title}>Delete Account</Text>
           <Text style={styles.subtitle}>
-            Account deletion is not available in this version. This screen reports availability and does not submit a deletion request.
+            This permanently deletes your Virasat account and everything in your vault.
           </Text>
         </View>
 
@@ -84,78 +111,86 @@ export default function DeleteAccountScreen() {
             <Text style={styles.warningSymbol}>⚠️</Text>
           </View>
           <View style={styles.warningContent}>
-            <Text style={styles.warningTitle}>Permanent Vault Deletion</Text>
+            <Text style={styles.warningTitle}>This cannot be undone</Text>
             <Text style={styles.warningText}>
-              A future deletion service must remove your vault content and account records according to its documented retention policy.
+              Your vault items, uploaded files, messages, trusted people, check-in and release settings are deleted immediately from our servers.
             </Text>
             <Text style={[styles.warningText, { marginTop: 6 }]}>
-              Copies already downloaded or retrieved by authorized recipients cannot be remotely recalled.
+              Copies you have already downloaded or shared are not affected.
             </Text>
           </View>
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Verification & Audit Requirements</Text>
-          <Text style={styles.infoText}>
-            A complete deletion workflow, including identity checks, retention rules, and removal of stored backups, still needs to be implemented. No deletion service is active.
-          </Text>
-        </View>
+          <Text style={styles.infoTitle}>Confirm it&apos;s you</Text>
+          <TextInput
+            accessibilityLabel="Current password"
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="current-password"
+            textContentType="password"
+            editable={!deleting}
+            placeholder="Current password"
+            placeholderTextColor={colors.neutral.textMuted}
+            style={styles.input}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={deleting}
+            onPress={() => void confirmWithGoogle()}
+            style={styles.outlineButton}
+          >
+            <Text style={styles.outlineButtonText}>Signed up with Google? Confirm with Google</Text>
+          </Pressable>
 
-        {loading ? (
-          <View style={styles.statusBox}>
-            <ActivityIndicator color={colors.primary.deepForest} size="small" />
-            <Text style={styles.statusText}>
-              Checking deletion availability…
-            </Text>
-          </View>
-        ) : null}
+          <Text style={[styles.infoText, { marginTop: 14 }]}>
+            Type {CONFIRMATION_WORD} to confirm
+          </Text>
+          <TextInput
+            accessibilityLabel={`Type ${CONFIRMATION_WORD} to confirm`}
+            value={confirmation}
+            onChangeText={setConfirmation}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!deleting}
+            placeholder={CONFIRMATION_WORD}
+            placeholderTextColor={colors.neutral.textMuted}
+            style={styles.input}
+          />
+        </View>
 
         {error ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorTitle}>Error checking status</Text>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorTitle}>Account not deleted</Text>
+            <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
           </View>
         ) : null}
-
-        {message ? (
-          <View style={styles.noticeBox}>
-            <Text style={styles.noticeTitle}>Deletion Notice</Text>
-            <Text style={styles.noticeText}>{message}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.safeNote}>
-          <Text style={styles.safeIcon}>🛡</Text>
-          <Text style={styles.safeText}>
-            No deletion request has been submitted. Your vault and account remain intact.
-          </Text>
-        </View>
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {!loading && (
-          <Pressable
-            onPress={() => setRetry((v) => v + 1)}
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={styles.secondaryButtonText}>Check Availability Again</Text>
-          </Pressable>
-        )}
-
         <Pressable
-          onPress={() =>
-            router.replace({
-              pathname: '/(auth)/profile',
-              params: { mode: 'edit' },
-            })
-          }
+          accessibilityRole="button"
+          disabled={deleting || !confirmed || !currentPassword}
+          onPress={() => void deleteAccount()}
           style={({ pressed }) => [
-            styles.primaryButton,
+            styles.secondaryButton,
+            (deleting || !confirmed || !currentPassword) && styles.buttonDisabled,
             pressed && styles.buttonPressed,
           ]}
+        >
+          {deleting ? (
+            <ActivityIndicator color="#991B1B" size="small" />
+          ) : (
+            <Text style={styles.secondaryButtonText}>Permanently Delete My Account</Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={goBack}
+          disabled={deleting}
+          style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
         >
           <Text style={styles.primaryButtonText}>Keep Account & Return</Text>
         </Pressable>
@@ -373,6 +408,32 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.inter.semiBold,
     fontSize: 13,
     color: '#991B1B',
+  },
+  input: {
+    marginTop: 8,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    backgroundColor: colors.neutral.white,
+    paddingHorizontal: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 14,
+    color: colors.primary.deepForest,
+  },
+  outlineButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  outlineButtonText: {
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: 12.5,
+    color: colors.primary.forest,
+    textDecorationLine: 'underline',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   buttonPressed: {
     opacity: 0.85,

@@ -242,6 +242,38 @@ export class StorageService {
     });
   }
 
+  /**
+   * Remove all stored files for a vault: every S3 object under the vault
+   * prefix, plus any legacy local files. Returns false if anything remained.
+   */
+  async deleteVaultFiles(
+    vaultId: string,
+    localRefs: string[],
+  ): Promise<boolean> {
+    let complete = true;
+    if (this.s3StorageService.isConfigured()) {
+      try {
+        await this.s3StorageService.deletePrefix(`vaults/${vaultId}/`);
+      } catch (error: any) {
+        complete = false;
+        this.logger.error(
+          `Vault ${vaultId} file cleanup incomplete: ${error?.message || error}`,
+        );
+      }
+    }
+    const storageDirectory = resolve(
+      process.env.PRIVATE_STORAGE_DIR ?? 'storage',
+    );
+    for (const ref of localRefs) {
+      try {
+        await unlink(this.localPath(storageDirectory, ref));
+      } catch (error: any) {
+        if (error?.code !== 'ENOENT') complete = false;
+      }
+    }
+    return complete;
+  }
+
   private isS3Key(ref: string): boolean {
     return ref.startsWith('vaults/') || ref.startsWith('s3://');
   }

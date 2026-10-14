@@ -381,11 +381,11 @@ export default function TermsAndConditionsPage() {
             10. Account Deletion
           </h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px' }}>
-            <strong>Automated account deletion is currently unavailable.</strong> The app reports that its deletion lifecycle is not configured and leaves your account unchanged. Contact the privacy address in our privacy policy to discuss a request. A complete deletion process must account for database records, stored files, retention and backups:
+            You can permanently delete your account in the app under Profile → Delete Account. Deletion takes effect immediately and cannot be undone:
           </p>
           <ul style={{ color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '22px' }}>
-            <li>The server master key is shared service infrastructure; it is not a user-held key revoked on account deletion.</li>
-            <li>No automatic file purge or immediate cryptographic erasure is currently provided.</li>
+            <li>Your account, vault items, uploaded files, trusted people and settings are removed from our servers.</li>
+            <li>Files are encrypted with keys stored only alongside the deleted records, so remaining copies cannot be decrypted.</li>
             <li>Automated family handover is currently disabled. Keep independent copies of important content.</li>
           </ul>
         </section>

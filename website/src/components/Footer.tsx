@@ -249,6 +249,10 @@ export default function Footer() {
             <Link href="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
               Terms & Conditions
             </Link>
+            <span style={{ opacity: 0.3 }}>•</span>
+            <Link href="/delete-account" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              Delete Account
+            </Link>
           </div>
 
           <button

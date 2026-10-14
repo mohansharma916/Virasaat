@@ -5,6 +5,8 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
   HeadObjectCommand,
   ServerSideEncryption,
 } from '@aws-sdk/client-s3';
@@ -271,6 +273,45 @@ export class S3StorageService {
     } catch (error) {
       this.logger.error(`Failed to delete S3 object ${key}:`, error);
     }
+  }
+
+  /**
+   * Delete every object under a prefix. Returns how many objects were removed;
+   * errors are thrown so callers can report incomplete cleanup.
+   */
+  async deletePrefix(prefix: string): Promise<number> {
+    if (!this.s3Client || !this.bucketName) return 0;
+    let deleted = 0;
+    let continuationToken: string | undefined;
+    do {
+      const page = await this.s3Client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucketName,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+      const objects = (page.Contents ?? [])
+        .filter((object) => object.Key)
+        .map((object) => ({ Key: object.Key! }));
+      if (objects.length > 0) {
+        const result = await this.s3Client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucketName,
+            Delete: { Objects: objects, Quiet: true },
+          }),
+        );
+        if (result.Errors?.length)
+          throw new Error(
+            `${result.Errors.length} object(s) under ${prefix} could not be deleted`,
+          );
+        deleted += objects.length;
+      }
+      continuationToken = page.IsTruncated
+        ? page.NextContinuationToken
+        : undefined;
+    } while (continuationToken);
+    return deleted;
   }
 
   /**

@@ -38,6 +38,9 @@ import {
   CheckInEventStatus,
 } from '../check-in/entities/check-in-event.entity';
 import { UsersController } from '../users/users.controller';
+import { DeleteAccountDto } from '../users/dto/delete-account.dto';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
 describe('PRD 2.1 safety boundaries', () => {
   it('saves a private recipient without claiming an invitation was sent', async () => {
@@ -223,14 +226,27 @@ describe('PRD 2.1 safety boundaries', () => {
     ).rejects.toThrow('Confirm your identity');
   });
 
-  it('deletion availability never reports an accepted or completed deletion without backend support', () => {
-    const controller = new UsersController({} as never);
+  it('account deletion requires typed confirmation and identity proof', async () => {
+    const deletion = {
+      deleteAccount: jest.fn(() => Promise.resolve({ status: 'DELETED' })),
+    };
+    const controller = new UsersController({} as never, deletion as never);
     expect(controller.deletionEligibility()).toMatchObject({
-      status: 'UNAVAILABLE',
+      status: 'AVAILABLE',
+      requires: ['CONFIRMATION', 'REAUTHENTICATION'],
     });
-    expect(controller.deletionEligibility()).toMatchObject({
-      status: 'UNAVAILABLE',
+    await controller.deleteAccount(
+      { user: { id: 'owner' } },
+      { confirmation: 'DELETE', currentPassword: 'secret-password' },
+    );
+    expect(deletion.deleteAccount).toHaveBeenCalledWith('owner', {
+      currentPassword: 'secret-password',
+      googleIdToken: undefined,
     });
+    const errors = await validate(
+      plainToInstance(DeleteAccountDto, { confirmation: 'delete' }),
+    );
+    expect(errors).toHaveLength(1);
   });
   it('preserves uploaded bytes through storage without document extraction', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'virasat-integrity-'));

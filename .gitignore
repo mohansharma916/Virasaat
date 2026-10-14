@@ -56,3 +56,6 @@ Virasat-MobileApp/android/
 
 # Local security review reports
 /SECURITY_REVIEW_*.md
+
+# Play Store release kit: upload keystore, passwords, signed bundles (never commit)
+/play-store-release/

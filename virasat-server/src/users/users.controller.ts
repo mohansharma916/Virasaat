@@ -1,24 +1,50 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
+import { AccountDeletionService } from './account-deletion.service';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly accountDeletion: AccountDeletionService,
+  ) {}
 
   @Get('me/deletion')
   deletionEligibility() {
-    // BACKEND GAP: retention, active-case resolution, step-up and deletion worker
-    // have no approved contract. Never accept a request we cannot execute.
     return {
-      status: 'UNAVAILABLE',
+      status: 'AVAILABLE',
       message:
-        'Account deletion is not available yet. Your account has not been changed. Please try again later.',
-      blockers: ['DELETION_LIFECYCLE_NOT_CONFIGURED'],
+        'Deleting your account permanently removes your vault items, files, trusted people and settings. This cannot be undone.',
+      requires: ['CONFIRMATION', 'REAUTHENTICATION'],
     };
+  }
+
+  /** Permanently delete the signed-in account after identity confirmation. */
+  @Post('me/deletion')
+  @HttpCode(HttpStatus.OK)
+  async deleteAccount(
+    @Req() req: { user: { id: string } },
+    @Body() dto: DeleteAccountDto,
+  ) {
+    return this.accountDeletion.deleteAccount(req.user.id, {
+      currentPassword: dto.currentPassword,
+      googleIdToken: dto.googleIdToken,
+    });
   }
 
   @Get('me')
