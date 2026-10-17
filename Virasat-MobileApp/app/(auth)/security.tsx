@@ -211,7 +211,7 @@ export default function SecurityScreen() {
         <View style={styles.points}>
           <Point icon="smartphone" text={`Your ${isFace ? 'face data' : 'fingerprint'} never leaves your phone. Virasat never sees it.`} />
           <Point icon="key" text="You can always sign in with your password instead." />
-          <Point icon="settings" text="Change this any time in Account → Security." />
+          <Point icon="settings" text="Change this any time from the Account tab." />
         </View>
       </ScrollView>
 

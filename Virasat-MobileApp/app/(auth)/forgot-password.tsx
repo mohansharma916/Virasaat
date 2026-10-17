@@ -510,35 +510,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 20,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    backgroundColor: colors.brand.mint,
-  },
-  topBarBrand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 16,
-    color: colors.primary.deepForest,
-    letterSpacing: 2,
-  },
-  topBarPlaceholder: {
-    width: 40,
-  },
   cardContainer: {
     backgroundColor: colors.neutral.white,
     borderRadius: 20,
@@ -580,32 +551,6 @@ const styles = StyleSheet.create({
   boldText: {
     fontWeight: '600',
     color: colors.primary.deepForest,
-  },
-  errorAlert: {
-    backgroundColor: colors.semantic.errorSoft,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.semantic.error,
-  },
-  errorAlertText: {
-    fontSize: 14,
-    color: colors.semantic.error,
-    lineHeight: 20,
-  },
-  infoAlert: {
-    backgroundColor: colors.brand.mint,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary.forest,
-  },
-  infoAlertText: {
-    fontSize: 14,
-    color: colors.primary.deepForest,
-    lineHeight: 20,
   },
   infoBox: {
     flexDirection: 'row',
@@ -676,9 +621,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.neutral.textPrimary,
   },
-  toggleButton: {
-    padding: 8,
-  },
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -700,75 +642,6 @@ const styles = StyleSheet.create({
     borderColor: colors.primary.forest,
     backgroundColor: colors.brand.mint,
   },
-  resendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  resendText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary.forest,
-  },
-  resendTextDisabled: {
-    color: colors.neutral.textMuted,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary.forest,
-    borderRadius: 12,
-    minHeight: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  primaryButtonText: {
-    color: colors.neutral.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonArrow: {
-    color: colors.neutral.white,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  googleButton: {
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    borderRadius: 12,
-    minHeight: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.neutral.white,
-    gap: 12,
-    marginBottom: 16,
-  },
-  googleIconBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#EA4335',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleIconText: {
-    color: colors.neutral.white,
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  googleButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.neutral.textPrimary,
-  },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -778,10 +651,5 @@ const styles = StyleSheet.create({
   switchTextMuted: {
     fontSize: 15,
     color: colors.neutral.textSecondary,
-  },
-  switchTextLink: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.primary.forest,
   },
 });

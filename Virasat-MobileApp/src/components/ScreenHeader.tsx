@@ -17,7 +17,8 @@ type ScreenHeaderProps = {
 // One 56dp app bar for every stack screen: 48dp back button, centred
 // wordmark (or title) and an optional trailing action.
 export function ScreenHeader({ onBack, backLabel = 'Go back', title, trailing }: ScreenHeaderProps) {
-  const handleBack = onBack === 'default' ? () => router.back() : onBack;
+  // Screens reached with router.replace have no history; hide back rather than show a dead button.
+  const handleBack = onBack === 'default' ? (router.canGoBack() ? () => router.back() : undefined) : onBack;
 
   return (
     <View style={styles.bar}>

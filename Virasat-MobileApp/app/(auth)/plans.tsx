@@ -1,17 +1,11 @@
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 
 import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { PlanCode } from '@/src/types/subscription.types';
@@ -23,22 +17,18 @@ export default function PlansScreen() {
   const { effectivePlanCode, restorePurchases, refreshSubscription } =
     useSubscription();
   const [restoring, setRestoring] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null);
 
 
   const handleRestore = async () => {
     try {
       setRestoring(true);
+      setRestoreResult(null);
       await restorePurchases();
       await refreshSubscription();
-      Alert.alert(
-        'Subscription Refreshed',
-        'Your saved account subscription was refreshed. Store purchase restoration is not available yet.',
-      );
+      setRestoreResult({ tone: 'success', message: 'Your plan is up to date.' });
     } catch (error) {
-      Alert.alert(
-        'Restore Failed',
-        getApiErrorMessage(error, 'Could not restore prior purchases.'),
-      );
+      setRestoreResult({ tone: 'danger', message: getApiErrorMessage(error, 'We couldn’t refresh your plan. Try again.') });
     } finally {
       setRestoring(false);
     }
@@ -50,27 +40,16 @@ export default function PlansScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={12}
-          style={styles.backButton}
-        >
-          <AppIcon name="chevronLeft" style={styles.backArrow} />
-        </Pressable>
-        <Text style={styles.brand}>VIRASAT</Text>
-      </View>
+      <ScreenHeader onBack="default" />
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 40) }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>Plans & protection</Text>
-          <Text style={styles.title}>Choose Your Legacy Shield</Text>
+          <Text style={styles.title} accessibilityRole="header">Plans</Text>
           <Text style={styles.subtitle}>
-            Starter access is available now. Paid checkout, purchase restoration, automatic reminders, verification workflows, and inheritance release are coming soon. Paid-tier benefits below are planned.
+            Starter is free and available now. Secure and Family are coming soon. Their features below are planned.
           </Text>
         </View>
 
@@ -89,33 +68,31 @@ export default function PlansScreen() {
           </View>
 
           <View style={styles.priceRow}>
-            <AppIcon name="investment" style={styles.priceCurrency} />
+            <Text style={styles.priceCurrency}>₹</Text>
             <Text style={styles.priceAmount}>0</Text>
             <Text style={styles.pricePeriod}>/ forever</Text>
           </View>
 
           <View style={styles.featureList}>
-            <FeatureItem text="1 Trusted Person" />
+            <FeatureItem text="1 trusted person" />
             <FeatureItem text="Standard monthly check-in" />
             <FeatureItem text="Standard release policy" />
-            <FeatureItem text="Up to 3 written messages & 1 video message" />
+            <FeatureItem text="Up to 3 written messages and 1 video message" />
             <FeatureItem text="Basic activity history" />
           </View>
 
-          <Pressable accessibilityRole="button"
-            disabled
-            style={[styles.planButton, styles.planButtonDisabled]}
-          >
-            <Text style={styles.planButtonDisabledText}>
-              {isStarter ? 'Active Tier' : 'Free Baseline'}
-            </Text>
-          </Pressable>
+          {isStarter ? (
+            <View style={styles.statusChip}>
+              <AppIcon name="checkCircle" size={16} color={colors.semantic.success} />
+              <Text style={styles.statusChipText}>Your current plan</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* 2. SECURE PLAN */}
         <View style={[styles.planCard, styles.popularCard, isSecure && styles.currentPlanBorder]}>
           <View style={styles.recommendTag}>
-            <Text style={styles.recommendTagText}>Recommended for Individuals</Text>
+            <Text style={styles.recommendTagText}>Recommended for individuals</Text>
           </View>
 
           <View style={styles.planHeader}>
@@ -133,34 +110,26 @@ export default function PlansScreen() {
           </View>
 
           <View style={styles.priceRow}>
-            <AppIcon name="investment" style={styles.priceCurrency} />
+            <Text style={styles.priceCurrency}>₹</Text>
             <Text style={styles.priceAmount}>999</Text>
             <Text style={styles.pricePeriod}>/ year</Text>
           </View>
 
           <View style={styles.featureList}>
-            <FeatureItem text="Up to 3 Trusted Persons" highlight />
-            <FeatureItem text="Custom check-in frequency & schedules" highlight />
+            <FeatureItem text="Up to 3 trusted people" highlight />
+            <FeatureItem text="Custom check-in frequency and schedules" highlight />
             <FeatureItem text="Customizable grace period" highlight />
             <FeatureItem text="Recipient verification options" highlight />
             <FeatureItem text="Item-level recipient assignment" highlight />
             <FeatureItem text="Unlimited written personal messages" />
             <FeatureItem text="Up to 10 personal video messages" />
-            <FeatureItem text="Full activity history & logs" />
+            <FeatureItem text="Full activity history" />
           </View>
 
-          <Pressable accessibilityRole="button"
-            disabled
-            accessibilityState={{ disabled: true }}
-                        style={({ pressed }) => [
-              styles.planButton,
-              styles.planButtonPrimary,
-              styles.planButtonDisabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.planButtonPrimaryText}>Coming soon</Text>
-          </Pressable>
+          <View style={[styles.statusChip, styles.statusChipSoon]} accessible accessibilityLabel="Coming soon. Not available to buy yet">
+            <AppIcon name="hourglass" size={16} color={colors.semantic.warning} />
+            <Text style={[styles.statusChipText, styles.statusChipTextSoon]}>Coming soon</Text>
+          </View>
         </View>
 
         {/* 3. FAMILY PLAN */}
@@ -180,53 +149,35 @@ export default function PlansScreen() {
           </View>
 
           <View style={styles.priceRow}>
-            <AppIcon name="investment" style={styles.priceCurrency} />
+            <Text style={styles.priceCurrency}>₹</Text>
             <Text style={styles.priceAmount}>2,499</Text>
             <Text style={styles.pricePeriod}>/ year</Text>
           </View>
 
           <View style={styles.featureList}>
-            <FeatureItem text="Up to 8 Trusted Persons" highlight />
+            <FeatureItem text="Up to 8 trusted people" highlight />
             <FeatureItem text="Advanced release policies" highlight />
             <FeatureItem text="Multiple independent verifiers" highlight />
             <FeatureItem text="Multi-person verification workflow" highlight />
             <FeatureItem text="Advanced escalation rules" highlight />
-            <FeatureItem text="Family & emergency instructions" highlight />
+            <FeatureItem text="Family and emergency instructions" highlight />
             <FeatureItem text="Up to 50 personal video messages" />
-            <FeatureItem text="Priority support & future family vault readiness" />
+            <FeatureItem text="Priority support" />
           </View>
 
-          <Pressable accessibilityRole="button"
-            disabled
-            accessibilityState={{ disabled: true }}
-                        style={({ pressed }) => [
-              styles.planButton,
-              styles.planButtonPrimary,
-              styles.planButtonDisabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.planButtonPrimaryText}>Coming soon</Text>
-          </Pressable>
+          <View style={[styles.statusChip, styles.statusChipSoon]} accessible accessibilityLabel="Coming soon. Not available to buy yet">
+            <AppIcon name="hourglass" size={16} color={colors.semantic.warning} />
+            <Text style={[styles.statusChipText, styles.statusChipTextSoon]}>Coming soon</Text>
+          </View>
         </View>
 
         {/* Restore purchases & calm notice */}
         <View style={styles.footer}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={handleRestore}
-            disabled={restoring}
-            style={styles.restoreButton}
-          >
-            {restoring ? (
-              <ActivityIndicator size="small" color={colors.primary.deepForest} />
-            ) : (
-              <Text style={styles.restoreText}>Refresh Account Subscription</Text>
-            )}
-          </Pressable>
+          {restoreResult ? <InlineNotice tone={restoreResult.tone} message={restoreResult.message} /> : null}
+          <Button title="Refresh my plan" variant="secondary" size="md" onPress={() => void handleRestore()} loading={restoring} />
 
           <Text style={styles.disclaimerText}>
-            Paid billing is unavailable. Refreshing updates your saved account subscription only; it does not restore a store purchase. Saved records and policy preferences are retained if access limits change.
+            Paid plans can’t be bought yet, so there’s nothing to restore from the store. If your plan’s limits change, everything you saved is kept.
           </Text>
         </View>
       </ScrollView>
@@ -254,36 +205,23 @@ function FeatureItem({
 }
 
 const styles = StyleSheet.create({
+  statusChip: {
+    marginTop: 16,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: colors.semantic.successSoft,
+  },
+  statusChipSoon: { backgroundColor: colors.semantic.warningSoft },
+  statusChipText: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.label, color: colors.semantic.success },
+  statusChipTextSoon: { color: colors.semantic.warning },
   safeArea: {
     flex: 1,
     backgroundColor: colors.brand.ivory,
-  },
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    paddingHorizontal: 24,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    top: 4,
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 32,
-    color: colors.primary.deepForest,
-    lineHeight: 46,
-  },
-  brand: {
-    fontFamily: typography.fonts.inter.bold,
-    fontSize: 15,
-    color: colors.primary.deepForest,
-    letterSpacing: 2,
   },
   content: {
     paddingHorizontal: 20,
@@ -292,13 +230,6 @@ const styles = StyleSheet.create({
   },
   heading: {
     marginBottom: 24,
-  },
-  eyebrow: {
-    fontFamily: typography.fonts.inter.bold,
-    fontSize: 13,
-    color: colors.primary.forest,
-    
-    marginBottom: 6,
   },
   title: {
     fontFamily: typography.fonts.playfair.bold,
@@ -439,45 +370,11 @@ const styles = StyleSheet.create({
     color: colors.neutral.textPrimary,
     fontWeight: '500',
   },
-  planButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  planButtonPrimary: {
-    backgroundColor: colors.primary.deepForest,
-  },
-  planButtonPrimaryText: {
-    fontFamily: typography.fonts.inter.bold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-  planButtonDisabled: {
-    backgroundColor: colors.neutral.border,
-  },
-  planButtonDisabledText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.textMuted,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
   footer: {
     alignItems: 'center',
     marginTop: 10,
     paddingHorizontal: 12,
     gap: 14,
-  },
-  restoreButton: {
-    paddingVertical: 10,
-  },
-  restoreText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.primary.deepForest,
-    textDecorationLine: 'underline',
   },
   disclaimerText: {
     fontFamily: typography.fonts.inter.regular,

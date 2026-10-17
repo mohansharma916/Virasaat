@@ -1,19 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { AppIcon } from '@/src/components/AppIcon';
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon, type IconName } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { IconButton } from '@/src/components/IconButton';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
@@ -34,7 +32,6 @@ type DocumentItem = {
 
 export default function LegacyDocumentsScreen() {
   const dispatch = useAppDispatch();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     category?: string;
     categories?: string;
@@ -46,8 +43,55 @@ export default function LegacyDocumentsScreen() {
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState('');
+  const [failed, setFailed] = useState(false);
+  const [pickError, setPickError] = useState('');
   const transfer = useRef<AbortController | null>(null);
   useEffect(() => () => transfer.current?.abort(), []);
+
+  const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
+  const addFile = (file: { name: string; size?: number | null; uri: string; mimeType?: string | null; file?: unknown }) => {
+    if (file.size && file.size > MAX_FILE_SIZE) {
+      setPickError('That file is larger than 25 MB. Choose a smaller file.');
+      haptics.warning();
+      return;
+    }
+    setPickError('');
+    setDocuments((current) => [
+      ...current,
+      { id: createItemRequestKey(), name: file.name, size: file.size ?? 0, uri: file.uri, mimeType: file.mimeType, file: file.file },
+    ]);
+  };
+
+  // Camera capture is the fastest way to add a paper document.
+  const capturePhoto = async (source: 'camera' | 'library') => {
+    if (transfer.current) return;
+    setPickError('');
+    try {
+      if (source === 'camera') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          setPickError('Allow camera access in your phone’s settings to photograph a document.');
+          return;
+        }
+      }
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.85 };
+      const result = await runWithSystemUi(() =>
+        source === 'camera' ? ImagePicker.launchCameraAsync(options) : ImagePicker.launchImageLibraryAsync(options),
+      );
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      addFile({
+        name: asset.fileName ?? `document-${new Date().toISOString().slice(0, 10)}.jpg`,
+        size: asset.fileSize,
+        uri: asset.uri,
+        mimeType: asset.mimeType ?? 'image/jpeg',
+        file: (asset as { file?: unknown }).file,
+      });
+    } catch {
+      setPickError('We couldn’t open the camera or photos. Try choosing a file instead.');
+    }
+  };
 
   const pickDocument = async () => {
     if (transfer.current) return;
@@ -69,41 +113,9 @@ export default function LegacyDocumentsScreen() {
       }
 
       const file = result.assets[0];
-
-      // 25 MB limit
-      const MAX_FILE_SIZE =
-        25 * 1024 * 1024;
-
-      if (
-        file.size &&
-        file.size > MAX_FILE_SIZE
-      ) {
-        Alert.alert(
-          'File too large',
-          'Please select a file smaller than 25 MB.',
-        );
-
-        return;
-      }
-
-      const newDocument: DocumentItem = {
-        id: createItemRequestKey(),
-        name: file.name,
-        size: file.size ?? 0,
-        uri: file.uri,
-        mimeType: file.mimeType,
-        file: (file as any).file,
-      };
-
-      setDocuments((current) => [
-        ...current,
-        newDocument,
-      ]);
+      addFile({ name: file.name, size: file.size, uri: file.uri, mimeType: file.mimeType, file: (file as { file?: unknown }).file });
     } catch {
-      Alert.alert(
-        'Unable to add document',
-        'Something went wrong while selecting the document.',
-      );
+      setPickError('We couldn’t open that file. Try another one.');
     }
   };
 
@@ -119,16 +131,13 @@ export default function LegacyDocumentsScreen() {
   const handleContinue = async () => {
     if (transfer.current) return;
     if (documents.length === 0) {
-      Alert.alert(
-        'Add a document',
-        'Please add at least one document to continue.',
-      );
-
+      setPickError('Add at least one file first.');
       return;
     }
 
     try {
       setSaving(true);
+      setFailed(false);
       const category = parseLegacyCategories(params.category)[0] ?? 'DOCUMENTS';
       transfer.current = new AbortController();
       for (const [index, document] of documents.entries()) {
@@ -145,557 +154,244 @@ export default function LegacyDocumentsScreen() {
       }
       if (transfer.current.signal.aborted) { setUploadStatus('Upload stopped. Check your vault before retrying.'); return; }
       setUploadStatus('Files protected.');
+      haptics.success();
 
-      router.replace('/(auth)/(tabs)/home');
+      // Return to where the user came from (the setup hub or the vault).
+      if (router.canGoBack()) router.back();
+      else router.replace('/(auth)/(tabs)/home');
     } catch (error) {
       const msg = transfer.current?.signal.aborted
-        ? 'Transfer stopped. Confirmed files remain saved. Retry remaining files safely.'
-        : getApiErrorMessage(error, 'We were unable to upload your documents. Please check your connection and try again.');
+        ? 'Upload stopped. Files already uploaded are saved. You can retry the rest.'
+        : getApiErrorMessage(error, 'We couldn’t upload your files. Check your connection and try again.');
       setUploadStatus(msg);
-      Alert.alert('Upload Failed', msg);
+      setFailed(true);
+      haptics.error();
     } finally {
       transfer.current = null;
       setSaving(false);
     }
   };
 
+  const label = isVideo ? 'video' : 'document';
+  const sources: { key: string; icon: IconName; title: string; detail: string; onPress: () => void }[] = isVideo
+    ? [
+        { key: 'record', icon: 'camera', title: 'Record a video message', detail: 'Use your camera now', onPress: () => router.push('/(auth)/legacy-video-message' as never) },
+        { key: 'file', icon: 'folder', title: 'Choose a video file', detail: 'MP4 or QuickTime, up to 25 MB', onPress: () => void pickDocument() },
+      ]
+    : [
+        { key: 'camera', icon: 'camera', title: 'Take a photo', detail: 'Photograph a paper document', onPress: () => void capturePhoto('camera') },
+        { key: 'library', icon: 'image', title: 'Choose a photo', detail: 'From your photo library', onPress: () => void capturePhoto('library') },
+        { key: 'file', icon: 'folder', title: 'Choose a file', detail: 'PDF, Word or image, up to 25 MB', onPress: () => void pickDocument() },
+      ];
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.category}>{isVideo ? 'Video messages' : 'Important documents'}</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          {isVideo ? 'Add a video for your loved ones' : 'Keep the important things together'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {isVideo
+            ? 'Upload a video you’ve already recorded, or record one now.'
+            : 'Add documents that will help your family understand and manage your affairs.'}
+        </Text>
 
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button"
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <AppIcon name="chevronLeft" style={styles.backArrow} />
-          </Pressable>
-
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
+        <View style={styles.sources}>
+          {sources.map((source) => (
+            <Pressable
+              key={source.key}
+              accessibilityRole="button"
+              accessibilityLabel={`${source.title}. ${source.detail}`}
+              disabled={saving}
+              onPress={source.onPress}
+              style={({ pressed }) => [styles.source, pressed && styles.pressed, saving && styles.disabled]}
+            >
+              <View style={styles.sourceIcon}>
+                <AppIcon name={source.icon} size={22} color={colors.primary.deepForest} />
+              </View>
+              <View style={styles.sourceBody}>
+                <Text style={styles.sourceTitle}>{source.title}</Text>
+                <Text style={styles.sourceDetail}>{source.detail}</Text>
+              </View>
+              <AppIcon name="plus" size={20} color={colors.primary.forest} />
+            </Pressable>
+          ))}
         </View>
 
-        {/* Heading */}
+        {pickError ? <InlineNotice tone="warning" message={pickError} style={styles.notice} /> : null}
 
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>
-            {isVideo ? 'VIDEO MESSAGE' : 'IMPORTANT DOCUMENTS'}
-          </Text>
-
-          <Text style={styles.title}>
-            Keep the important things together.
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Upload documents that may help your
-            family understand and manage your
-            affairs later.
-          </Text>
-        </View>
-
-        {/* Add Document */}
-
-        <Pressable
-          disabled={saving}
-          accessibilityRole="button"
-          onPress={pickDocument}
-          style={({ pressed }) => [
-            styles.uploadCard,
-            pressed && styles.uploadPressed,
-          ]}
-        >
-          <View style={styles.plusCircle}>
-            <AppIcon name="plus" style={styles.plus} />
-          </View>
-
-          <Text style={styles.uploadTitle}>
-            {isVideo ? 'Add a video' : 'Add a document'}
-          </Text>
-
-          <Text style={styles.uploadSubtitle}>
-            {isVideo ? 'MP4 or QuickTime video' : 'PDF, image or document'}
-          </Text>
-
-          <Text style={styles.uploadLimit}>
-            Up to 25 MB
-          </Text>
-        </Pressable>
-
-        {/* Documents */}
-
-        {documents.length > 0 && (
+        {documents.length > 0 ? (
           <View style={styles.documentsSection}>
-            <Text style={styles.sectionTitle}>
-              Added documents
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              Ready to upload ({documents.length})
             </Text>
-
             {documents.map((document) => (
-              <View
-                key={document.id}
-                style={styles.documentCard}
-              >
+              <View key={document.id} style={styles.documentCard}>
                 <View style={styles.fileIcon}>
-                  <AppIcon name="document" style={styles.fileIconText} />
+                  <AppIcon name={document.mimeType?.startsWith('image/') ? 'image' : isVideo ? 'video' : 'document'} size={20} color={colors.primary.deepForest} />
                 </View>
-
                 <View style={styles.documentInfo}>
-                  <Text
-                    numberOfLines={1}
-                    style={styles.documentName}
-                  >
-                    {document.name}
-                  </Text>
-
-                  <Text style={styles.documentSize}>
-                    {formatFileSize(
-                      document.size,
-                    )}
-                  </Text>
+                  <Text numberOfLines={1} style={styles.documentName}>{document.name}</Text>
+                  <Text style={styles.documentSize}>{formatFileSize(document.size)}</Text>
                 </View>
-
-                <Pressable accessibilityRole="button"
-                  onPress={() =>
-                    removeDocument(document.id)
-                  }
-                  hitSlop={12}
-                >
-                  <AppIcon name="close" style={styles.remove} />
-                </Pressable>
+                <IconButton
+                  icon="close"
+                  accessibilityLabel={`Remove ${document.name}`}
+                  onPress={() => removeDocument(document.id)}
+                  disabled={saving}
+                  color={colors.neutral.textSecondary}
+                  size={20}
+                />
               </View>
             ))}
           </View>
-        )}
+        ) : null}
 
-        {/* Security */}
-
-        <View style={styles.securityCard}>
-          <View style={styles.securityIcon}>
-            <AppIcon name="lock" style={styles.lock} />
-          </View>
-
-          <View style={styles.securityContent}>
-            <Text style={styles.securityTitle}>
-              AWS S3 Encrypted Vault
-            </Text>
-
-            <Text style={styles.securityText}>
-              Each file is protected with client-side AES-256-GCM envelope
-              encryption before storage in AWS S3 with hardware-level at-rest encryption.
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.helperNotice}>
-          AES-256-GCM + S3 SSE · SHA-256 verified · Max 25 MB per file
-        </Text>
+        <InlineNotice
+          tone="brand"
+          title="Encrypted before it’s stored"
+          message="Each file is encrypted with AES-256 before it leaves for your vault. Maximum 25 MB per file."
+          style={styles.notice}
+        />
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {!!uploadStatus && (
+      <ActionBar>
+        {uploadStatus ? (
           <View style={styles.transferRow}>
-            <Text style={styles.transferText} accessibilityLiveRegion="polite">
-              {uploadStatus}{saving ? ` · ${progress}%${progress === 100 ? ' — confirming' : ''}` : ''}
-            </Text>
-            {saving && (
-              <Pressable
-                accessibilityRole="button"
-                style={styles.stopButton}
-                onPress={() => transfer.current?.abort()}
+            {saving ? (
+              <View
+                style={styles.progressTrack}
+                accessible
+                accessibilityRole="progressbar"
+                accessibilityLabel={uploadStatus}
+                accessibilityValue={{ min: 0, max: 100, now: progress }}
               >
-                <Text style={styles.stopText}>Stop</Text>
-              </Pressable>
-            )}
-          </View>
-        )}
-
-        {/* Continue */}
-        <Pressable accessibilityRole="button"
-          disabled={documents.length === 0 || saving}
-          onPress={handleContinue}
-          style={({ pressed }) => [
-            styles.button,
-            (documents.length === 0 || saving) &&
-              styles.buttonDisabled,
-            pressed &&
-              documents.length > 0 && !saving &&
-              styles.buttonPressed,
-          ]}
-        >
-          {saving ? (
-            <Text style={styles.buttonText}>Saving…</Text>
-          ) : (
-            <>
-              <Text style={styles.buttonText}>
-                Continue
+                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              </View>
+            ) : null}
+            <View style={styles.transferTextRow}>
+              <Text style={[styles.transferText, failed && styles.transferTextError]} accessibilityLiveRegion="polite">
+                {uploadStatus}
+                {saving ? ` · ${progress}%${progress === 100 ? ', confirming' : ''}` : ''}
               </Text>
-            </>
-          )}
-        </Pressable>
+              {saving ? <Button title="Stop" variant="tertiary" onPress={() => transfer.current?.abort()} /> : null}
+            </View>
+          </View>
+        ) : null}
 
-        <Text style={styles.footer}>
-          {documents.length === 0
-            ? 'Add at least one document'
-            : `${documents.length} ${
-                documents.length === 1
-                  ? 'document'
-                  : 'documents'
-              } added`}
-        </Text>
-      </View>
+        <Button
+          title={
+            saving
+              ? 'Uploading…'
+              : documents.length === 0
+                ? `Add a ${label} to continue`
+                : failed
+                  ? 'Retry upload'
+                  : `Upload ${documents.length} ${documents.length === 1 ? 'file' : 'files'}`
+          }
+          onPress={() => void handleContinue()}
+          disabled={documents.length === 0 || saving}
+          loading={saving}
+        />
+      </ActionBar>
     </SafeAreaView>
   );
 }
 
 function formatFileSize(bytes: number) {
-  if (!bytes) {
-    return 'Unknown size';
-  }
-
+  if (!bytes) return 'Size unknown';
   const mb = bytes / (1024 * 1024);
-
-  if (mb < 1) {
-    return `${Math.round(bytes / 1024)} KB`;
-  }
-
+  if (mb < 1) return `${Math.round(bytes / 1024)} KB`;
   return `${mb.toFixed(1)} MB`;
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 35,
-  },
-
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary.forest,
-  },
-
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 18,
-    marginBottom: 16,
-  },
-
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
+  category: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.label, color: colors.primary.forest },
   title: {
-    marginTop: 7,
+    marginTop: 4,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 29,
-    lineHeight: 38,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-
   subtitle: {
     marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-
-  uploadCard: {
-    minHeight: 170,
-    borderRadius: 17,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.primary.forest,
-    backgroundColor: colors.brand.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-
-  uploadPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.99 }],
-  },
-
-  plusCircle: {
-    width: 43,
-    height: 43,
-    borderRadius: 22,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-
-  plus: {
-    fontSize: 25,
-    fontWeight: '300',
-    color: colors.primary.forest,
-  },
-
-  uploadTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.primary.deepForest,
-  },
-
-  uploadSubtitle: {
-    marginTop: 4,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textSecondary,
-  },
-
-  uploadLimit: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-
-  documentsSection: {
-    marginTop: 25,
-  },
-
-  sectionTitle: {
-    marginBottom: 11,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.neutral.textMuted,
-  },
-
-  documentCard: {
-    minHeight: 67,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    borderRadius: 13,
+  sources: {
+    borderRadius: 16,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
+    overflow: 'hidden',
+  },
+  source: {
+    minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 9,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.neutral.border,
   },
-
+  pressed: { backgroundColor: colors.brand.mint },
+  disabled: { opacity: 0.5 },
+  sourceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.brand.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sourceBody: { flex: 1, gap: 2 },
+  sourceTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.callout, lineHeight: 22, color: colors.neutral.textPrimary },
+  sourceDetail: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, lineHeight: 18, color: colors.neutral.textSecondary },
+  notice: { marginTop: 16 },
+  documentsSection: { marginTop: 24, gap: 8 },
+  sectionTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.label, color: colors.neutral.textSecondary },
+  documentCard: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingLeft: 12,
+    paddingRight: 4,
+    borderRadius: 12,
+    backgroundColor: colors.neutral.white,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+  },
   fileIcon: {
-    width: 37,
-    height: 37,
+    width: 40,
+    height: 40,
     borderRadius: 10,
     backgroundColor: colors.brand.mint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  fileIconText: {
-    fontSize: 16,
-  },
-
-  documentInfo: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  documentName: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  documentSize: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-
-  remove: {
-    fontSize: 22,
-    fontWeight: '300',
-    color: colors.neutral.textMuted,
-    paddingLeft: 10,
-  },
-
-  securityCard: {
-    marginTop: 7,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  securityIcon: {
-    width: 29,
-    height: 29,
-    borderRadius: 15,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  lock: {
-    fontSize: 13,
-  },
-
-  securityContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  securityTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  securityText: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.neutral.textSecondary,
-  },
-
-  helperNotice: {
-    marginTop: 16,
-    marginBottom: 8,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textMuted,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  transferRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.neutral.white,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-  },
-
+  documentInfo: { flex: 1, gap: 2 },
+  documentName: { fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.callout, color: colors.neutral.textPrimary },
+  documentSize: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, color: colors.neutral.textMuted },
+  transferRow: { marginBottom: 8, gap: 6 },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.brand.sage, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.primary.forest },
+  transferTextRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   transferText: {
     flex: 1,
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.primary.deepForest,
-  },
-
-  stopButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: colors.semantic.errorSoft,
-    marginLeft: 8,
-  },
-
-  stopText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.semantic.error,
-  },
-
-  button: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonDisabled: {
-    opacity: 0.35,
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  buttonArrow: {
-    marginLeft: 10,
-    fontSize: 19,
-    color: colors.neutral.white,
-  },
-
-  footer: {
-    marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textMuted,
-    textAlign: 'center',
+    fontSize: typography.sizes.caption,
+    lineHeight: 18,
+    color: colors.neutral.textSecondary,
   },
+  transferTextError: { color: colors.semantic.error },
 });

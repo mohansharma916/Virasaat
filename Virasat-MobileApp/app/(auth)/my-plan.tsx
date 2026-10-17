@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
 import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { Feature, PlanCode, PlanLimit, SubscriptionStatus } from '@/src/types/subscription.types';
@@ -21,9 +16,10 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 
 export default function MyPlanScreen() {
   const insets = useSafeAreaInsets();
-  const { currentPlan, subscription, subscriptionStatus, effectivePlanCode, purchaseVerification, getLimit, canUseFeature, restorePurchases, refreshSubscription } =
+  const { currentPlan, subscription, subscriptionStatus, purchaseVerification, getLimit, canUseFeature, restorePurchases, refreshSubscription } =
     useSubscription();
   const [restoring, setRestoring] = useState(false);
+  const [notice, setNotice] = useState<{ tone: 'success' | 'danger' | 'info'; message: string } | null>(null);
 
   const isStarter = !currentPlan || currentPlan.code === PlanCode.STARTER;
   const isFamily = currentPlan?.code === PlanCode.FAMILY;
@@ -32,28 +28,26 @@ export default function MyPlanScreen() {
     try {
       await PurchaseService.openSubscriptionManagement();
     } catch {
-      Alert.alert(
-        'Manage Subscription',
-        'Open your device Google Play or App Store account settings to manage your recurring subscriptions.',
-      );
+      setNotice({ tone: 'info', message: 'Open Google Play or the App Store on your phone to manage your subscription.' });
     }
   };
 
   const handleRestore = async () => {
     try {
       setRestoring(true);
+      setNotice(null);
       await restorePurchases();
       await refreshSubscription();
-      Alert.alert('Subscription Refreshed', 'Your saved account subscription was refreshed. Store purchase restoration is not available yet.');
+      setNotice({ tone: 'success', message: 'Your plan is up to date.' });
     } catch (error) {
-      Alert.alert('Restore Failed', getApiErrorMessage(error));
+      setNotice({ tone: 'danger', message: getApiErrorMessage(error, 'We couldn’t refresh your plan. Try again.') });
     } finally {
       setRestoring(false);
     }
   };
 
   const formatExpiryDate = (dateStr?: string | null) => {
-    if (!dateStr) return 'Active · No expiration';
+    if (!dateStr) return 'No end date';
     try {
       const d = new Date(dateStr);
       return d.toLocaleDateString(undefined, {
@@ -84,28 +78,15 @@ export default function MyPlanScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={12}
-          style={styles.backButton}
-        >
-          <AppIcon name="chevronLeft" style={styles.backArrow} />
-        </Pressable>
-        <Text style={styles.brand}>VIRASAT</Text>
-      </View>
+      <ScreenHeader onBack="default" />
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 40) }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>Membership & billing</Text>
-          <Text style={styles.title}>Current Plan</Text>
-          <Text style={styles.subtitle}>
-            Review your active plan, entitlements, and renewal preferences.
-          </Text>
+          <Text style={styles.title} accessibilityRole="header">Your plan</Text>
+          <Text style={styles.subtitle}>What your plan includes and when it renews.</Text>
         </View>
 
         {/* Plan Summary Card */}
@@ -124,14 +105,14 @@ export default function MyPlanScreen() {
 
             <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
               <Text style={[styles.statusBadgeText, { color: badge.text }]}>
-                {subscriptionStatus}
+                {subscriptionStatus.charAt(0) + subscriptionStatus.slice(1).toLowerCase().replace(/_/g, ' ')}
               </Text>
             </View>
           </View>
 
           <View style={styles.renewalRow}>
             <Text style={styles.renewalLabel}>
-              {isStarter ? 'Term:' : 'Renewal Date:'}
+              {isStarter ? 'Term' : 'Renews on'}
             </Text>
             <Text style={styles.renewalValue}>
               {formatExpiryDate(subscription?.expiryDate)}
@@ -140,74 +121,42 @@ export default function MyPlanScreen() {
 
           <View style={styles.divider} />
 
-          <Text style={styles.benefitsTitle}>CURRENT ACCESS: {effectivePlanCode}</Text>
-          {purchaseVerification === 'UNVERIFIED' && <Text style={styles.subtitle}>This saved paid plan has no verified store purchase. Starter access applies until billing verification is available.</Text>}
+          <Text style={styles.benefitsTitle}>What you can use now</Text>
+          {purchaseVerification === 'UNVERIFIED' && <Text style={styles.subtitle}>We couldn’t verify a store purchase for this plan, so Starter limits apply for now.</Text>}
           <View style={styles.benefitsList}>
-            <BenefitRow text={`${getLimit(PlanLimit.TRUSTED_PERSONS) ?? 'Unlimited'} trusted person(s)`} />
+            <BenefitRow text={`${getLimit(PlanLimit.TRUSTED_PERSONS) ?? 'Unlimited'} trusted ${getLimit(PlanLimit.TRUSTED_PERSONS) === 1 ? 'person' : 'people'}`} />
             <BenefitRow text={`${getLimit(PlanLimit.PERSONAL_MESSAGES) ?? 'Unlimited'} written messages`} />
             <BenefitRow text={`${getLimit(PlanLimit.VIDEO_MESSAGES) ?? 'Unlimited'} video messages`} />
-            <BenefitRow text={canUseFeature(Feature.CUSTOM_CHECK_IN) ? 'Monthly or weekly schedule preferences' : 'Monthly schedule preferences'} />
-            <BenefitRow text="Private item storage and recipient assignment preferences" />
-            <Text style={styles.subtitle}>Limits reflect your effective account access. Automatic reminders, recipient invitations, inheritance release, and paid checkout are not available yet.</Text>
+            <BenefitRow text={canUseFeature(Feature.CUSTOM_CHECK_IN) ? 'Monthly or weekly check-ins' : 'Monthly check-ins'} />
+            <BenefitRow text="Encrypted storage and choosing who receives each item" />
           </View>
         </View>
 
-        {/* Action Buttons */}
+        {notice ? <InlineNotice tone={notice.tone} message={notice.message} style={styles.noticeGap} /> : null}
+
         <View style={styles.actionsContainer}>
-          {!isFamily && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/(auth)/plans' as never)}
-              style={({ pressed }) => [
-                styles.primaryAction,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.primaryActionText}>
-                View planned paid tiers
-              </Text>
-            </Pressable>
-          )}
-
-          {!isStarter && purchaseVerification === 'VERIFIED' && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleManage}
-              style={({ pressed }) => [
-                styles.secondaryAction,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.secondaryActionText}>
-                Manage Subscription in Store
-              </Text>
-            </Pressable>
-          )}
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={handleRestore}
-            disabled={restoring}
-            style={({ pressed }) => [
-              styles.restoreAction,
-              pressed && styles.pressed,
-            ]}
-          >
-            {restoring ? (
-              <ActivityIndicator size="small" color={colors.primary.deepForest} />
-            ) : (
-              <Text style={styles.restoreActionText}>Refresh Account Subscription</Text>
-            )}
-          </Pressable>
+          {!isFamily ? <Button title="Compare plans" onPress={() => router.push('/(auth)/plans' as never)} /> : null}
+          {!isStarter && purchaseVerification === 'VERIFIED' ? (
+            <Button title="Manage subscription in store" variant="secondary" onPress={() => void handleManage()} />
+          ) : null}
+          <Button title="Refresh my plan" variant="tertiary" onPress={() => void handleRestore()} loading={restoring} />
         </View>
+
+        <InlineNotice
+          tone="info"
+          title="Coming soon"
+          message="Paid plans, automatic reminders, invitations and releasing items aren’t available yet."
+          style={styles.noticeGap}
+        />
 
         {/* Downgrade & Continuity Policy Guarantee */}
         <View style={styles.guaranteeBox}>
-          <Text style={styles.guaranteeTitle}>🛡 CONTINUITY GUARANTEE</Text>
+          <View style={styles.guaranteeHeader}>
+            <AppIcon name="shieldCheck" size={20} color={colors.primary.deepForest} />
+            <Text style={styles.guaranteeTitle}>Nothing is lost if you change plans</Text>
+          </View>
           <Text style={styles.guaranteeText}>
-            Virasat never deletes your digital legacy data, uploaded documents, or
-            saved release policies if your subscription ends or you change tiers.
-            Your appointed trusted persons remain intact.
+            If your plan ends or changes, we keep your documents, messages, release rules and trusted people.
           </Text>
         </View>
       </ScrollView>
@@ -227,36 +176,11 @@ function BenefitRow({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
+  noticeGap: { marginTop: 16 },
+  guaranteeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   safeArea: {
     flex: 1,
     backgroundColor: colors.brand.ivory,
-  },
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    paddingHorizontal: 24,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    top: 4,
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 32,
-    color: colors.primary.deepForest,
-    lineHeight: 46,
-  },
-  brand: {
-    fontFamily: typography.fonts.inter.bold,
-    fontSize: 15,
-    color: colors.primary.deepForest,
-    letterSpacing: 2,
   },
   content: {
     paddingHorizontal: 20,
@@ -265,13 +189,6 @@ const styles = StyleSheet.create({
   },
   heading: {
     marginBottom: 20,
-  },
-  eyebrow: {
-    fontFamily: typography.fonts.inter.bold,
-    fontSize: 13,
-    color: colors.primary.forest,
-    
-    marginBottom: 6,
   },
   title: {
     fontFamily: typography.fonts.playfair.bold,
@@ -383,49 +300,6 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 24,
   },
-  primaryAction: {
-    backgroundColor: colors.primary.deepForest,
-    borderRadius: 14,
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  primaryActionText: {
-    fontFamily: typography.fonts.inter.bold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-  actionArrow: {
-    color: colors.neutral.white,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  secondaryAction: {
-    borderWidth: 1,
-    borderColor: colors.brand.sage,
-    backgroundColor: colors.neutral.white,
-    borderRadius: 14,
-    minHeight: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryActionText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.primary.deepForest,
-  },
-  restoreAction: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  restoreActionText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
-    color: colors.neutral.textSecondary,
-    textDecorationLine: 'underline',
-  },
   guaranteeBox: {
     backgroundColor: colors.brand.mint,
     borderRadius: 16,
@@ -443,8 +317,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primary.deepForest,
     lineHeight: 19,
-  },
-  pressed: {
-    opacity: 0.8,
   },
 });

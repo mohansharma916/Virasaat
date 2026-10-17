@@ -92,6 +92,8 @@ export function SearchablePickerModal({
 
     return (
       <Pressable accessibilityRole="button"
+        accessibilityLabel={item.subtitle ? `${item.title}, ${item.subtitle}` : item.title}
+        accessibilityState={{ selected: !!isSelected }}
         onPress={() => handleSelect(item)}
         style={({ pressed }) => [
           styles.itemRow,
@@ -188,8 +190,9 @@ export function SearchablePickerModal({
               </View>
 
               <Pressable accessibilityRole="button"
+                accessibilityLabel="Close"
                 onPress={handleClose}
-                hitSlop={12}
+                hitSlop={8}
                 style={({ pressed }) => [
                   styles.closeButton,
                   pressed && styles.closeButtonPressed,
@@ -202,8 +205,9 @@ export function SearchablePickerModal({
             {/* Search Input */}
             <View style={styles.searchContainer}>
               <View style={styles.searchBar}>
-                <Text style={styles.searchIcon}>🔍</Text>
+                <AppIcon name="search" size={20} color={colors.neutral.textSecondary} />
                 <TextInput
+                  accessibilityLabel={placeholder}
                   style={styles.searchInput}
                   placeholder={placeholder}
                   placeholderTextColor={colors.neutral.textMuted}
@@ -216,8 +220,9 @@ export function SearchablePickerModal({
                 />
                 {searchQuery ? (
                   <Pressable accessibilityRole="button"
+                    accessibilityLabel="Clear search"
                     onPress={() => setSearchQuery('')}
-                    hitSlop={8}
+                    hitSlop={12}
                     style={styles.clearButton}
                   >
                     <AppIcon name="close" style={styles.clearIcon} />
@@ -284,7 +289,7 @@ export function SearchablePickerModal({
               ItemSeparatorComponent={() => <View style={styles.separator} />}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyIcon}>🔎</Text>
+                  <AppIcon name="search" size={32} color={colors.neutral.textMuted} />
                   <Text style={styles.emptyTitle}>{emptyMessage}</Text>
                   <Text style={styles.emptySubtitle}>
                     Check your spelling or try searching for another name or code.
@@ -391,8 +396,8 @@ const styles = StyleSheet.create({
   },
 
   closeButton: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
     borderRadius: 16,
     backgroundColor: colors.brand.mint,
     alignItems: 'center',
@@ -425,12 +430,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-  },
-
-  searchIcon: {
-    fontSize: 15,
-    marginRight: 8,
-    opacity: 0.7,
   },
 
   searchInput: {
@@ -638,11 +637,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
     paddingHorizontal: 24,
-  },
-
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: 10,
   },
 
   emptyTitle: {

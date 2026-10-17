@@ -1,761 +1,150 @@
-import { useState } from 'react';
-
-import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
+import { ActionBar } from '@/src/components/ActionBar';
 import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { EmptyState } from '@/src/components/EmptyState';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { parseLegacyCategories } from '@/src/utils/legacy-flow';
-
-type AssetType =
-  | 'INVESTMENT'
-  | 'INSURANCE'
-  | 'BANK'
-  | 'PROPERTY'
-  | 'OTHER';
-
-type FinancialAsset = {
-  id: string;
-  type: AssetType;
-  title: string;
-  provider: string;
-  identifier?: string;
-};
-
-const assetTypes = [
-  {
-    id: 'INVESTMENT' as AssetType,
-    title: 'Investments',
-    icon: '📈',
-  },
-  {
-    id: 'INSURANCE' as AssetType,
-    title: 'Insurance',
-    icon: '🛡',
-  },
-  {
-    id: 'BANK' as AssetType,
-    title: 'Bank',
-    icon: '🏦',
-  },
-  {
-    id: 'PROPERTY' as AssetType,
-    title: 'Property',
-    icon: '🏠',
-  },
-  {
-    id: 'OTHER' as AssetType,
-    title: 'Other Financial Asset',
-    icon: '＋',
-  },
-];
+import { useAppSelector } from '@/src/store/hooks';
+import { ASSET_TYPES } from '@/src/utils/financial-assets';
 
 export default function LegacyInvestmentsScreen() {
-  const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{
-    category?: string;
-    categories?: string;
-  }>();
-  const [assets, setAssets] = useState<
-    FinancialAsset[]
-  >([]);
+  const params = useLocalSearchParams<{ category?: string; categories?: string }>();
+  const items = useAppSelector((state) => state.vault.items);
+  const assets = items.filter((item) => item.category === 'INVESTMENTS');
 
-  const [showAssetModal, setShowAssetModal] =
-    useState(false);
-
-const addAsset = (type: AssetType) => {
-  setShowAssetModal(false);
-
-  if (type === 'INVESTMENT') {
+  const addAsset = () =>
     router.push({
       pathname: '/(auth)/legacy-investment-details',
-      params: {
-        category: params.category ?? 'INVESTMENTS',
-        categories: params.categories ?? 'INVESTMENTS',
-      },
+      params: { category: params.category ?? 'INVESTMENTS', categories: params.categories ?? 'INVESTMENTS' },
     });
-    return;
-  }
 
-  Alert.alert(
-    'Coming next',
-    'This asset type will be implemented in the next screen.',
-  );
-};
-
-  const removeAsset = (id: string) => {
-    setAssets((current) =>
-      current.filter(
-        (asset) => asset.id !== id,
-      ),
-    );
-  };
-
-  const handleContinue = () => {
-    if (assets.length === 0) {
-      Alert.alert(
-        'Add an asset first',
-        'Add at least one financial asset before continuing.',
-      );
-      return;
-    }
-
-    const category = parseLegacyCategories(params.category)[0];
-
-    router.replace({
-      pathname: '/(auth)/legacy-category',
-      params: {
-        categories: params.categories ?? category ?? 'INVESTMENTS',
-      },
-    });
+  const finish = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/(auth)/legacy-category', params: { categories: params.categories ?? 'INVESTMENTS' } });
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.category}>Investments and finance</Text>
+        <Text style={styles.title} accessibilityRole="header">Help your family find what you’ve built</Text>
+        <Text style={styles.subtitle}>Add your investments, insurance, bank accounts and property.</Text>
 
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button"
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <AppIcon name="chevronLeft" style={styles.backArrow} />
-          </Pressable>
-
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
-        </View>
-
-        {/* Heading */}
-
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>
-            Investments & finance
-          </Text>
-
-          <Text style={styles.title}>
-            Help your family find what you've built.
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Add information about your investments,
-            insurance and other financial assets.
-          </Text>
-        </View>
-
-        {/* Add Asset */}
-
-        <Pressable accessibilityRole="button"
-          onPress={() => setShowAssetModal(true)}
-          style={({ pressed }) => [
-            styles.addCard,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <View style={styles.addIcon}>
-            <AppIcon name="plus" style={styles.plus} />
-          </View>
-
-          <View style={styles.addContent}>
-            <Text style={styles.addTitle}>
-              Add Financial Asset
-            </Text>
-
-            <Text style={styles.addDescription}>
-              Investment, insurance, bank account
-              or other financial asset
-            </Text>
-          </View>
-        </Pressable>
-
-        {/* Assets */}
-
-        {assets.length > 0 && (
-          <View style={styles.assetsSection}>
-            <Text style={styles.sectionTitle}>
-              Your financial assets
-            </Text>
-
-            {assets.map((asset) => (
-              <View
-                key={asset.id}
-                style={styles.assetCard}
-              >
-                <View style={styles.assetIcon}>
-                  <Text style={styles.assetEmoji}>
-                    {getAssetIcon(asset.type)}
-                  </Text>
-                </View>
-
-                <View style={styles.assetInfo}>
-                  <Text style={styles.assetTitle}>
-                    {asset.title}
-                  </Text>
-
-                  <Text style={styles.assetProvider}>
-                    {asset.provider}
-                  </Text>
-
-                  {asset.identifier && (
-                    <Text style={styles.assetIdentifier}>
-                      Account {maskIdentifier(
-                        asset.identifier,
-                      )}
-                    </Text>
-                  )}
-                </View>
-
-                <Pressable accessibilityRole="button"
-                  hitSlop={12}
-                  onPress={() =>
-                    removeAsset(asset.id)
-                  }
-                >
-                  <AppIcon name="close" style={styles.more} />
-                </Pressable>
-              </View>
-            ))}
-          </View>
+        {assets.length === 0 ? (
+          <EmptyState
+            icon="investment"
+            title="No financial assets yet"
+            message="Add where each asset is held so your family can find it."
+            actionLabel="Add a financial asset"
+            onAction={addAsset}
+          />
+        ) : (
+          <>
+            <View style={styles.list}>
+              {assets.map((asset) => {
+                const type = ASSET_TYPES.find((entry) => entry.label === asset.title) ?? ASSET_TYPES[ASSET_TYPES.length - 1];
+                return (
+                  <Pressable
+                    key={asset.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${asset.title}. Opens details`}
+                    onPress={() => router.push({ pathname: '/(auth)/saved-item', params: { id: asset.id } } as never)}
+                    style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                  >
+                    <View style={styles.rowIcon}>
+                      <AppIcon name={type.icon} size={22} color={colors.primary.deepForest} />
+                    </View>
+                    <View style={styles.rowBody}>
+                      <Text style={styles.rowTitle}>{asset.title}</Text>
+                      <Text style={styles.rowMeta}>
+                        Added {new Date(asset.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </Text>
+                    </View>
+                    <AppIcon name="chevronRight" size={20} color={colors.neutral.textMuted} />
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Button
+              title="Add another asset"
+              variant="secondary"
+              onPress={addAsset}
+              icon={<AppIcon name="plus" size={20} color={colors.primary.forest} />}
+              style={styles.addButton}
+            />
+          </>
         )}
 
-        {/* Security Warning */}
-
-        <View style={styles.securityCard}>
-          <View style={styles.securityIcon}>
-            <AppIcon name="lock" style={styles.lock} />
-          </View>
-
-          <View style={styles.securityContent}>
-            <Text style={styles.securityTitle}>
-              Keep authentication secrets out
-            </Text>
-
-            <Text style={styles.securityText}>
-              Never store passwords, PINs, OTPs,
-              CVVs or similar authentication secrets
-              in Virasat.
-            </Text>
-          </View>
-        </View>
+        <InlineNotice
+          tone="warning"
+          icon="key"
+          title="Keep secrets out"
+          message="Never store passwords, PINs, OTPs or card CVVs in Virasat."
+          style={styles.notice}
+        />
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {/* Continue */}
-        <Pressable accessibilityRole="button"
-          onPress={handleContinue}
-          style={({ pressed }) => [
-            styles.button,
-            assets.length === 0 && styles.buttonDisabled,
-            pressed && assets.length > 0 && styles.buttonPressed,
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            Continue
-          </Text>
-        </Pressable>
-
-        <Text style={styles.footer}>
-          {assets.length === 0
-            ? 'You can add assets later'
-            : `${assets.length} ${
-                assets.length === 1
-                  ? 'asset'
-                  : 'assets'
-              } added`}
-        </Text>
-      </View>
-
-      {/* Asset Type Modal */}
-
-      <Modal
-        visible={showAssetModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() =>
-          setShowAssetModal(false)
-        }
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHandle} />
-
-            <Text style={styles.modalTitle}>
-              Add Financial Asset
-            </Text>
-
-            <Text style={styles.modalSubtitle}>
-              What would you like to add?
-            </Text>
-
-            <View style={styles.assetTypeGrid}>
-              {assetTypes.map((type) => (
-                <Pressable accessibilityRole="button"
-                  key={type.id}
-                  onPress={() =>
-                    addAsset(type.id)
-                  }
-                  style={({ pressed }) => [
-                    styles.assetType,
-                    pressed &&
-                      styles.assetTypePressed,
-                  ]}
-                >
-                  <Text style={styles.typeIcon}>
-                    {type.icon}
-                  </Text>
-
-                  <Text style={styles.typeTitle}>
-                    {type.title}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Pressable accessibilityRole="button"
-              onPress={() =>
-                setShowAssetModal(false)
-              }
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelText}>
-                Cancel
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <ActionBar>
+        {assets.length === 0 ? (
+          <Button title="Skip for now" variant="secondary" onPress={finish} />
+        ) : (
+          <Button title="Done" onPress={finish} />
+        )}
+      </ActionBar>
     </SafeAreaView>
   );
 }
 
-function getAssetIcon(type: AssetType) {
-  switch (type) {
-    case 'INVESTMENT':
-      return '📈';
-
-    case 'INSURANCE':
-      return '🛡';
-
-    case 'BANK':
-      return '🏦';
-
-    case 'PROPERTY':
-      return '🏠';
-
-    default:
-      return '📁';
-  }
-}
-
-function maskIdentifier(value: string) {
-  if (value.length <= 4) {
-    return `•••• ${value}`;
-  }
-
-  return `•••• ${value.slice(-4)}`;
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 35,
-  },
-
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary.forest,
-  },
-
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 18,
-    marginBottom: 16,
-  },
-
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
+  category: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.label, color: colors.primary.forest },
   title: {
-    marginTop: 7,
+    marginTop: 4,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 29,
-    lineHeight: 38,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-
   subtitle: {
     marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-
-  addCard: {
-    minHeight: 91,
-    padding: 15,
+  list: { gap: 12 },
+  row: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
     borderRadius: 16,
-    backgroundColor: colors.brand.mint,
-    borderWidth: 1,
-    borderColor: colors.brand.sage,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  cardPressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.99 }],
-  },
-
-  addIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 13,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  plus: {
-    fontSize: 25,
-    fontWeight: '300',
-    color: colors.primary.forest,
-  },
-
-  addContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  addTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
-    color: colors.primary.deepForest,
-  },
-
-  addDescription: {
-    marginTop: 4,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.neutral.textSecondary,
-  },
-
-  arrow: {
-    marginLeft: 8,
-    fontSize: 18,
-    color: colors.primary.forest,
-  },
-
-  assetsSection: {
-    marginTop: 25,
-  },
-
-  sectionTitle: {
-    marginBottom: 11,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.neutral.textMuted,
-  },
-
-  assetCard: {
-    minHeight: 70,
-    padding: 12,
-    marginBottom: 9,
-    borderRadius: 13,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  assetIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    backgroundColor: colors.brand.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  assetEmoji: {
-    fontSize: 17,
-  },
-
-  assetInfo: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  assetTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  assetProvider: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textSecondary,
-  },
-
-  assetIdentifier: {
-    marginTop: 2,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-
-  more: {
-    fontSize: 22,
-    color: colors.neutral.textMuted,
-    paddingLeft: 10,
-  },
-
-  securityCard: {
-    marginTop: 8,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  securityIcon: {
-    width: 29,
-    height: 29,
-    borderRadius: 15,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  lock: {
-    fontSize: 13,
-  },
-
-  securityContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  securityTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  securityText: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.neutral.textSecondary,
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  button: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonDisabled: {
-    opacity: 0.45,
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  buttonArrow: {
-    marginLeft: 10,
-    fontSize: 19,
-    color: colors.neutral.white,
-  },
-
-  footer: {
-    marginTop: 10,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textMuted,
-    textAlign: 'center',
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'flex-end',
-  },
-
-  modal: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 32,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  modalHandle: {
-    alignSelf: 'center',
-    width: 38,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.neutral.border,
-    marginBottom: 22,
-  },
-
-  modalTitle: {
-    fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 25,
-    color: colors.primary.deepForest,
-  },
-
-  modalSubtitle: {
-    marginTop: 5,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textSecondary,
-  },
-
-  assetTypeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 22,
-  },
-
-  assetType: {
-    width: '47%',
-    minHeight: 105,
-    borderRadius: 15,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-
-  assetTypePressed: {
-    opacity: 0.75,
-  },
-
-  typeIcon: {
-    fontSize: 25,
-    marginBottom: 8,
-  },
-
-  typeTitle: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    textAlign: 'center',
-    color: colors.neutral.textPrimary,
-  },
-
-  cancelButton: {
-    minHeight: 50,
-    marginTop: 18,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
   },
-
-  cancelText: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 14,
-    color: colors.primary.deepForest,
+  pressed: { backgroundColor: colors.brand.mint },
+  rowIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.brand.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  rowBody: { flex: 1, gap: 2 },
+  rowTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.body, lineHeight: 22, color: colors.neutral.textPrimary },
+  rowMeta: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, color: colors.neutral.textSecondary },
+  addButton: { marginTop: 16 },
+  notice: { marginTop: 24 },
 });

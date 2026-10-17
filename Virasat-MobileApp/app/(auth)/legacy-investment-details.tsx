@@ -1,80 +1,77 @@
-import { useState, useRef } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
+import { ActionBar } from '@/src/components/ActionBar';
 import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { Input } from '@/src/components/Input';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { createLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { ASSET_TYPES, type AssetTypeId } from '@/src/utils/financial-assets';
+import { haptics } from '@/src/utils/haptics';
 import { useAppDispatch } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
 
 export default function LegacyInvestmentDetailsScreen() {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const [assetType, setAssetType] = useState<AssetTypeId>('INVESTMENT');
   const [provider, setProvider] = useState('');
-  const [folioNumber, setFolioNumber] = useState('');
+  const [reference, setReference] = useState('');
   const [contact, setContact] = useState('');
   const [value, setValue] = useState('');
-  const [instructions, setInstructions] =
-    useState('');
+  const [instructions, setInstructions] = useState('');
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{ provider?: string; reference?: string }>({});
+  const [submitError, setSubmitError] = useState('');
   const requestKey = useRef(createItemRequestKey());
   const busy = useRef(false);
 
+  const type = ASSET_TYPES.find((entry) => entry.id === assetType) ?? ASSET_TYPES[0];
+
   const handleSave = async () => {
     if (busy.current) return;
-    if (!provider.trim()) {
-      Alert.alert(
-        'Provider required',
-        'Please enter the investment provider or institution.',
-      );
-      return;
-    }
-
-    if (!folioNumber.trim()) {
-      Alert.alert(
-        'Reference required',
-        'Please enter the account or folio number.',
-      );
+    const nextErrors: typeof errors = {};
+    if (!provider.trim()) nextErrors.provider = 'Enter who holds this asset.';
+    if (!reference.trim()) nextErrors.reference = `Enter the ${type.referenceLabel.toLowerCase()}.`;
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      haptics.error();
       return;
     }
 
     try {
       busy.current = true;
       setSaving(true);
+      setSubmitError('');
       const item = await createLegacyItem({
         requestKey: requestKey.current,
         type: 'FINANCIAL',
         category: 'INVESTMENTS',
-        title: 'Financial record',
+        title: type.label,
         description: [
+          `Type: ${type.label}`,
           `Provider: ${provider.trim()}`,
-          `Reference: ${folioNumber.trim()}`,
+          `Reference: ${reference.trim()}`,
           contact.trim() ? `Contact: ${contact.trim()}` : '',
-          value.trim() ? `Approximate value: ${value.trim()}` : '',
+          value.trim() ? `Approximate value: ₹${value.trim()}` : '',
           instructions.trim() ? `Instructions: ${instructions.trim()}` : '',
-        ].filter(Boolean).join('\n'),
+        ]
+          .filter(Boolean)
+          .join('\n'),
       });
       dispatch(addLegacyItem(item));
-
-
-      router.replace('/(auth)/(tabs)/home');
+      haptics.success();
+      if (router.canGoBack()) router.back();
+      else router.replace('/(auth)/(tabs)/home');
     } catch (error) {
-      Alert.alert('Unable to save investment', getApiErrorMessage(error));
+      haptics.error();
+      setSubmitError(getApiErrorMessage(error, 'We couldn’t save this asset. Check your connection and try again.'));
     } finally {
       busy.current = false;
       setSaving(false);
@@ -82,515 +79,155 @@ export default function LegacyInvestmentDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.keyboard}
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : undefined
-        }
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScreenHeader onBack="default" />
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Text style={styles.title} accessibilityRole="header">Add a financial asset</Text>
+          <Text style={styles.subtitle}>Just enough for your family to find it and contact the provider.</Text>
 
-          <View style={styles.header}>
-            <Pressable accessibilityRole="button"
-              onPress={() => router.back()}
-              hitSlop={12}
-              style={styles.backButton}
-            >
-              <AppIcon name="chevronLeft" style={styles.backArrow} />
-            </Pressable>
-
-            <Text style={styles.brand}>
-              VIRASAT
-            </Text>
+          <Text style={styles.label} nativeID="assetTypeLabel">Type of asset</Text>
+          <View style={styles.typeGrid} accessibilityRole="radiogroup" accessibilityLabelledBy="assetTypeLabel">
+            {ASSET_TYPES.map((entry) => {
+              const selected = entry.id === assetType;
+              return (
+                <Pressable
+                  key={entry.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  accessibilityLabel={entry.label}
+                  onPress={() => {
+                    haptics.selection();
+                    setAssetType(entry.id);
+                  }}
+                  style={[styles.typeChip, selected && styles.typeChipSelected]}
+                >
+                  <AppIcon name={entry.icon} size={18} color={selected ? colors.neutral.white : colors.primary.deepForest} />
+                  <Text style={[styles.typeText, selected && styles.typeTextSelected]}>{entry.label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
 
-          {/* Heading */}
-
-          <View style={styles.heading}>
-            <Text style={styles.eyebrow}>
-              Investment details
-            </Text>
-
-            <Text style={styles.title}>
-              Add the details your family may need.
-            </Text>
-
-            <Text style={styles.subtitle}>
-              Keep this information focused on
-              identifying and managing the asset.
-            </Text>
-          </View>
-
-          {/* Investment Type */}
-
-          <FieldLabel label="Investment type" />
-
-          <Pressable accessibilityRole="button" style={styles.select}>
-            <Text style={styles.selectText}>
-              Mutual Fund
-            </Text>
-
-            <AppIcon name="chevronDown" style={styles.chevron} />
-          </Pressable>
-
-          {/* Provider */}
-
-          <FieldLabel
-            label="Provider / Institution"
-          />
-
-          <TextInput
+          <Input
+            label="Provider or institution"
+            placeholder={type.providerHint}
             value={provider}
-            onChangeText={setProvider}
-            placeholder="e.g. HDFC Mutual Fund"
-            placeholderTextColor={
-              colors.neutral.textMuted
-            }
-            style={styles.input}
+            onChangeText={(text) => {
+              setProvider(text);
+              if (errors.provider) setErrors((current) => ({ ...current, provider: undefined }));
+            }}
+            error={errors.provider}
+            autoCapitalize="words"
           />
-
-          {/* Folio */}
-
-          <FieldLabel label="Account / Folio Number" />
-
-          <TextInput
-            value={folioNumber}
-            onChangeText={setFolioNumber}
-            placeholder="Enter reference number"
-            placeholderTextColor={
-              colors.neutral.textMuted
-            }
+          <Input
+            label={type.referenceLabel}
+            placeholder="So your family can identify it"
+            value={reference}
+            onChangeText={(text) => {
+              setReference(text);
+              if (errors.reference) setErrors((current) => ({ ...current, reference: undefined }));
+            }}
+            error={errors.reference}
             autoCapitalize="none"
-            style={styles.input}
           />
-
-          {/* Contact */}
-
-          <FieldLabel
-            label="Registered Email / Phone"
-            optional
-          />
-
-          <TextInput
+          <Input
+            label="Registered email or phone"
+            required={false}
+            placeholder="The contact the provider has on file"
             value={contact}
             onChangeText={setContact}
-            placeholder="Optional"
-            placeholderTextColor={
-              colors.neutral.textMuted
-            }
             keyboardType="email-address"
             autoCapitalize="none"
-            style={styles.input}
           />
 
-          {/* Value */}
-
-          <FieldLabel
-            label="Approximate Value"
-            optional
-          />
-
-          <View style={styles.amountInput}>
-            <AppIcon name="investment" style={styles.rupee} />
-
-            <TextInput
+          <View>
+            <Input
+              label="Approximate value in rupees"
+              required={false}
+              placeholder="e.g. 5,00,000"
               value={value}
               onChangeText={setValue}
-              placeholder="Enter amount"
-              placeholderTextColor={
-                colors.neutral.textMuted
-              }
               keyboardType="numeric"
-              style={styles.amountTextInput}
+              style={styles.amountInput}
             />
+            <Text style={styles.currency} accessible={false}>₹</Text>
           </View>
 
-          {/* Instructions */}
-
-          <FieldLabel
-            label="Important Instructions"
-            optional
-          />
-
-          <TextInput
+          <Input
+            label="Instructions for your family"
+            required={false}
+            placeholder="Anything they should know, such as who to call first"
             value={instructions}
             onChangeText={setInstructions}
-            placeholder="Add any information your family should know..."
-            placeholderTextColor={
-              colors.neutral.textMuted
-            }
             multiline
-            textAlignVertical="top"
-            style={styles.textArea}
           />
 
-          {/* Supporting Document */}
-
-          <FieldLabel
-            label="Supporting Document"
-            optional
+          <InlineNotice
+            tone="warning"
+            icon="key"
+            title="Keep secrets out"
+            message="Never enter passwords, PINs, OTPs, card CVVs or banking logins."
           />
-
-          <Pressable accessibilityRole="button" style={styles.documentButton}>
-            <AppIcon name="plus" style={styles.documentPlus} />
-
-            <Text style={styles.documentText}>
-              Add document
-            </Text>
-          </Pressable>
-
-          {/* Security */}
-
-          <View style={styles.securityCard}>
-            <View style={styles.securityIcon}>
-              <AppIcon name="lock" style={styles.lock} />
-            </View>
-
-            <View style={styles.securityContent}>
-              <Text style={styles.securityTitle}>
-                Sensitive information
-              </Text>
-
-              <Text style={styles.securityText}>
-                Never enter passwords, PINs, OTPs,
-                CVVs or banking login credentials.
-              </Text>
-            </View>
-          </View>
         </ScrollView>
 
-        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          {/* Save */}
-          <Pressable accessibilityRole="button"
-            disabled={saving}
-            onPress={handleSave}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && !saving && styles.buttonPressed,
-            ]}
-          >
-            <Text style={styles.buttonText}>
-              {saving ? 'Saving…' : 'Save Investment'}
-            </Text>
-          </Pressable>
-
-          <Text style={styles.footer}>
-            You can edit this information later.
-          </Text>
-        </View>
+        <ActionBar>
+          {submitError ? <InlineNotice tone="danger" message={submitError} style={styles.error} /> : null}
+          <Button title="Save asset" onPress={() => void handleSave()} loading={saving} />
+        </ActionBar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function FieldLabel({
-  label,
-  optional = false,
-}: {
-  label: string;
-  optional?: boolean;
-}) {
-  return (
-    <View style={styles.labelRow}>
-      <Text style={styles.label}>
-        {label}
-      </Text>
-
-      {optional && (
-        <Text style={styles.optional}>
-          Optional
-        </Text>
-      )}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  keyboard: {
-    flex: 1,
-  },
-
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 40,
-  },
-
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary.forest,
-  },
-
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 18,
-    marginBottom: 16,
-  },
-
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  keyboard: { flex: 1 },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
-    marginTop: 7,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 28,
-    lineHeight: 37,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-
   subtitle: {
     marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-
-  labelRow: {
-    marginTop: 17,
-    marginBottom: 7,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
   label: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  optional: {
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-
-  input: {
-    minHeight: 52,
-    paddingHorizontal: 15,
-    borderRadius: 13,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  select: {
-    minHeight: 52,
-    paddingHorizontal: 15,
-    borderRadius: 13,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  selectText: {
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  chevron: {
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-
-  amountInput: {
-    minHeight: 52,
-    paddingHorizontal: 15,
-    borderRadius: 13,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  rupee: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 15,
-    color: colors.primary.forest,
-    marginRight: 8,
-  },
-
-  amountTextInput: {
-    flex: 1,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  textArea: {
-    minHeight: 105,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    borderRadius: 13,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.neutral.textPrimary,
-  },
-
-  documentButton: {
-    minHeight: 50,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: colors.brand.sage,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  documentPlus: {
-    fontSize: 19,
-    color: colors.primary.forest,
-    marginRight: 7,
-  },
-
-  documentText: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.primary.forest,
-  },
-
-  securityCard: {
-    marginTop: 20,
-    padding: 13,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-  },
-
-  securityIcon: {
-    width: 29,
-    height: 29,
-    borderRadius: 15,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  lock: {
-    fontSize: 13,
-  },
-
-  securityContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  securityTitle: {
+    marginBottom: 8,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
+    fontSize: typography.sizes.label,
+    lineHeight: typography.lineHeights.label,
     color: colors.neutral.textPrimary,
   },
-
-  securityText: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 17,
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  typeChip: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.neutral.control,
+    backgroundColor: colors.neutral.white,
+  },
+  typeChipSelected: { backgroundColor: colors.primary.deepForest, borderColor: colors.primary.deepForest },
+  typeText: { fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.label, color: colors.neutral.textPrimary },
+  typeTextSelected: { color: colors.neutral.white },
+  amountInput: { paddingLeft: 36 },
+  currency: {
+    position: 'absolute',
+    left: 16,
+    top: 42,
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: typography.sizes.body,
     color: colors.neutral.textSecondary,
   },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  button: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  footer: {
-    marginTop: 10,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-    textAlign: 'center',
-  },
+  error: { marginBottom: 8 },
 });

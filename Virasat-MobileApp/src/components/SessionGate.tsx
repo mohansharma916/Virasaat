@@ -75,7 +75,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Remove decrypted exports left by a force-closed sharing session.
-    try { clearTemporaryVaultExports(); } catch { setError('Unable to clear temporary exports. Please restart the app.'); }
+    try { clearTemporaryVaultExports(); } catch { setError('We couldn’t clear temporary files. Restart the app.'); }
   }, []);
 
   useEffect(() => {
@@ -201,14 +201,14 @@ export function SessionGate({ children }: { children: ReactNode }) {
           reason?.isNetworkError || (isAxiosError(reason) && !reason.response);
         setError(
           isNet
-            ? 'Unable to reach Virasat servers. Please check your internet connection.'
-            : reason?.message || 'Unable to confirm your session. Check your connection and retry.',
+            ? 'We can’t reach Virasat. Check your internet connection and try again.'
+            : reason?.message || 'We couldn’t confirm your sign-in. Check your connection and try again.',
         );
       }
     };
 
     void validate().catch(() => {
-      if (active) setError('Unable to open secure storage. Please retry.');
+      if (active) setError('We couldn’t open secure storage on this device. Try again.');
     });
 
     return () => {
@@ -235,14 +235,14 @@ export function SessionGate({ children }: { children: ReactNode }) {
           <View style={styles.iconCircle}>
             <AppIcon name="alert" style={styles.iconText} />
           </View>
-          <Text style={styles.errorHeading}>Unable to Verify Session</Text>
+          <Text style={styles.errorHeading} accessibilityRole="header">We couldn’t confirm your sign-in</Text>
           <Text style={styles.errorBody} accessibilityRole="alert">
             {error}
           </Text>
 
           <View style={styles.actionRow}>
             <Button
-              title="Retry Connection"
+              title="Try again"
               onPress={() => setRetry((value) => value + 1)}
             />
             <Pressable accessibilityRole="button"
@@ -254,7 +254,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
                 router.replace('/(auth)/login');
               }}
             >
-              <Text style={styles.secondaryButtonText}>Return to Sign In</Text>
+              <Text style={styles.secondaryButtonText}>Go to sign in</Text>
             </Pressable>
           </View>
         </View>
@@ -333,6 +333,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   secondaryButton: {
+    minHeight: 48,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1,11 +1,7 @@
 import React from 'react';
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -22,53 +18,65 @@ export interface UpgradeModalProps {
   secondaryCtaText?: string;
 }
 
+// Bottom sheet shown when a plan limit is reached. Paid plans can't be bought
+// yet, so it says so and leads to the comparison, not a checkout.
 export function UpgradeModal({
   visible,
   onClose,
   title,
   message,
   benefits = [],
-  ctaText = 'View Plans',
+  ctaText = 'Compare plans',
   onCtaPress,
   secondaryCtaText = 'Not now',
 }: UpgradeModalProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable accessibilityRole="button" style={styles.backdrop} onPress={onClose}>
-        <Pressable accessibilityRole="button" style={styles.card} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.badgeRow}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
+        <View
+          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}
+          accessibilityViewIsModal
+          importantForAccessibility="yes"
+        >
+          <View style={styles.handle} />
+
+          <View style={styles.headerRow}>
             <View style={styles.iconCircle}>
-              <AppIcon name="sparkles" style={styles.shieldIcon} />
+              <AppIcon name="sparkles" size={22} color={colors.primary.deepForest} />
             </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Virasat premium</Text>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={onClose}
+              style={({ pressed }) => [styles.closeButton, pressed && styles.closePressed]}
+            >
+              <AppIcon name="close" size={22} color={colors.neutral.textSecondary} />
+            </Pressable>
           </View>
 
-          <Text style={styles.title}>{title}</Text>
-
+          <Text style={styles.title} accessibilityRole="header">{title}</Text>
           {message ? <Text style={styles.message}>{message}</Text> : null}
-          <Text style={styles.message}>Paid upgrades are not available yet. The benefits below describe planned tiers.</Text>
 
-          {benefits.length > 0 && (
-            <View style={styles.benefitsContainer}>
-              {benefits.map((benefit, idx) => (
-                <View key={idx} style={styles.benefitRow}>
-                  <View style={styles.checkCircle}>
-                    <AppIcon name="check" style={styles.checkIcon} />
-                  </View>
+          {benefits.length > 0 ? (
+            <View style={styles.benefits}>
+              {benefits.map((benefit) => (
+                <View key={benefit} style={styles.benefitRow}>
+                  <AppIcon name="checkCircle" size={20} color={colors.primary.forest} />
                   <Text style={styles.benefitText}>{benefit}</Text>
                 </View>
               ))}
             </View>
-          )}
+          ) : null}
 
-          <View style={styles.actionContainer}>
+          <View style={styles.soonRow}>
+            <AppIcon name="hourglass" size={16} color={colors.semantic.warning} />
+            <Text style={styles.soonText}>Paid plans are coming soon. You can’t buy them yet.</Text>
+          </View>
+
+          <View style={styles.actions}>
             <Button
               title={ctaText}
               onPress={() => {
@@ -76,52 +84,27 @@ export function UpgradeModal({
                 onCtaPress();
               }}
             />
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.secondaryPressed,
-              ]}
-            >
-              <Text style={styles.secondaryText}>{secondaryCtaText}</Text>
-            </Pressable>
+            <Button title={secondaryCtaText} variant="tertiary" onPress={onClose} />
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(6, 63, 52, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(6, 63, 52, 0.45)' },
+  sheet: {
     backgroundColor: colors.neutral.white,
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: colors.brand.sage,
-    shadowColor: colors.primary.deepForest,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    maxHeight: '90%',
   },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
+  handle: { alignSelf: 'center', width: 32, height: 4, borderRadius: 2, backgroundColor: colors.neutral.border, marginBottom: 12 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconCircle: {
     width: 44,
     height: 44,
@@ -130,81 +113,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shieldIcon: {
-    fontSize: 20,
-    color: colors.primary.deepForest,
-  },
-  badge: {
-    backgroundColor: colors.brand.mint,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  badgeText: {
-    fontFamily: typography.fonts.inter.bold,
-    fontSize: 13,
-    color: colors.primary.deepForest,
-    
-  },
+  closeButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  closePressed: { backgroundColor: colors.neutral.sunken },
   title: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 22,
+    marginTop: 12,
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: typography.sizes.title2,
+    lineHeight: typography.lineHeights.title2,
     color: colors.neutral.textPrimary,
-    lineHeight: 32,
-    marginBottom: 8,
   },
   message: {
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 15,
+    fontSize: typography.sizes.callout,
+    lineHeight: typography.lineHeights.callout,
     color: colors.neutral.textSecondary,
-    lineHeight: 21,
-    marginBottom: 16,
   },
-  benefitsContainer: {
-    backgroundColor: colors.brand.ivory,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    gap: 12,
-  },
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  checkCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.primary.forest,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkIcon: {
-    color: colors.neutral.white,
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  benefits: { marginTop: 16, gap: 12, padding: 16, borderRadius: 16, backgroundColor: colors.brand.ivory },
+  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   benefitText: {
     flex: 1,
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 15,
+    fontSize: typography.sizes.callout,
+    lineHeight: typography.lineHeights.callout,
     color: colors.neutral.textPrimary,
   },
-  actionContainer: {
-    gap: 10,
-  },
-  secondaryButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryPressed: {
-    opacity: 0.7,
-  },
-  secondaryText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.textSecondary,
-  },
+  soonRow: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  soonText: { flex: 1, fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.caption, color: colors.semantic.warning },
+  actions: { marginTop: 16, gap: 4 },
 });

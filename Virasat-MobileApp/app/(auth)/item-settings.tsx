@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { assignLegacyItem, listLegacyItems, type LegacyItem } from '@/src/api/vault.api';
 import { listRecipients, type Recipient } from '@/src/api/recipients.api';
 import { getReleasePolicy, type ReleasePolicy } from '@/src/api/release.api';
-import { AppIcon } from '@/src/components/AppIcon';
+import { ActionBar } from '@/src/components/ActionBar';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { Input } from '@/src/components/Input';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { Skeleton, SkeletonGroup } from '@/src/components/Skeleton';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
@@ -23,7 +20,6 @@ import { runWithSystemUi } from '@/src/components/SessionGate';
 
 export default function ItemSettingsScreen() {
   const params = useLocalSearchParams<{ itemId?: string }>();
-  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<LegacyItem[]>([]);
   const [people, setPeople] = useState<Recipient[]>([]);
   const [policy, setPolicy] = useState<ReleasePolicy | null>(null);
@@ -79,7 +75,7 @@ export default function ItemSettingsScreen() {
       return;
     }
     if (!policy?.enabled) {
-      setError('Please configure and enable a release policy before confirming assignment.');
+      setError('Set your release rules before assigning an item.');
       return;
     }
     busy.current = true;
@@ -99,7 +95,7 @@ export default function ItemSettingsScreen() {
         current.map((item) => (item.id === saved.id ? saved : item)),
       );
       setCurrentPassword('');
-      setSuccess('Assignment saved successfully. No notifications were sent.');
+      setSuccess('Saved. Nobody was notified.');
     } catch (reason) {
       setError(getApiErrorMessage(reason));
     } finally {
@@ -125,71 +121,50 @@ export default function ItemSettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Pressable accessibilityRole="button"
-          onPress={() => router.replace('/(auth)/(tabs)/home')}
-          hitSlop={12}
-          style={styles.backButton}
-        >
-          <AppIcon name="chevronLeft" style={styles.backArrow} />
-        </Pressable>
-        <Text style={styles.brand}>VIRASAT</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader
+        onBack={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/(auth)/(tabs)/home');
+        }}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>Vault assignment</Text>
-          <Text style={styles.title}>Release Settings</Text>
+          <Text style={styles.title} accessibilityRole="header">Who receives this</Text>
           <Text style={styles.subtitle}>
-            Save recipient and policy preferences for each item. Recipient access and inheritance release are not available yet.
+            Choose an item and the person who should receive it. Releasing items is coming soon.
           </Text>
         </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator color={colors.primary.deepForest} size="small" />
-            <Text style={styles.loadingText}>Loading settings…</Text>
-          </View>
+          <SkeletonGroup label="Loading your items and people">
+            {[0, 1, 2].map((key) => (
+              <Skeleton key={key} height={64} radius={12} style={styles.skeletonGap} />
+            ))}
+          </SkeletonGroup>
         ) : null}
 
         {error ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
-            <Pressable accessibilityRole="button"
-              onPress={() => setRetry((v) => v + 1)}
-              style={styles.retryButton}
-            >
-              <Text style={styles.retryText}>Reload</Text>
-            </Pressable>
-          </View>
+          <InlineNotice tone="danger" message={error} actionLabel="Try again" onAction={() => setRetry((v) => v + 1)} style={styles.notice} />
         ) : null}
 
-        {success ? (
-          <View style={styles.successCard}>
-            <Text style={styles.successText}>✓ {success}</Text>
-          </View>
-        ) : null}
+        {success ? <InlineNotice tone="success" message={success} style={styles.notice} /> : null}
 
         {!loading && (
           <>
             {/* Step 1: Select Item */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>1. SELECT A VAULT ITEM</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">1. Choose an item</Text>
             </View>
 
             {items.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>No items found in your vault.</Text>
-                <Pressable accessibilityRole="button"
-                  onPress={() => router.push('/(auth)/legacy-setup')}
-                  style={styles.outlineButton}
-                >
-                  <Text style={styles.outlineButtonText}>Protect an item first</Text>
-                </Pressable>
+                <Text style={styles.emptyText}>Your vault is empty. Save an item first, then choose who receives it.</Text>
+                <Button title="Add your first item" variant="secondary" size="md" onPress={() => router.push('/(auth)/legacy-setup')} />
               </View>
             ) : (
               items.map((item) => {
@@ -224,8 +199,8 @@ export default function ItemSettingsScreen() {
                       <Text style={styles.itemTitle}>{item.title}</Text>
                       <Text style={styles.itemMeta}>
                         {item.assignment
-                          ? `${people.find((person) => person.id === item.assignment?.recipientId)?.name ?? 'Removed person'} · Policy v${item.assignment.policyVersion} · Verification ${item.assignment.verificationRequired ? 'required' : 'optional'}`
-                          : 'No policy assigned yet'}
+                          ? `Assigned to ${people.find((person) => person.id === item.assignment?.recipientId)?.name ?? 'a removed person'} · ${item.assignment.verificationRequired ? 'ID check required' : 'No ID check'}`
+                          : 'Not assigned yet'}
                       </Text>
                     </View>
                   </Pressable>
@@ -235,18 +210,13 @@ export default function ItemSettingsScreen() {
 
             {/* Step 2: Select Recipient */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>2. SELECT A RECIPIENT</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">2. Choose who receives it</Text>
             </View>
 
             {people.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>No recipients added yet.</Text>
-                <Pressable accessibilityRole="button"
-                  onPress={() => router.push('/(auth)/trusted-person')}
-                  style={styles.outlineButton}
-                >
-                  <Text style={styles.outlineButtonText}>Add a recipient</Text>
-                </Pressable>
+                <Text style={styles.emptyText}>You haven’t added a trusted person yet.</Text>
+                <Button title="Add a trusted person" variant="secondary" size="md" onPress={() => router.push('/(auth)/trusted-person')} />
               </View>
             ) : (
               people.map((person) => {
@@ -278,7 +248,7 @@ export default function ItemSettingsScreen() {
                     <View style={styles.selectInfo}>
                       <Text style={styles.itemTitle}>{person.name}</Text>
                       <Text style={styles.itemMeta}>
-                        {person.status === 'PRIVATE' ? 'Private · Silent' : person.status}
+                        {person.status === 'PRIVATE' ? 'Saved privately' : person.status === 'ACTIVE' ? 'Active' : person.status === 'INVITED' ? 'Invited' : 'Removed'}
                       </Text>
                     </View>
                   </Pressable>
@@ -288,41 +258,33 @@ export default function ItemSettingsScreen() {
 
             {/* Step 3: Policy Overview */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>3. RELEASE POLICY RULES</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">3. Release rules that apply</Text>
             </View>
 
             {policy?.enabled ? (
               <View style={styles.policyCard}>
-                <View style={styles.policyHeader}>
-                  <Text style={styles.policyBadge}>VERSION {policy.version}</Text>
-                  <Text style={styles.policyActive}>Active Policy</Text>
-                </View>
+                <Text style={styles.policyActive}>Active</Text>
                 <Text style={styles.policyDesc}>
-                  Trigger: {policy.trigger === 'CHECK_IN_ESCALATION' ? 'Missed check-in escalation & human review' : 'Manual request & review'}.
+                  {policy.trigger === 'CHECK_IN_ESCALATION' ? 'Released after missed check-ins and Virasat’s review.' : 'Released only on request, after Virasat’s review.'}
                 </Text>
                 <Text style={styles.policySubtext}>
-                  Identity verification: {policy.verificationRequired ? 'Required' : 'Not required'}. Explicit owner authorization always applies.
+                  {policy.verificationRequired ? 'They must verify their identity first.' : 'No ID check, but sign-in and review still apply.'}
                 </Text>
               </View>
             ) : (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>Release policy is not yet configured.</Text>
-                <Pressable accessibilityRole="button"
-                  onPress={() => router.push('/(auth)/release-rules')}
-                  style={styles.outlineButton}
-                >
-                  <Text style={styles.outlineButtonText}>Configure Policy</Text>
-                </Pressable>
+                <Text style={styles.emptyText}>You haven’t set your release rules yet.</Text>
+                <Button title="Set release rules" variant="secondary" size="md" onPress={() => router.push('/(auth)/release-rules')} />
               </View>
             )}
             {needsReauth ? (
               <View style={styles.reauthCard}>
-                <Text style={styles.reauthTitle}>Confirm it's you</Text>
+                <Text style={styles.reauthTitle} accessibilityRole="header">Confirm it’s you</Text>
                 <Text style={styles.emptyText}>
                   This item is already assigned. Changing who receives it needs your password.
                 </Text>
-                <TextInput
-                  accessibilityLabel="Current password"
+                <Input
+                  label="Current password"
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
                   secureTextEntry
@@ -330,76 +292,29 @@ export default function ItemSettingsScreen() {
                   autoComplete="current-password"
                   textContentType="password"
                   editable={!saving}
-                  placeholder="Current password"
-                  placeholderTextColor={colors.neutral.textMuted}
-                  style={styles.reauthInput}
+                  placeholder="Your password"
+                  containerStyle={styles.reauthInput}
                 />
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={saving}
-                  onPress={() => void confirmWithGoogle()}
-                  style={styles.outlineButton}
-                >
-                  <Text style={styles.outlineButtonText}>Signed up with Google? Confirm with Google</Text>
-                </Pressable>
+                <Button title="I use Google: confirm with Google" variant="secondary" size="md" disabled={saving} onPress={() => void confirmWithGoogle()} />
               </View>
             ) : null}
           </>
         )}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Pressable accessibilityRole="button"
-          disabled={!canSave}
-          onPress={() => void save()}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            !canSave && styles.buttonDisabled,
-            pressed && canSave && styles.buttonPressed,
-          ]}
-        >
-          {saving ? (
-            <ActivityIndicator color={colors.neutral.white} />
-          ) : (
-            <>
-              <Text style={styles.primaryButtonText}>Confirm Assignment</Text>
-            </>
-          )}
-        </Pressable>
-      </View>
+      <ActionBar>
+        <Button title="Save assignment" onPress={() => void save()} loading={saving} disabled={!canSave && !saving} />
+      </ActionBar>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  skeletonGap: { marginTop: 12 },
+  notice: { marginBottom: 16 },
   safeArea: {
     flex: 1,
     backgroundColor: colors.brand.ivory,
-  },
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    paddingHorizontal: 24,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 24,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
   },
   content: {
     paddingHorizontal: 24,
@@ -409,12 +324,6 @@ const styles = StyleSheet.create({
   heading: {
     marginTop: 14,
     marginBottom: 20,
-  },
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
   },
   title: {
     marginTop: 6,
@@ -429,57 +338,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.neutral.textSecondary,
-  },
-  loadingContainer: {
-    paddingVertical: 32,
-    alignItems: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textMuted,
-  },
-  errorCard: {
-    backgroundColor: colors.semantic.errorSoft,
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: colors.semantic.errorBorder,
-    alignItems: 'center',
-  },
-  errorText: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.semantic.error,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    backgroundColor: colors.semantic.error,
-    borderRadius: 8,
-  },
-  retryText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.white,
-  },
-  successCard: {
-    backgroundColor: colors.semantic.successSoft,
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: colors.semantic.successSoft,
-  },
-  successText: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.semantic.success,
-    textAlign: 'center',
   },
   sectionHeader: {
     marginTop: 14,
@@ -530,18 +388,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.neutral.textSecondary,
     marginBottom: 10,
-  },
-  outlineButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.primary.forest,
-  },
-  outlineButtonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.primary.forest,
   },
   selectCard: {
     backgroundColor: colors.neutral.white,
@@ -601,18 +447,6 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.sage,
     marginBottom: 12,
   },
-  policyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  policyBadge: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.deepForest,
-  },
   policyActive: {
     fontFamily: typography.fonts.inter.semiBold,
     fontSize: 13,
@@ -630,37 +464,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.neutral.textSecondary,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-  primaryButton: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.45,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-  primaryButtonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-  buttonArrow: {
-    marginLeft: 10,
-    fontSize: 19,
-    color: colors.neutral.white,
   },
 });

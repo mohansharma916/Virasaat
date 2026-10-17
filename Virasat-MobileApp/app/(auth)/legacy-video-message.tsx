@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
-  Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   CameraView,
@@ -18,7 +18,12 @@ import {
 } from 'expo-camera';
 import { File } from 'expo-file-system';
 
+import { ActionBar } from '@/src/components/ActionBar';
 import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
@@ -40,7 +45,6 @@ function deleteRecording(uri: string | null) {
 }
 
 export default function LegacyVideoMessageScreen() {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const items = useAppSelector((state) => state.vault.items);
   const { isAtLimit, getLimit, currentPlan } = useSubscription();
@@ -54,6 +58,11 @@ export default function LegacyVideoMessageScreen() {
 
   const permissionsLoading = !cameraPermission || !microphonePermission;
   const permissionsGranted = Boolean(cameraPermission?.granted && microphonePermission?.granted);
+
+  // Once the user has refused twice the OS won't prompt again; send them to Settings.
+  const blocked =
+    (cameraPermission && !cameraPermission.granted && !cameraPermission.canAskAgain) ||
+    (microphonePermission && !microphonePermission.granted && !microphonePermission.canAskAgain);
 
   const requestAllPermissions = async () => {
     if (!cameraPermission?.granted) {
@@ -166,10 +175,15 @@ export default function LegacyVideoMessageScreen() {
       }, { signal: controller.signal, onProgress: setProgress });
       if (!alive.current) return;
       dispatch(addLegacyItem(item));
+      haptics.success();
       deleteRecording(cachedRecording.current);
       cachedRecording.current = null;
       const category = parseLegacyCategories(params.category)[0];
 
+      if (router.canGoBack()) {
+        router.back();
+        return;
+      }
       router.replace({
         pathname: '/(auth)/legacy-category',
         params: {
@@ -178,9 +192,8 @@ export default function LegacyVideoMessageScreen() {
       });
     } catch (requestError) {
       if (!alive.current || controller.signal.aborted) return;
-      const msg = getApiErrorMessage(requestError, 'We could not save your video message. Please try again.');
-      setError(msg);
-      Alert.alert('Unable to Save Video', msg);
+      haptics.error();
+      setError(getApiErrorMessage(requestError, 'We couldn’t save your video. It’s still here. Try again.'));
     } finally {
       busy.current = false;
       if (alive.current) setSaving(false);
@@ -199,11 +212,9 @@ export default function LegacyVideoMessageScreen() {
   if (permissionsLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.center}>
+        <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Checking camera and microphone access">
           <ActivityIndicator color={colors.primary.forest} />
-          <Text style={styles.loadingText}>
-            Checking camera and audio permissions...
-          </Text>
+          <Text style={styles.loadingText}>Checking camera and microphone access…</Text>
         </View>
       </SafeAreaView>
     );
@@ -211,90 +222,46 @@ export default function LegacyVideoMessageScreen() {
 
   if (!permissionsGranted) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          {saving && <Text accessibilityLiveRegion="polite">{progress}% transferred — confirming storage</Text>}
-        <View style={styles.header}>
-            <Pressable accessibilityRole="button"
-              onPress={() => router.back()}
-              hitSlop={12}
-              style={styles.backButton}
-            >
-              <AppIcon name="chevronLeft" style={styles.backArrow} />
-            </Pressable>
-
-            <Text style={styles.brand}>VIRASAT</Text>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScreenHeader onBack="default" />
+        <ScrollView contentContainerStyle={styles.permissionContent}>
+          <View style={styles.permissionIcon}>
+            <AppIcon name="camera" size={28} color={colors.primary.deepForest} />
           </View>
-
-          <View style={styles.permissionBlock}>
-            <View style={styles.permissionIcon}>
-              <AppIcon name="video" style={styles.permissionSymbol} />
-            </View>
-
-            <Text style={styles.title}>
-              Camera & microphone access needed
-            </Text>
-
-            <Text style={styles.subtitle}>
-              Virasat needs access to your camera and microphone so you can
-              record a private video message with audio for your loved ones.
-            </Text>
-
-            <Pressable accessibilityRole="button"
-              onPress={requestAllPermissions}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && styles.buttonPressed,
-              ]}
-            >
-              <Text style={styles.primaryButtonText}>
-                Allow Access
-              </Text>
-            </Pressable>
-
-            <Pressable accessibilityRole="button"
-              onPress={() => router.back()}
-              style={styles.secondaryButton}
-            >
-              <Text style={styles.secondaryButtonText}>
-                Go Back
-              </Text>
-            </Pressable>
-          </View>
-        </View>
+          <Text style={styles.permissionTitle} accessibilityRole="header">Allow camera and microphone</Text>
+          <Text style={styles.permissionText}>
+            {blocked
+              ? 'Access is turned off for Virasat. Open your phone’s settings, allow Camera and Microphone, then come back.'
+              : 'Virasat needs your camera and microphone to record a private video message. The recording stays on your phone until you save it.'}
+          </Text>
+        </ScrollView>
+        <ActionBar>
+          {blocked ? (
+            <Button title="Open settings" onPress={() => void Linking.openSettings()} />
+          ) : (
+            <Button title="Allow access" onPress={() => void requestAllPermissions()} />
+          )}
+          <Button title="Not now" variant="tertiary" onPress={() => router.back()} />
+        </ActionBar>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader
+        onBack={() => {
+          if (recording) stopRecording();
+          else router.back();
+        }}
+        backLabel={recording ? 'Stop recording and go back' : 'Go back'}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {saving && <Text accessibilityLiveRegion="polite">{progress}% transferred — confirming storage</Text>}
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button"
-            onPress={() => {
-              if (recording) {
-                stopRecording();
-              } else {
-                router.back();
-              }
-            }}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <AppIcon name="chevronLeft" style={styles.backArrow} />
-          </Pressable>
-
-          <Text style={styles.brand}>VIRASAT</Text>
-        </View>
-
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>Your digital legacy</Text>
-
-          <Text style={styles.title}>
+          <Text style={styles.title} accessibilityRole="header">
             Leave a video message
           </Text>
 
@@ -336,6 +303,7 @@ export default function LegacyVideoMessageScreen() {
             <View style={styles.cameraControls}>
               {recording ? (
                 <Pressable accessibilityRole="button"
+                  accessibilityLabel="Stop recording"
                   onPress={stopRecording}
                   style={({ pressed }) => [
                     styles.stopButton,
@@ -346,6 +314,7 @@ export default function LegacyVideoMessageScreen() {
                 </Pressable>
               ) : (
                 <Pressable accessibilityRole="button"
+                  accessibilityLabel="Start recording"
                   onPress={startRecording}
                   style={({ pressed }) => [
                     styles.recordButton,
@@ -390,80 +359,78 @@ export default function LegacyVideoMessageScreen() {
               </View>
             </View>
 
-            <Pressable accessibilityRole="button"
-              onPress={handleRetake}
-              style={styles.retakeButton}
-            >
-              <Text style={styles.retakeText}>
-                Record Again
-              </Text>
-            </Pressable>
+            <Button title="Record again" variant="secondary" size="md" onPress={handleRetake} disabled={saving} style={styles.retake} />
           </View>
         )}
 
-        <View style={styles.securityCard}>
-          <View style={styles.securityIcon}>
-            <AppIcon name="lock" style={styles.lock} />
-          </View>
-
-          <View style={styles.securityContent}>
-            <Text style={styles.securityTitle}>
-              Private by design
-            </Text>
-
-            <Text style={styles.securityText}>
-              Your saved video is encrypted in your private vault. Automatic inheritance release is not available yet.
-            </Text>
-          </View>
-        </View>
+        <InlineNotice
+          tone="brand"
+          title="Private by design"
+          message="Your saved video is encrypted in your vault. Releasing it to your people is coming soon."
+          style={styles.notice}
+        />
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {error ? (
-          <Text style={styles.error}>{error}</Text>
+      <ActionBar>
+        {saving ? (
+          <Text style={styles.progressText} accessibilityLiveRegion="polite">
+            Uploading · {progress}%{progress === 100 ? ', confirming' : ''}
+          </Text>
         ) : null}
-
-        <Pressable accessibilityRole="button"
-          disabled={!recordedUri || saving}
-          onPress={handleSave}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            (!recordedUri || saving) && styles.primaryButtonDisabled,
-            pressed && recordedUri && !saving && styles.buttonPressed,
-          ]}
-        >
-          {saving ? (
-            <ActivityIndicator color={colors.neutral.white} />
-          ) : (
-            <>
-              <Text style={styles.primaryButtonText}>
-                Save Video Message
-              </Text>
-            </>
-          )}
-        </Pressable>
-      </View>
+        {error ? <InlineNotice tone="danger" message={error} style={styles.errorNotice} /> : null}
+        <Button
+          title={recordedUri ? 'Save video message' : 'Record a video to save it'}
+          onPress={() => void handleSave()}
+          disabled={!recordedUri}
+          loading={saving}
+        />
+      </ActionBar>
 
       <UpgradeModal
         visible={upgradeModalVisible}
         onClose={() => setUpgradeModalVisible(false)}
-        title="Preserve More Video Memories"
-        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes ${videoLimit ?? 1} video message. Upgrade to Secure (10 videos) or Family (50 videos) to record additional video messages.`}
-        benefits={[
-          'Up to 10 video messages on Secure',
-          'Up to 50 video messages on Family',
-          'Encrypted cloud backup for precious memories',
-          'Controlled release to designated trusted persons',
-        ]}
-        ctaText="View Plans"
+        title="You’ve reached your video limit"
+        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes ${videoLimit ?? 1} video message. Secure will include 10 and Family 50.`}
+        benefits={['Up to 10 videos on Secure', 'Up to 50 videos on Family', 'Encrypted and private until release']}
         onCtaPress={() => router.push('/(auth)/plans' as never)}
-        secondaryCtaText="Not now"
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  permissionContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 32 },
+  permissionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.brand.sage,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permissionTitle: {
+    marginTop: 20,
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
+    color: colors.primary.deepForest,
+  },
+  permissionText: {
+    marginTop: 8,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
+    color: colors.neutral.textSecondary,
+  },
+  retake: { marginTop: 16, alignSelf: 'stretch' },
+  notice: { marginTop: 16 },
+  progressText: {
+    marginBottom: 8,
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: typography.sizes.caption,
+    color: colors.neutral.textSecondary,
+  },
+  errorNotice: { marginBottom: 8 },
   safeArea: {
     flex: 1,
     backgroundColor: colors.brand.ivory,
@@ -486,53 +453,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.neutral.textSecondary,
   },
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.neutral.border,
-  },
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
   heading: {
     marginTop: 18,
     marginBottom: 14,
-  },
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
   },
   title: {
     marginTop: 7,
@@ -718,118 +641,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.neutral.textSecondary,
   },
-  retakeButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  retakeText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.primary.forest,
-  },
-  securityCard: {
-    flexDirection: 'row',
-    marginTop: 18,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: colors.brand.mint,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-  },
-  securityIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.neutral.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lock: {
-    fontSize: 17,
-  },
-  securityContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  securityTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.primary.deepForest,
-  },
-  securityText: {
-    marginTop: 4,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-  primaryButton: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.forest,
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonDisabled: {
-    opacity: 0.45,
-  },
-  primaryButtonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-  primaryButtonArrow: {
-    marginLeft: 12,
-    fontSize: 18,
-    color: colors.neutral.white,
-  },
-  secondaryButton: {
-    marginTop: 10,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
-    color: colors.primary.forest,
-  },
   buttonPressed: {
     opacity: 0.82,
-  },
-  error: {
-    marginTop: 10,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.semantic.error,
-  },
-  permissionBlock: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  permissionIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  permissionSymbol: {
-    fontSize: 25,
-    color: colors.primary.forest,
   },
 });

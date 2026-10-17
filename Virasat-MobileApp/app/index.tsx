@@ -28,8 +28,9 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 export default function SplashScreen() {
   const dispatch = useAppDispatch();
   const [error, setError] = useState('');
-  const [errorTitle, setErrorTitle] = useState('Connection Issue');
+  const [errorTitle, setErrorTitle] = useState('Can’t connect');
   const [retry, setRetry] = useState(0);
+  const [slow, setSlow] = useState(false);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.94)).current;
 
@@ -76,8 +77,8 @@ export default function SplashScreen() {
           // The session is still stored on this device. Offer another unlock
           // attempt, or an explicit sign-out, instead of a signed-in Welcome screen.
           if (active) {
-            setErrorTitle('Vault Locked');
-            setError('Unlock was not completed. Try again, or sign out and sign in with your password.');
+            setErrorTitle('Vault locked');
+            setError('Unlock wasn’t completed. Try again, or sign out and sign in with your password.');
           }
           return null;
         }
@@ -105,31 +106,34 @@ export default function SplashScreen() {
         }
 
         if (active) {
-          setErrorTitle('Connection Issue');
+          setErrorTitle('Can’t connect');
           const isNet =
             reason?.isNetworkError ||
             (isAxiosError(reason) && !reason.response);
           setError(
             isNet
-              ? 'Unable to reach Virasat servers. Please check your internet connection.'
-              : getApiErrorMessage(reason, 'Unable to confirm your session. Please retry.')
+              ? 'We can’t reach Virasat. Check your internet connection and try again.'
+              : getApiErrorMessage(reason, 'We couldn’t confirm your sign-in. Try again.')
           );
         }
         return null;
       }
     };
 
-    const timer = setTimeout(async () => {
-      const destination = await initializeSession();
-
+    // Route as soon as the session check finishes; the logo animation doesn't block it.
+    void initializeSession().then((destination) => {
       if (active && destination) {
         router.replace(destination as never);
       }
-    }, 1200);
+    });
+    // Only mention loading if the check is actually slow.
+    const slowTimer = setTimeout(() => {
+      if (active) setSlow(true);
+    }, 1000);
 
     return () => {
       active = false;
-      clearTimeout(timer);
+      clearTimeout(slowTimer);
     };
   }, [dispatch, logoOpacity, logoScale, subtitleOpacity, retry]);
 
@@ -174,7 +178,7 @@ export default function SplashScreen() {
 
           <View style={styles.errorActions}>
             <Button
-              title={errorTitle === 'Vault Locked' ? 'Unlock' : 'Retry Connection'}
+              title={errorTitle === 'Vault locked' ? 'Unlock' : 'Try again'}
               onPress={() => {
                 setError('');
                 setRetry((val) => val + 1);
@@ -189,14 +193,14 @@ export default function SplashScreen() {
               }}
             >
               <Text style={styles.switchAccountText}>
-                {errorTitle === 'Vault Locked' ? 'Sign out and use password' : 'Sign in with another account'}
+                {errorTitle === 'Vault locked' ? 'Sign out and use password' : 'Sign in with another account'}
               </Text>
             </Pressable>
           </View>
         </View>
       ) : (
         <View style={styles.bottomContainer}>
-          <Text style={styles.loadingText}>Preparing your vault</Text>
+          {slow ? <Text style={styles.loadingText} accessibilityLiveRegion="polite">Opening your vault…</Text> : null}
 
           <View style={styles.dots}>
             <View style={styles.dot} />
@@ -342,6 +346,7 @@ const styles = StyleSheet.create({
   },
 
   switchAccountButton: {
+    minHeight: 48,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',

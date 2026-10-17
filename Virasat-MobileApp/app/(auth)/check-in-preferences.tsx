@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
 
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { router } from 'expo-router';
-
+import { ActionBar } from '@/src/components/ActionBar';
 import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { Skeleton, SkeletonGroup } from '@/src/components/Skeleton';
+import { StepProgress } from '@/src/components/StepProgress';
+import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getCheckInStatus, updateCheckInSettings, type CheckInPolicy } from '@/src/api/check-in.api';
@@ -26,7 +23,8 @@ import { Feature } from '@/src/types/subscription.types';
 import { UpgradeModal } from '@/src/components/UpgradeModal';
 
 export default function CheckInPreferencesScreen() {
-  const insets = useSafeAreaInsets();
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
+  const inOnboarding = onboarding === 'true';
   const dispatch = useAppDispatch();
   const email = useAppSelector((state) => state.session.user?.email);
   const { canUseFeature } = useSubscription();
@@ -57,20 +55,11 @@ export default function CheckInPreferencesScreen() {
         setInitialPolicy(null);
       } else {
         setLoadFailed(true);
-        setError(getApiErrorMessage(reason, 'Could not load your saved settings. Retry before editing.'));
+        setError(getApiErrorMessage(reason, 'We couldn’t load your saved settings. Try again before making changes.'));
       }
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [retry]);
-
-  const selectPreferredTime = () => {
-    Alert.alert('Preferred time', 'Choose when to receive your check-in reminder.', [
-      { text: '8:00 AM', onPress: () => setPreferredTime('08:00') },
-      { text: '10:00 AM', onPress: () => setPreferredTime('10:00') },
-      { text: '6:00 PM', onPress: () => setPreferredTime('18:00') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   const handleContinue = async () => {
     if (loading || loadFailed || saving) return;
@@ -88,605 +77,251 @@ export default function CheckInPreferencesScreen() {
         escalationEnabled: initialPolicy?.escalationEnabled ?? false,
       });
       await dispatch(refreshVaultData()).unwrap();
-      router.push('/(auth)/release-rules');
+      haptics.success();
+      if (inOnboarding) router.push({ pathname: '/(auth)/release-rules', params: { onboarding: 'true' } } as never);
+      else if (router.canGoBack()) router.back();
+      else router.replace('/(auth)/(tabs)/home');
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'We could not save your check-in settings. Please try again.'));
+      setError(getApiErrorMessage(requestError, 'We couldn’t save your check-in settings. Try again.'));
     } finally {
       setSaving(false);
     }
   };
 
+  const TIMES = [
+    { value: '08:00', label: '8:00 AM' },
+    { value: '10:00', label: '10:00 AM' },
+    { value: '18:00', label: '6:00 PM' },
+  ];
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button"
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <AppIcon name="chevronLeft" style={styles.backArrow} />
-          </Pressable>
-
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
-        </View>
-
-        {/* Heading */}
-
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>
-            Check-in preferences
-          </Text>
-
-          <Text style={styles.title}>
-            Stay connected with Virasat.
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Save your check-in preferences and confirm activity in the app. Automatic email reminders and escalation are not available yet.
-          </Text>
-        </View>
-
-        {/* Frequency */}
-
-        <Text style={styles.sectionLabel}>
-          Check-in frequency
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {inOnboarding ? <StepProgress phase="Rules" /> : null}
+        <Text style={[styles.title, inOnboarding && styles.titleOnboarding]} accessibilityRole="header">Check-ins</Text>
+        <Text style={styles.subtitle}>
+          We’ll regularly ask you to confirm you’re active. Missing a check-in never releases anything on its own.
         </Text>
 
-        <Pressable accessibilityRole="button"
-          onPress={() => setSelectedSchedule('MONTHLY')}
-          style={[styles.frequencyCard, selectedSchedule === 'MONTHLY' && styles.frequencyCardSelected]}
-        >
-          <View style={[styles.checkCircle, selectedSchedule === 'MONTHLY' && styles.checkCircleSelected]}>
-            <AppIcon name="check" style={[styles.check, selectedSchedule === 'MONTHLY' && styles.checkSelected]} />
-          </View>
-
-          <View style={styles.optionContent}>
-            <Text style={styles.optionTitle}>
-              Every month
+        {loading ? (
+          <SkeletonGroup label="Loading your check-in settings">
+            <Skeleton height={48} radius={12} />
+            <Skeleton height={48} radius={12} style={styles.skeletonGap} />
+            <Skeleton height={72} radius={16} style={styles.skeletonGap} />
+          </SkeletonGroup>
+        ) : (
+          <>
+            <Text style={styles.sectionLabel} nativeID="frequencyLabel">How often</Text>
+            <View style={styles.segmented} accessibilityRole="radiogroup" accessibilityLabelledBy="frequencyLabel">
+              {(['MONTHLY', 'WEEKLY'] as const).map((option) => {
+                const selected = selectedSchedule === option;
+                const locked = option === 'WEEKLY' && !hasCustomCheckIn;
+                return (
+                  <Pressable
+                    key={option}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={option === 'MONTHLY' ? 'Every month, recommended' : locked ? 'Every week, needs the Secure plan' : 'Every week'}
+                    onPress={() => {
+                      if (locked) {
+                        setCustomModalVisible(true);
+                        return;
+                      }
+                      haptics.selection();
+                      setSelectedSchedule(option);
+                    }}
+                    style={[styles.segment, selected && styles.segmentSelected]}
+                  >
+                    {locked ? <AppIcon name="lock" size={16} color={colors.neutral.textSecondary} /> : null}
+                    <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
+                      {option === 'MONTHLY' ? 'Every month' : 'Every week'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={styles.hint}>
+              {selectedSchedule === 'MONTHLY' ? 'Recommended for most people.' : 'For people who want a closer watch.'}
+              {!hasCustomCheckIn ? ' Weekly needs the Secure plan.' : ''}
             </Text>
 
-            <Text style={styles.optionSubtitle}>
-              Standard monthly schedule · Recommended
-            </Text>
-          </View>
-        </Pressable>
-
-        <Pressable accessibilityRole="button"
-          onPress={() => {
-            if (!hasCustomCheckIn) {
-              setCustomModalVisible(true);
-            } else {
-              setSelectedSchedule('WEEKLY');
-            }
-          }}
-          style={[styles.frequencyCard, selectedSchedule === 'WEEKLY' && styles.frequencyCardSelected]}
-        >
-          <View style={[styles.checkCircle, selectedSchedule === 'WEEKLY' && styles.checkCircleSelected]}>
-            <Text style={[styles.check, selectedSchedule === 'WEEKLY' && styles.checkSelected]}>
-              {hasCustomCheckIn && selectedSchedule === 'WEEKLY' ? '✓' : '🔒'}
-            </Text>
-          </View>
-
-          <View style={styles.optionContent}>
-            <View style={styles.customScheduleTitleRow}>
-              <Text style={styles.optionTitle}>
-                Custom Schedule
-              </Text>
-              {!hasCustomCheckIn && (
-                <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>Secure</Text>
-                </View>
-              )}
+            <Text style={styles.sectionLabel} nativeID="timeLabel">Preferred time</Text>
+            <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabelledBy="timeLabel">
+              {TIMES.map((time) => {
+                const selected = preferredTime === time.value;
+                return (
+                  <Pressable
+                    key={time.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    onPress={() => {
+                      haptics.selection();
+                      setPreferredTime(time.value);
+                    }}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                  >
+                    <AppIcon name="clock" size={16} color={selected ? colors.neutral.white : colors.neutral.textSecondary} />
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{time.label}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
-            <Text style={styles.optionSubtitle}>
-              {hasCustomCheckIn ? 'Weekly check-in cadence' : 'Weekly cadence requires Secure or Family'}
-            </Text>
-          </View>
-        </Pressable>
+            <Text style={styles.sectionLabel}>How we’ll contact you</Text>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIcon}>
+                <AppIcon name="mail" size={20} color={colors.primary.deepForest} />
+              </View>
+              <View style={styles.infoBody}>
+                <Text style={styles.infoTitle}>Email</Text>
+                <Text style={styles.infoText}>{email ?? 'Your account email'}</Text>
+              </View>
+            </View>
+            <View style={[styles.infoRow, styles.infoRowGap]}>
+              <View style={styles.infoIcon}>
+                <AppIcon name="bell" size={20} color={colors.primary.deepForest} />
+              </View>
+              <View style={styles.infoBody}>
+                <Text style={styles.infoTitle}>Reminders</Text>
+                <Text style={styles.infoText}>
+                  {selectedSchedule === 'WEEKLY' ? '3 days and 1 day before' : '7, 3 and 1 days before'} each check-in
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
 
-        {/* Schedule */}
-
-        <Text style={styles.sectionLabel}>
-          Schedule
-        </Text>
-
-        <View style={styles.selectCard}>
-          <View>
-            <Text style={styles.selectValue}>
-              {selectedSchedule === 'WEEKLY' ? 'Weekly check-in' : 'Monthly check-in'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Time */}
-
-        <Text style={styles.sectionLabel}>
-          Preferred time
-        </Text>
-
-        <Pressable accessibilityRole="button" onPress={selectPreferredTime} style={styles.selectCard}>
-          <Text style={styles.selectValue}>
-            {new Date(`2000-01-01T${preferredTime}`).toLocaleTimeString([], {
-              hour: 'numeric',
-              minute: '2-digit',
-            })}
-          </Text>
-
-          <AppIcon name="chevronRight" style={styles.chevron} />
-        </Pressable>
-
-        {/* Contact */}
-
-        <Text style={styles.sectionLabel}>
-          How should we contact you?
-        </Text>
-
-        <View style={styles.contactCard}>
-          <ContactOption
-            selected
-            title="Email"
-            subtitle={email ?? 'Your account email'}
-          />
-        </View>
-
-        {/* Response Window */}
-
-        <Text style={styles.sectionLabel}>
-          Reminder window
-        </Text>
-
-        <View style={styles.selectCard}>
-          <Text style={styles.selectValue}>
-            {selectedSchedule === 'WEEKLY' ? '3 and 1 days before (planned)' : '7, 3 and 1 days before (planned)'}
-          </Text>
-        </View>
-
-        {/* Information */}
-
-        <View style={styles.infoCard}>
-          <View style={styles.infoIcon}>
-            <AppIcon name="info" style={styles.infoText} />
-          </View>
-
-          <Text style={styles.infoDescription}>
-            These preferences are saved for future reminders. Missing a check-in does not release your information. Automated reminders, escalation, and inheritance release are unavailable.
-          </Text>
-        </View>
+        <InlineNotice
+          tone="info"
+          title="Coming soon"
+          message="We save these preferences now. Automatic email reminders and releasing items aren’t available yet, so confirm check-ins in the app."
+          style={styles.notice}
+        />
       </ScrollView>
 
-      {/* Sticky Bottom Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {loading && <ActivityIndicator />}
-        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        {loadFailed && <Pressable accessibilityRole="button" onPress={() => setRetry((value) => value + 1)}><Text style={{ color: colors.primary.forest, paddingVertical: 12 }}>Retry loading settings</Text></Pressable>}
-
-        <Pressable accessibilityRole="button"
-          disabled={saving || loading || loadFailed}
-          onPress={handleContinue}
-          style={({ pressed }) => [
-            styles.button,
-            (saving || loading || loadFailed) && styles.buttonDisabled,
-            pressed && !saving && styles.buttonPressed,
-          ]}
-        >
-          {saving ? (
-            <ActivityIndicator color={colors.neutral.white} />
-          ) : (
-            <>
-              <Text style={styles.buttonText}>
-                Continue
-              </Text>
-            </>
-          )}
-        </Pressable>
-      </View>
+      <ActionBar>
+        {error ? (
+          <InlineNotice
+            tone="danger"
+            message={error}
+            actionLabel={loadFailed ? 'Try again' : undefined}
+            onAction={loadFailed ? () => setRetry((value) => value + 1) : undefined}
+            style={styles.error}
+          />
+        ) : null}
+        <Button
+          title={inOnboarding ? 'Save and continue' : 'Save check-ins'}
+          onPress={() => void handleContinue()}
+          loading={saving}
+          disabled={loading || loadFailed}
+        />
+      </ActionBar>
 
       <UpgradeModal
         visible={customModalVisible}
         onClose={() => setCustomModalVisible(false)}
-        title="Custom Check-in"
-        message="Available with Virasat Secure."
-        benefits={[
-          'Choose your own check-in schedule',
-          'Customize your grace period',
-          'Get advanced reminder controls',
-          'Ensure continuity at your own pace',
-        ]}
-        ctaText="Upgrade to Secure"
+        title="Weekly check-ins"
+        message="Weekly check-ins will be part of Virasat Secure."
+        benefits={['Choose a weekly schedule', 'More reminder options', 'A closer watch on your account']}
         onCtaPress={() => router.push('/(auth)/plans' as never)}
-        secondaryCtaText="Not now"
       />
     </SafeAreaView>
   );
 }
 
-function ContactOption({
-  selected = false,
-  title,
-  subtitle,
-}: {
-  selected?: boolean;
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <Pressable accessibilityRole="button" style={styles.contactOption}>
-      <View
-        style={[
-          styles.radio,
-          selected && styles.radioSelected,
-        ]}
-      >
-        {selected && (
-          <View style={styles.radioDot} />
-        )}
-      </View>
-
-      <View style={styles.contactContent}>
-        <Text style={styles.contactTitle}>
-          {title}
-        </Text>
-
-        {subtitle && (
-          <Text style={styles.contactSubtitle}>
-            {subtitle}
-          </Text>
-        )}
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 45,
-  },
-
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary.forest,
-  },
-
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 35,
-    marginBottom: 21,
-  },
-
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
-    marginTop: 7,
+    marginTop: 8,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 28,
-    lineHeight: 37,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-
+  titleOnboarding: { marginTop: 24 },
   subtitle: {
-    marginTop: 9,
+    marginTop: 8,
+    marginBottom: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-
+  skeletonGap: { marginTop: 12 },
   sectionLabel: {
-    marginTop: 17,
+    marginTop: 24,
     marginBottom: 8,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.neutral.textMuted,
-  },
-
-  selectedCard: {
-    minHeight: 57,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    borderWidth: 1,
-    borderColor: colors.brand.sage,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  frequencyCard: {
-    minHeight: 57,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.brand.sage,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-
-  frequencyCardSelected: {
-    backgroundColor: colors.brand.mint,
-    borderColor: colors.primary.forest,
-  },
-
-  checkCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.neutral.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  checkCircleSelected: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  check: {
-    color: colors.neutral.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  checkSelected: {
-    color: colors.neutral.white,
-  },
-
-  customScheduleTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-
-  lockBadge: {
-    backgroundColor: colors.primary.deepForest,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-
-  lockBadgeText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: colors.neutral.white,
-    
-  },
-
-  optionContent: {
-    marginLeft: 11,
-  },
-
-  optionTitle: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.primary.deepForest,
-  },
-
-  optionSubtitle: {
-    marginTop: 2,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.primary.forest,
-  },
-
-  selectCard: {
-    minHeight: 52,
-    paddingHorizontal: 15,
-    borderRadius: 13,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  selectValue: {
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
+    fontSize: typography.sizes.label,
+    lineHeight: typography.lineHeights.label,
     color: colors.neutral.textPrimary,
   },
-
-  chevron: {
-    fontSize: 23,
-    fontWeight: '300',
-    color: colors.primary.forest,
-  },
-
-  contactCard: {
-    borderRadius: 14,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    overflow: 'hidden',
-  },
-
-  contactOption: {
-    minHeight: 55,
-    paddingHorizontal: 14,
+  segmented: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  radio: {
-    width: 19,
-    height: 19,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.neutral.textMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  radioSelected: {
-    borderColor: colors.primary.forest,
-  },
-
-  radioDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: colors.primary.forest,
-  },
-
-  contactContent: {
-    marginLeft: 11,
-  },
-
-  contactTitle: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  contactSubtitle: {
-    marginTop: 2,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: colors.neutral.border,
-    marginLeft: 44,
-  },
-
-  infoCard: {
-    marginTop: 19,
-    padding: 13,
+    padding: 4,
+    gap: 4,
     borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
+    backgroundColor: colors.neutral.sunken,
   },
-
-  infoIcon: {
-    width: 21,
-    height: 21,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: colors.primary.forest,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  infoText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.primary.forest,
-  },
-
-  infoDescription: {
+  segment: {
     flex: 1,
-    marginLeft: 9,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  button: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
+    minHeight: 44,
     flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  segmentSelected: { backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.primary.forest },
+  segmentText: { fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.label, color: colors.neutral.textSecondary },
+  segmentTextSelected: { fontFamily: typography.fonts.inter.semiBold, color: colors.primary.deepForest },
+  hint: {
+    marginTop: 8,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.caption,
+    lineHeight: 18,
+    color: colors.neutral.textMuted,
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.neutral.control,
+    backgroundColor: colors.neutral.white,
+  },
+  chipSelected: { backgroundColor: colors.primary.deepForest, borderColor: colors.primary.deepForest },
+  chipText: { fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.label, color: colors.neutral.textPrimary },
+  chipTextSelected: { color: colors.neutral.white },
+  infoRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: colors.neutral.white,
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+  },
+  infoRowGap: { marginTop: 8 },
+  infoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.brand.mint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  error: {
-    marginBottom: 10,
-    textAlign: 'center',
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.semantic.error,
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  buttonArrow: {
-    marginLeft: 9,
-    fontSize: 18,
-    color: colors.neutral.white,
-  },
+  infoBody: { flex: 1, gap: 2 },
+  infoTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.callout, color: colors.neutral.textPrimary },
+  infoText: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, lineHeight: 18, color: colors.neutral.textSecondary },
+  notice: { marginTop: 24 },
+  error: { marginBottom: 8 },
 });

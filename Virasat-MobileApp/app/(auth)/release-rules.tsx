@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
 
-import { router } from 'expo-router';
-
-import { AppIcon } from '@/src/components/AppIcon';
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon, type IconName } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { SelectionRow } from '@/src/components/SelectionRow';
+import { Skeleton, SkeletonGroup } from '@/src/components/Skeleton';
+import { StepProgress } from '@/src/components/StepProgress';
+import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getReleasePolicy, updateReleasePolicy, type ReleasePolicy } from '@/src/api/release.api';
@@ -21,7 +21,8 @@ import { useAppDispatch } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
 
 export default function ReleaseRulesScreen() {
-  const insets = useSafeAreaInsets();
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
+  const inOnboarding = onboarding === 'true';
   const dispatch = useAppDispatch();
   const [initialPolicy, setInitialPolicy] = useState<ReleasePolicy | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +46,7 @@ export default function ReleaseRulesScreen() {
       if (isAxiosError(reason) && reason.response?.status === 404) setInitialPolicy(null);
       else {
         setLoadFailed(true);
-        setError(getApiErrorMessage(reason, 'Could not load your saved policy. Retry before editing.'));
+        setError(getApiErrorMessage(reason, 'We couldn’t load your saved rules. Try again before making changes.'));
       }
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -67,630 +68,186 @@ export default function ReleaseRulesScreen() {
         enabled: true,
       });
       await dispatch(refreshVaultData()).unwrap();
-      router.replace('/(auth)/(tabs)/home');
+      haptics.success();
+      if (!inOnboarding && router.canGoBack()) router.back();
+      else router.replace('/(auth)/(tabs)/home');
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'We could not save your release plan. Please try again.'));
+      setError(getApiErrorMessage(requestError, 'We couldn’t save your release rules. Try again.'));
     } finally {
       setSaving(false);
     }
   };
 
+  const missedBeforeReview = Number(
+    (initialPolicy?.escalationConfig as { missedCheckInsBeforeReview?: number } | undefined)?.missedCheckInsBeforeReview ?? 3,
+  );
+
+  const steps: { icon: IconName; title: string; body: string }[] = [
+    { icon: 'clock', title: 'You miss a check-in', body: 'Nothing is released. We simply notice you haven’t responded.' },
+    { icon: 'bell', title: 'We remind you', body: `We keep trying to reach you. After ${missedBeforeReview} missed check-ins we move to the next step.` },
+    { icon: 'users', title: 'We contact your trusted person', body: 'Only if we still can’t reach you.' },
+    {
+      icon: 'verified',
+      title: verificationRequired ? 'Identity check and review' : 'Review by Virasat',
+      body: verificationRequired
+        ? 'Your trusted person verifies their identity, and Virasat reviews the case.'
+        : 'Virasat reviews the case before anything is released.',
+    },
+    { icon: 'lock', title: 'Items are released', body: 'Only the items you assigned to that person, nothing else.' },
+  ];
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button"
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <AppIcon name="chevronLeft" style={styles.backArrow} />
-          </Pressable>
-
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
-        </View>
-
-        <View style={{ paddingVertical: 16 }}>
-          <Text style={{ fontSize: 18 }}>Recipient identity verification</Text>
-          <Text>Authentication always applies. This preference affects new assignments; existing assigned policies stay unchanged.</Text>
-          <Pressable accessibilityRole="switch" accessibilityState={{ checked: verificationRequired }} onPress={() => setVerificationRequired(!verificationRequired)} style={{ paddingVertical: 16 }}>
-            <Text>{verificationRequired ? '✓ Required' : '○ Not required'} — tap to change</Text>
-          </Pressable>
-        </View>
-
-        {/* Heading */}
-
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>
-            Release rules
-          </Text>
-
-          <Text style={styles.title}>
-            Save your release preferences.
-          </Text>
-
-          <Text style={styles.subtitle}>
-            These preferences guide future release workflows. Automatic escalation, recipient verification, and inheritance release are not available yet.
-          </Text>
-        </View>
-
-        {/* Monthly Check-in */}
-
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>
-              Check-in preferences
-            </Text>
-
-            <Pressable accessibilityRole="button"
-              onPress={() =>
-                router.push(
-                  '/(auth)/check-in-preferences',
-                )
-              }
-            >
-              <Text style={styles.edit}>
-                Edit
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.checkInRow}>
-            <View style={styles.iconCircle}>
-              <AppIcon name="check" style={styles.icon} />
-            </View>
-
-            <View style={styles.checkInContent}>
-              <Text style={styles.checkInTitle}>
-                View your saved schedule
-              </Text>
-
-              <Text style={styles.checkInText}>
-                You can confirm activity in the app. Automated notifications are unavailable.
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.activeBox}>
-            <Text style={styles.activeQuote}>
-              "I'm safe & active"
-            </Text>
-          </View>
-        </View>
-
-        {/* Missed Check-ins */}
-
-        <Text style={styles.sectionTitle}>
-          Planned missed check-in process
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {inOnboarding ? <StepProgress phase="Rules" /> : null}
+        <Text style={[styles.title, inOnboarding && styles.titleOnboarding]} accessibilityRole="header">Release rules</Text>
+        <Text style={styles.subtitle}>
+          What happens if you stop responding. Missing one check-in never releases anything.
         </Text>
 
-        <View style={styles.timeline}>
-          <TimelineItem
-            number="1"
-            title="1st missed check-in"
-            description="Planned reminder · unavailable"
-            last={false}
-          />
+        {loading ? (
+          <SkeletonGroup label="Loading your release rules">
+            {[0, 1, 2].map((key) => (
+              <Skeleton key={key} height={64} radius={12} style={styles.skeletonGap} />
+            ))}
+          </SkeletonGroup>
+        ) : (
+          <>
+            <View style={styles.timeline} accessibilityRole="list">
+              {steps.map((step, index) => {
+                const last = index === steps.length - 1;
+                return (
+                  <View key={step.title} style={styles.step} accessible accessibilityLabel={`Step ${index + 1} of ${steps.length}: ${step.title}. ${step.body}`}>
+                    <View style={styles.rail}>
+                      <View style={[styles.dot, last && styles.dotLast]}>
+                        <AppIcon name={step.icon} size={18} color={last ? colors.neutral.white : colors.primary.deepForest} />
+                      </View>
+                      {!last ? <View style={styles.line} /> : null}
+                    </View>
+                    <View style={[styles.stepBody, !last && styles.stepBodySpacing]}>
+                      <Text style={styles.stepTitle}>{step.title}</Text>
+                      <Text style={styles.stepText}>{step.body}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
 
-          <TimelineItem
-            number="2"
-            title="2nd missed check-in"
-            description="Planned urgent reminder · unavailable"
-            last={false}
-          />
+            <Text style={styles.sectionTitle} accessibilityRole="header">Identity check for your people</Text>
+            <View style={styles.options} accessibilityRole="radiogroup">
+              <SelectionRow
+                kind="radio"
+                selected={verificationRequired}
+                onPress={() => setVerificationRequired(true)}
+                title="Require an ID check"
+                description="Recommended. They verify their identity before opening anything."
+              />
+              <SelectionRow
+                kind="radio"
+                selected={!verificationRequired}
+                onPress={() => setVerificationRequired(false)}
+                title="No ID check"
+                description="Sign-in and Virasat’s review still apply."
+              />
+            </View>
+            <Text style={styles.hint}>This applies to items you assign from now on. Existing assignments keep their rules.</Text>
+          </>
+        )}
 
-          <TimelineItem
-            number="3"
-            title="3rd missed check-in"
-            description="Planned verification · unavailable"
-            last
-          />
-        </View>
-
-        {/* Verification */}
-
-        <Text style={styles.sectionTitle}>
-          Future release workflow
-        </Text>
-
-        <View style={styles.processCard}>
-          <ProcessRow
-            number="01"
-            title="Contact you"
-            description="We'll try multiple available channels."
-          />
-
-          <ProcessRow
-            number="02"
-            title="Send verification notifications"
-            description="You'll have an opportunity to confirm you're active."
-          />
-
-          <ProcessRow
-            number="03"
-            title="Contact trusted person"
-            description="Only if we still cannot reach you."
-          />
-
-          <ProcessRow
-            number="04"
-            title="Begin secure review"
-            description="The release process requires additional verification."
-          />
-        </View>
-
-        {/* Security */}
-
-        <View style={styles.securityCard}>
-          <View style={styles.securityIcon}>
-            <AppIcon name="lock" style={styles.lock} />
-          </View>
-
-          <View style={styles.securityContent}>
-            <Text style={styles.securityTitle}>
-              Release protection
-            </Text>
-
-            <Text style={styles.securityText}>
-              Your records remain private. Saving these preferences does not activate reminders, notify recipients, or release any content.
-            </Text>
-          </View>
-        </View>
+        <InlineNotice
+          tone="info"
+          title="Coming soon"
+          message="We save these rules now. Automatic reminders, contacting your people and releasing items aren’t active yet."
+          style={styles.notice}
+        />
       </ScrollView>
 
-      {/* Sticky Bottom Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {loading && <ActivityIndicator />}
-        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        {loadFailed && <Pressable accessibilityRole="button" onPress={() => setRetry((value) => value + 1)}><Text style={styles.edit}>Retry loading policy</Text></Pressable>}
-
-        <Pressable accessibilityRole="button"
-          disabled={saving || loading || loadFailed}
-          onPress={handleContinue}
-          style={({ pressed }) => [
-            styles.button,
-            (saving || loading || loadFailed) && styles.buttonDisabled,
-            pressed && !saving && styles.buttonPressed,
-          ]}
-        >
-          {saving ? (
-            <ActivityIndicator color={colors.neutral.white} />
-          ) : (
-            <>
-              <Text style={styles.buttonText}>
-                Continue
-              </Text>
-            </>
-          )}
-        </Pressable>
-      </View>
+      <ActionBar>
+        {error ? (
+          <InlineNotice
+            tone="danger"
+            message={error}
+            actionLabel={loadFailed ? 'Try again' : undefined}
+            onAction={loadFailed ? () => setRetry((value) => value + 1) : undefined}
+            style={styles.error}
+          />
+        ) : null}
+        <Button
+          title={inOnboarding ? 'Save and finish setup' : 'Save release rules'}
+          onPress={() => void handleContinue()}
+          loading={saving}
+          disabled={loading || loadFailed}
+        />
+      </ActionBar>
     </SafeAreaView>
   );
 }
 
-function TimelineItem({
-  number,
-  title,
-  description,
-  last,
-}: {
-  number: string;
-  title: string;
-  description: string;
-  last: boolean;
-}) {
-  return (
-    <View style={styles.timelineItem}>
-      <View style={styles.timelineLeft}>
-        <View style={styles.numberCircle}>
-          <Text style={styles.numberText}>
-            {number}
-          </Text>
-        </View>
-
-        {!last && (
-          <View style={styles.timelineLine} />
-        )}
-      </View>
-
-      <View style={styles.timelineContent}>
-        <Text style={styles.timelineTitle}>
-          {title}
-        </Text>
-
-        <Text style={styles.timelineDescription}>
-          {description}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function ProcessRow({
-  number,
-  title,
-  description,
-}: {
-  number: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <View style={styles.processRow}>
-      <Text style={styles.processNumber}>
-        {number}
-      </Text>
-
-      <View style={styles.processContent}>
-        <Text style={styles.processTitle}>
-          {title}
-        </Text>
-
-        <Text style={styles.processDescription}>
-          {description}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 45,
-  },
-
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary.forest,
-  },
-
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 35,
-    marginBottom: 22,
-  },
-
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
-    marginTop: 7,
+    marginTop: 8,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 28,
-    lineHeight: 37,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-
+  titleOnboarding: { marginTop: 24 },
   subtitle: {
-    marginTop: 9,
+    marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-
-  card: {
+  skeletonGap: { marginTop: 12 },
+  timeline: {
     padding: 16,
     borderRadius: 16,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
   },
-
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  cardTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.neutral.textMuted,
-  },
-
-  edit: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
-    color: colors.primary.forest,
-  },
-
-  checkInRow: {
-    marginTop: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  step: { flexDirection: 'row', gap: 12 },
+  rail: { alignItems: 'center', width: 36 },
+  dot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.brand.sage,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  icon: {
-    fontSize: 17,
-    color: colors.primary.forest,
-  },
-
-  checkInContent: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  checkInTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  checkInText: {
-    marginTop: 3,
+  dotLast: { backgroundColor: colors.primary.deepForest },
+  line: { flex: 1, width: 2, minHeight: 16, backgroundColor: colors.brand.sage, marginVertical: 4 },
+  stepBody: { flex: 1, paddingTop: 6, gap: 2 },
+  stepBodySpacing: { paddingBottom: 16 },
+  stepTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.body, lineHeight: 22, color: colors.neutral.textPrimary },
+  stepText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: typography.sizes.callout,
+    lineHeight: typography.lineHeights.callout,
     color: colors.neutral.textSecondary,
   },
-
-  activeBox: {
-    marginTop: 13,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: colors.brand.mint,
-    alignItems: 'center',
-  },
-
-  activeQuote: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
-    color: colors.primary.forest,
-  },
-
   sectionTitle: {
-    marginTop: 24,
+    marginTop: 28,
     marginBottom: 12,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
+    fontSize: typography.sizes.title3,
+    lineHeight: typography.lineHeights.title3,
+    color: colors.neutral.textPrimary,
+  },
+  options: { gap: 12 },
+  hint: {
+    marginTop: 8,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.caption,
+    lineHeight: 18,
     color: colors.neutral.textMuted,
   },
-
-  timeline: {
-    paddingLeft: 4,
-  },
-
-  timelineItem: {
-    flexDirection: 'row',
-    minHeight: 67,
-  },
-
-  timelineLeft: {
-    width: 32,
-    alignItems: 'center',
-  },
-
-  numberCircle: {
-    width: 27,
-    height: 27,
-    borderRadius: 14,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  numberText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: colors.primary.deepForest,
-  },
-
-  timelineLine: {
-    flex: 1,
-    width: 1,
-    marginVertical: 4,
-    backgroundColor: colors.brand.sage,
-  },
-
-  timelineContent: {
-    flex: 1,
-    paddingLeft: 12,
-    paddingTop: 2,
-  },
-
-  timelineTitle: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  timelineDescription: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textSecondary,
-  },
-
-  processCard: {
-    padding: 15,
-    borderRadius: 16,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-  },
-
-  processRow: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-  },
-
-  processNumber: {
-    width: 27,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: colors.primary.forest,
-  },
-
-  processContent: {
-    flex: 1,
-  },
-
-  processTitle: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  processDescription: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-
-  securityCard: {
-    marginTop: 18,
-    padding: 13,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-  },
-
-  securityIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  lock: {
-    fontSize: 14,
-  },
-
-  securityContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  securityTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: colors.neutral.textPrimary,
-  },
-
-  securityText: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  button: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  error: {
-    marginBottom: 10,
-    textAlign: 'center',
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.semantic.error,
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  buttonArrow: {
-    marginLeft: 9,
-    fontSize: 18,
-    color: colors.neutral.white,
-  },
+  notice: { marginTop: 24 },
+  error: { marginBottom: 8 },
 });

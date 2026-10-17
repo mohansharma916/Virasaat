@@ -1,27 +1,26 @@
 import { useCallback } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 
-import { AppIcon } from '@/src/components/AppIcon';
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon, type IconName } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { StepProgress } from '@/src/components/StepProgress';
+import { TextLink } from '@/src/components/TextLink';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
 
 export default function LegacyReviewScreen() {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const items = useAppSelector((state) => state.vault.items);
-  const trustedPerson = useAppSelector((state) =>
-    state.vault.recipients.find((recipient) => recipient.status !== 'REVOKED') ?? null,
+  const releasePolicy = useAppSelector((state) => state.vault.releasePolicy);
+  const trustedPerson = useAppSelector(
+    (state) => state.vault.recipients.find((recipient) => recipient.status !== 'REVOKED') ?? null,
   );
 
   useFocusEffect(
@@ -30,465 +29,190 @@ export default function LegacyReviewScreen() {
     }, [dispatch]),
   );
 
-  const documentsCount = items.filter((item) =>
-    ['DOCUMENT', 'IMAGE', 'OTHER'].includes(item.type),
-  ).length;
-  const investmentsCount = items.filter((item) => item.type === 'FINANCIAL').length;
-  const messagesCount = items.filter((item) => item.type === 'TEXT').length;
-  const videosCount = items.filter((item) => item.type === 'VIDEO').length;
-  const handleContinue = () => {
-    router.push('/(auth)/check-in-preferences');
-  };
-
-  const handleSaveExit = () => {
-    router.replace('/(auth)/(tabs)/home');
-  };
+  const rows: { icon: IconName; title: string; count: number; unit: [string, string]; route: string }[] = [
+    {
+      icon: 'document',
+      title: 'Documents',
+      count: items.filter((item) => ['DOCUMENT', 'IMAGE', 'OTHER'].includes(item.type)).length,
+      unit: ['item', 'items'],
+      route: '/(auth)/legacy-documents',
+    },
+    {
+      icon: 'investment',
+      title: 'Investments',
+      count: items.filter((item) => item.type === 'FINANCIAL').length,
+      unit: ['asset', 'assets'],
+      route: '/(auth)/legacy-investments',
+    },
+    {
+      icon: 'message',
+      title: 'Personal messages',
+      count: items.filter((item) => item.type === 'TEXT').length,
+      unit: ['message', 'messages'],
+      route: '/(auth)/legacy-message',
+    },
+    {
+      icon: 'video',
+      title: 'Video messages',
+      count: items.filter((item) => item.type === 'VIDEO').length,
+      unit: ['video', 'videos'],
+      route: '/(auth)/legacy-video-message',
+    },
+  ];
+  const completeCount = rows.filter((row) => row.count > 0).length;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button"
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <AppIcon name="chevronLeft" style={styles.backArrow} />
-          </Pressable>
-
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
-        </View>
-
-        {/* Heading */}
-
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>
-            Final review
-          </Text>
-
-          <Text style={styles.title}>
-            Your legacy, your way.
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Review what you have saved. Reminders
-            and release are not active yet.
-          </Text>
-        </View>
-
-        {/* Legacy Summary */}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <StepProgress phase="Legacy" />
+        <Text style={styles.title} accessibilityRole="header">Review your legacy</Text>
+        <Text style={styles.subtitle}>
+          {completeCount} of {rows.length} categories have something saved. Reminders and release aren’t active yet.
+        </Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardHeading}>
-            Your legacy
-          </Text>
+          {rows.map((row, index) => {
+            const empty = row.count === 0;
+            const value = empty ? 'Nothing added yet' : `${row.count} ${row.count === 1 ? row.unit[0] : row.unit[1]}`;
+            return (
+              <Pressable
+                key={row.title}
+                accessibilityRole="button"
+                accessibilityLabel={`${row.title}, ${value}`}
+                accessibilityHint={empty ? 'Opens a form to add one' : 'Opens to add more'}
+                onPress={() => router.push(row.route as never)}
+                style={({ pressed }) => [styles.row, index < rows.length - 1 && styles.rowDivider, pressed && styles.pressed]}
+              >
+                <View style={styles.rowIcon}>
+                  <AppIcon name={row.icon} size={20} color={colors.primary.deepForest} />
+                </View>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>{row.title}</Text>
+                  <View style={styles.statusRow}>
+                    {empty ? <View style={styles.warningDot} /> : null}
+                    <Text style={[styles.rowValue, empty && styles.rowValueWarning]}>{value}</Text>
+                  </View>
+                </View>
+                <AppIcon name={empty ? 'plus' : 'chevronRight'} size={20} color={empty ? colors.primary.forest : colors.neutral.textMuted} />
+              </Pressable>
+            );
+          })}
+        </View>
 
-          <ReviewRow
-            icon="📄"
-            title="Documents"
-            value={`${documentsCount} ${documentsCount === 1 ? 'item' : 'items'}`}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Trusted person</Text>
+          <TextLink
+            title={trustedPerson ? 'Edit' : 'Add'}
             onPress={() =>
-              router.push(
-                '/(auth)/legacy-documents',
-              )
-            }
-          />
-
-          <View style={styles.divider} />
-
-          <ReviewRow
-            icon="📈"
-            title="Investments"
-            value={`${investmentsCount} ${investmentsCount === 1 ? 'asset' : 'assets'}`}
-            onPress={() =>
-              router.push(
-                '/(auth)/legacy-investments',
-              )
-            }
-          />
-
-          <View style={styles.divider} />
-
-          <ReviewRow
-            icon="💌"
-            title="Personal Messages"
-            value={`${messagesCount} ${messagesCount === 1 ? 'message' : 'messages'}`}
-            onPress={() =>
-              router.push(
-                '/(auth)/legacy-message',
-              )
-            }
-          />
-
-          <View style={styles.divider} />
-
-          <ReviewRow
-            icon="🎥"
-            title="Video Messages"
-            value={`${videosCount} ${videosCount === 1 ? 'video' : 'videos'}`}
-            onPress={() =>
-              router.push(
-                '/(auth)/legacy-video-message',
-              )
+              trustedPerson
+                ? router.push({ pathname: '/(auth)/trusted-person', params: { recipientId: trustedPerson.id } })
+                : router.push('/(auth)/trusted-person')
             }
           />
         </View>
-
-        {/* Trusted Person */}
-
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardHeading}>
-              Trusted person
-            </Text>
-
-            <Pressable accessibilityRole="button"
-              onPress={() =>
-                router.push(
-                  '/(auth)/trusted-person',
-                )
-              }
-              hitSlop={10}
-            >
-              <Text style={styles.edit}>
-                Edit
-              </Text>
-            </Pressable>
-          </View>
-
+        <View style={[styles.card, styles.cardPadded]}>
           <View style={styles.personRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {trustedPerson?.name.charAt(0).toUpperCase() ?? '+'}
-              </Text>
+            <View style={[styles.avatar, !trustedPerson && styles.avatarEmpty]}>
+              {trustedPerson ? (
+                <Text style={styles.avatarText}>{trustedPerson.name.charAt(0).toUpperCase()}</Text>
+              ) : (
+                <AppIcon name="userPlus" size={22} color={colors.semantic.warning} />
+              )}
             </View>
-
-            <View style={styles.personInfo}>
-              <Text style={styles.personName}>
-                {trustedPerson?.name ?? 'No trusted person added'}
-              </Text>
-
-              <Text style={styles.personRelation}>
-                {trustedPerson?.relationship ?? 'Optional during setup'}
-              </Text>
-
-              <Text style={styles.personEmail}>
-                {trustedPerson?.email ?? 'You can add one later'}
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>{trustedPerson?.name ?? 'No trusted person yet'}</Text>
+              <Text style={styles.rowValue}>
+                {trustedPerson ? [trustedPerson.relationship, trustedPerson.email].filter(Boolean).join(' · ') : 'Optional now. You can add one later.'}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Release Condition */}
-
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardHeading}>
-              Release condition
-            </Text>
-
-            <Pressable accessibilityRole="button"
-              onPress={() =>
-                router.push(
-                  '/(auth)/release-rules',
-                )
-              }
-              hitSlop={10}
-            >
-              <Text style={styles.edit}>
-                Edit
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.conditionBox}>
-            <View style={styles.conditionIcon}>
-              <Text style={styles.conditionEmoji}>
-                ⏱
-              </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">When items are released</Text>
+          <TextLink title="Edit" onPress={() => router.push('/(auth)/release-rules')} />
+        </View>
+        <View style={[styles.card, styles.cardPadded]}>
+          <View style={styles.personRow}>
+            <View style={styles.rowIcon}>
+              <AppIcon name="hourglass" size={20} color={colors.primary.deepForest} />
             </View>
-
-            <View style={styles.conditionContent}>
-              <Text style={styles.conditionTitle}>
-                3 missed check-ins
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>
+                {releasePolicy?.trigger === 'MANUAL' ? 'Only when you decide' : 'After missed check-ins'}
               </Text>
-
-              <Text style={styles.conditionDescription}>
-                Followed by Virasat's verification
-                process before anything is released.
+              <Text style={styles.rowValue}>
+                {releasePolicy?.verificationRequired === false
+                  ? 'Followed by Virasat’s review before anything is released.'
+                  : 'Followed by identity checks and Virasat’s review before anything is released.'}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Security Confirmation */}
-
-        <View style={styles.securitySection}>
-          <SecurityRow text="Everything is encrypted" />
-
-          <SecurityRow text="You control who receives it" />
-
-          <SecurityRow text="You can change this anytime" />
-        </View>
+        <InlineNotice
+          tone="brand"
+          title="You stay in control"
+          message="Everything is encrypted, you choose who receives it, and you can change it any time."
+          style={styles.notice}
+        />
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {/* Continue */}
-        <Pressable accessibilityRole="button"
-          onPress={handleContinue}
-          style={({ pressed }) => [
-            styles.button,
-            pressed && styles.buttonPressed,
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            Continue
-          </Text>
-        </Pressable>
-
-        {/* Save */}
-        <Pressable accessibilityRole="button"
-          onPress={handleSaveExit}
-          style={styles.saveExit}
-        >
-          <Text style={styles.saveExitText}>
-            Not ready yet?{' '}
-            <Text style={styles.saveExitBold}>
-              Save & exit
-            </Text>
-          </Text>
-        </Pressable>
-      </View>
+      <ActionBar>
+        <Button title="Continue to check-ins" onPress={() => router.push({ pathname: '/(auth)/check-in-preferences', params: { onboarding: 'true' } } as never)} />
+        <Button title="Save and finish later" variant="tertiary" onPress={() => router.replace('/(auth)/(tabs)/home')} />
+      </ActionBar>
     </SafeAreaView>
   );
 }
 
-function ReviewRow({
-  icon,
-  title,
-  value,
-  onPress,
-}: {
-  icon: string;
-  title: string;
-  value: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable accessibilityRole="button"
-      onPress={onPress}
-      style={styles.reviewRow}
-    >
-      <View style={styles.reviewIcon}>
-        <Text style={styles.reviewEmoji}>
-          {icon}
-        </Text>
-      </View>
-
-      <View style={styles.reviewInfo}>
-        <Text style={styles.reviewTitle}>
-          {title}
-        </Text>
-
-        <Text style={styles.reviewValue}>
-          {value}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function SecurityRow({
-  text,
-}: {
-  text: string;
-}) {
-  return (
-    <View style={styles.securityRow}>
-      <View style={styles.checkCircle}>
-        <AppIcon name="check" style={styles.check} />
-      </View>
-
-      <Text style={styles.securityText}>
-        {text}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 40,
-  },
-
-  header: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary.forest,
-  },
-
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 18,
-    marginBottom: 16,
-  },
-
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.primary.forest,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
-    marginTop: 7,
+    marginTop: 24,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 30,
-    lineHeight: 44,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-
   subtitle: {
     marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-
   card: {
-    marginBottom: 13,
-    padding: 16,
     borderRadius: 16,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
+    overflow: 'hidden',
   },
-
-  cardHeading: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    
-    color: colors.neutral.textMuted,
-  },
-
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  edit: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
-    color: colors.primary.forest,
-  },
-
-  reviewRow: {
-    minHeight: 57,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  reviewIcon: {
-    width: 37,
-    height: 37,
-    borderRadius: 11,
+  cardPadded: { padding: 16 },
+  row: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.neutral.border },
+  pressed: { backgroundColor: colors.brand.mint },
+  rowIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: colors.brand.mint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  reviewEmoji: {
-    fontSize: 16,
-  },
-
-  reviewInfo: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  reviewTitle: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  reviewValue: {
-    marginTop: 2,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textSecondary,
-  },
-
-  reviewArrow: {
-    fontSize: 17,
-    color: colors.primary.forest,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: colors.neutral.border,
-  },
-
-  personRow: {
-    marginTop: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
+  rowBody: { flex: 1, gap: 2 },
+  rowTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.callout, lineHeight: 22, color: colors.neutral.textPrimary },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  warningDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.semantic.warning },
+  rowValue: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, lineHeight: 18, color: colors.neutral.textSecondary },
+  rowValueWarning: { color: colors.semantic.warning, fontFamily: typography.fonts.inter.medium },
+  sectionHeader: { marginTop: 24, marginBottom: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.title3, lineHeight: 24, color: colors.neutral.textPrimary },
+  personRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 48,
     height: 48,
@@ -497,157 +221,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  avatarText: {
-    fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 20,
-    color: colors.primary.deepForest,
-  },
-
-  personInfo: {
-    marginLeft: 12,
-  },
-
-  personName: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  personRelation: {
-    marginTop: 2,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textSecondary,
-  },
-
-  personEmail: {
-    marginTop: 2,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textMuted,
-  },
-
-  conditionBox: {
-    marginTop: 13,
-    padding: 11,
-    borderRadius: 12,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-  },
-
-  conditionIcon: {
-    width: 35,
-    height: 35,
-    borderRadius: 11,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  conditionEmoji: {
-    fontSize: 15,
-  },
-
-  conditionContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  conditionTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-
-  conditionDescription: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-
-  securitySection: {
-    marginTop: 5,
-    paddingHorizontal: 3,
-  },
-
-  securityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 5,
-  },
-
-  checkCircle: {
-    width: 19,
-    height: 19,
-    borderRadius: 10,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  check: {
-    fontSize: 13,
-    color: colors.primary.forest,
-  },
-
-  securityText: {
-    marginLeft: 8,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textSecondary,
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  button: {
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  buttonArrow: {
-    marginLeft: 9,
-    fontSize: 18,
-    color: colors.neutral.white,
-  },
-
-  saveExit: {
-    marginTop: 10,
-    paddingVertical: 4,
-    alignItems: 'center',
-  },
-
-  saveExitText: {
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textMuted,
-  },
-
-  saveExitBold: {
-    fontFamily: typography.fonts.inter.semiBold,
-    color: colors.primary.forest,
-  },
+  avatarEmpty: { backgroundColor: colors.semantic.warningSoft },
+  avatarText: { fontFamily: typography.fonts.playfair.semiBold, fontSize: 20, color: colors.primary.deepForest },
+  notice: { marginTop: 24 },
 });
