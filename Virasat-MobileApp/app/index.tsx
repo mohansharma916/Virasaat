@@ -22,6 +22,7 @@ import { clearSession, hydrateSession } from '@/src/store/session.slice';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
+import { getApiErrorMessage } from '@/src/utils/api-error';
 
 export default function SplashScreen() {
   const dispatch = useAppDispatch();
@@ -110,7 +111,7 @@ export default function SplashScreen() {
           setError(
             isNet
               ? 'Unable to reach Virasat servers. Please check your internet connection.'
-              : reason?.message || 'Unable to confirm your session. Please retry.'
+              : getApiErrorMessage(reason, 'Unable to confirm your session. Please retry.')
           );
         }
         return null;

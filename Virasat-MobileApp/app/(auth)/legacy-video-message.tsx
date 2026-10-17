@@ -179,7 +179,7 @@ export default function LegacyVideoMessageScreen() {
       if (!alive.current || controller.signal.aborted) return;
       const msg = getApiErrorMessage(requestError, 'We could not save your video message. Please try again.');
       setError(msg);
-      Alert.alert('Video save failed', msg);
+      Alert.alert('Unable to Save Video', msg);
     } finally {
       busy.current = false;
       if (alive.current) setSaving(false);

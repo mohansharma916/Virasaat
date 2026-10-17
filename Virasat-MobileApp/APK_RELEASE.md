@@ -18,7 +18,8 @@ AWS credentials, JWT secrets, or Google client secrets in the mobile app.
 1. Install Node 22.13 or newer and open a terminal in `Virasat-MobileApp`.
 2. Run `npm ci` and `npx eas-cli@latest login` with the Expo account that should own the app.
 3. The permanent Android package in `app.json` is configured as
-   `com.virasat.app` (matching iOS bundle identifier `com.virasat.app`).
+   `in.virasat.app` (`com.virasat.app` was already taken on Google Play; the iOS
+   bundle identifier stays `com.virasat.app`, which is a separate Apple namespace).
    Ensure your Google Cloud Console Android OAuth client uses this exact package name
    along with your release keystore's SHA-1 fingerprint.
 4. Run `npx eas-cli@latest init` to create/link the EAS project. It writes the

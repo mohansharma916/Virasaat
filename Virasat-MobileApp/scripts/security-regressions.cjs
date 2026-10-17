@@ -110,6 +110,57 @@ test('server explanations survive Axios errors, while authenticated 401s expire 
   assert.equal(getApiErrorMessage({ status: 401, isUnauthorized: false, message: 'Incorrect OTP.' }), 'Incorrect OTP.');
 });
 
+test('S3 upload and storage failure messages are sanitized into user-centric errors', () => {
+  const { load } = fixture();
+  const { getApiErrorMessage, isTechnicalErrorMessage } = load('src/utils/api-error.ts');
+  const { AxiosError } = require('axios');
+
+  // Verify detection of technical S3 strings
+  assert.equal(isTechnicalErrorMessage("Direct S3 upload failed for key 'vaults/123/items/456.bin': Access Denied"), true);
+  assert.equal(isTechnicalErrorMessage('AWS S3 is not configured. Direct S3 storage is required for all vault files.'), true);
+  assert.equal(isTechnicalErrorMessage('<?xml version="1.0"?><Error><Code>AccessDenied</Code></Error>'), true);
+  assert.equal(isTechnicalErrorMessage('Limit reached for this plan.'), false);
+  assert.equal(isTechnicalErrorMessage('Incorrect password.'), false);
+
+  // S3 direct upload failure on upload endpoint
+  const uploadConfig = { headers: {}, url: '/vault/items/upload' };
+  const s3ErrorResponse = {
+    status: 502,
+    data: { message: "Direct S3 upload failed for key 'vaults/123/items/456.bin': Access Denied" },
+    config: uploadConfig,
+  };
+  const uploadError = new AxiosError('Request failed with status code 502', undefined, uploadConfig, undefined, s3ErrorResponse);
+
+  // Without custom fallback: clean user-centric upload failure
+  assert.equal(getApiErrorMessage(uploadError), 'We were unable to upload your file. Please check your connection and try again.');
+
+  // With custom user-centric fallback: custom fallback is honored
+  assert.equal(
+    getApiErrorMessage(uploadError, 'We were unable to upload your documents. Please check your connection and try again.'),
+    'We were unable to upload your documents. Please check your connection and try again.'
+  );
+
+  // S3 XML payload returned directly from AWS S3
+  const xmlResponse = {
+    status: 403,
+    data: '<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>',
+    config: uploadConfig,
+  };
+  const xmlError = new AxiosError('Request failed with status code 403', undefined, uploadConfig, undefined, xmlResponse);
+  assert.equal(getApiErrorMessage(xmlError), 'We were unable to upload your file. Please check your connection and try again.');
+
+  // Generic Error object with S3 message
+  const directS3Error = new Error('Cannot upload to S3: AWS S3 credentials or bucket are not configured.');
+  assert.equal(getApiErrorMessage(directS3Error), 'We were unable to upload your file. Please check your connection and try again.');
+
+  // Download S3 error
+  const downloadConfig = { headers: {}, url: '/vault/items/123/download' };
+  const downloadResponse = { status: 500, data: { message: "S3 download failed for 'vaults/abc.bin': NoSuchKey" }, config: downloadConfig };
+  const downloadError = new AxiosError('Request failed with status code 500', undefined, downloadConfig, undefined, downloadResponse);
+  assert.equal(getApiErrorMessage(downloadError), 'We were unable to download this file. Please try again in a few moments.');
+});
+
+
 test('logout and account switching clear all private caches and ignore old completions', () => {
   const { load } = fixture();
   const { store } = load('src/store/store.ts');

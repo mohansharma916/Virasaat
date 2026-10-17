@@ -10,6 +10,7 @@
     "countries-list": "^3.4.1",
     "decode-uri-component": "file:vendor/decode-uri-component",
     "expo": "~57.0.22",
+    "expo-build-properties": "~57.0.22",
     "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.18",
     "expo-device": "~57.0.2",

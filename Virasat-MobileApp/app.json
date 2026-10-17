@@ -2,7 +2,7 @@
   "expo": {
     "name": "Virasat",
     "slug": "Virasat",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "virasat",
@@ -23,8 +23,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.virasat.app",
-      "versionCode": 1,
+      "package": "in.virasat.app",
+      "versionCode": 2,
       "allowBackup": false,
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -72,7 +72,17 @@
           "photosPermission": "Allow Virasat to select photos and videos for your vault."
         }
       ],
-      "./plugins/with-release-signing"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "./plugins/with-release-signing",
+      "./plugins/with-r8-optimization"
     ],
     "experiments": {
       "typedRoutes": true,

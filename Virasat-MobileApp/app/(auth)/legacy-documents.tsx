@@ -149,9 +149,9 @@ export default function LegacyDocumentsScreen() {
     } catch (error) {
       const msg = transfer.current?.signal.aborted
         ? 'Transfer stopped. Confirmed files remain saved. Retry remaining files safely.'
-        : getApiErrorMessage(error);
+        : getApiErrorMessage(error, 'We were unable to upload your documents. Please check your connection and try again.');
       setUploadStatus(msg);
-      Alert.alert('S3 Upload Failed', msg);
+      Alert.alert('Upload Failed', msg);
     } finally {
       transfer.current = null;
       setSaving(false);
