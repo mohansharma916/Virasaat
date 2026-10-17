@@ -8,11 +8,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { GoogleButton } from '@/src/components/GoogleButton';
+import { IconButton } from '@/src/components/IconButton';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { Input } from '@/src/components/Input';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { TextLink } from '@/src/components/TextLink';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import {
@@ -108,7 +115,7 @@ export default function LoginScreen() {
     // A Google sign-in can create a brand-new account; it gets the same onboarding as email signup.
     router.replace(result.isNewUser
       ? { pathname: '/(auth)/security', params: { onboarding: 'true' } } as never
-      : '/(auth)/home');
+      : '/(auth)/(tabs)/home');
   };
 
   const handleBiometricLogin = async () => {
@@ -128,7 +135,7 @@ export default function LoginScreen() {
 
       if (!bioResult.success) {
         if (bioResult.error && !bioResult.error.includes('cancel')) {
-          setError(`${biometricType} verification failed. Please try again or use your password.`);
+          setError(`${biometricType} didn’t recognise you. Try again or sign in with your password.`);
         }
         return;
       }
@@ -140,7 +147,7 @@ export default function LoginScreen() {
         try {
           const hydrated = await dispatch(hydrateSession()).unwrap();
           if (hydrated) {
-            router.replace('/(auth)/home');
+            router.replace('/(auth)/(tabs)/home');
             return;
           }
         } catch {
@@ -150,10 +157,10 @@ export default function LoginScreen() {
 
       // If no valid session exists, guide user
       setError(
-        `${biometricType} recognized! Enter your password once to connect ${biometricType} for 1-tap sign-in.`
+        `Enter your password once to turn on ${biometricType} sign-in for this device.`
       );
     } catch {
-      setError(`Unable to authenticate with ${biometricType}. Please use your password.`);
+      setError(`${biometricType} isn’t working right now. Sign in with your password.`);
     } finally {
       setBiometricLoading(false);
     }
@@ -175,14 +182,18 @@ export default function LoginScreen() {
       const result = await googleLogin(idToken);
       await finishAuthentication(result, result.user?.email);
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Google sign-in failed. Please try again.'));
+      setError(getApiErrorMessage(error, 'Google sign-in didn’t work. Try again or use your email.'));
     } finally {
       setGoogleLoading(false);
     }
   };
 
   const handleLogin = async () => {
-    if (!canContinue || loading || googleLoading || biometricLoading) return;
+    if (loading || googleLoading || biometricLoading) return;
+    if (!canContinue) {
+      setError('Enter your email and password.');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -195,192 +206,120 @@ export default function LoginScreen() {
 
       await finishAuthentication(result, normalizedEmail);
     } catch (error) {
-      setError(getApiErrorMessage(error, 'Unable to sign in. Please try again.'));
+      setError(getApiErrorMessage(error, 'We couldn’t sign you in. Check your email and password and try again.'));
     } finally {
       setLoading(false);
     }
   };
 
   const isFaceID = biometricType === 'Face ID';
+  const busy = loading || googleLoading || biometricLoading;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScreenHeader onBack={router.canGoBack() ? 'default' : undefined} />
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={styles.brand}>VIRASAT</Text>
-          </View>
+          <Text style={styles.title} accessibilityRole="header">Welcome back</Text>
+          <Text style={styles.subtitle}>Sign in to manage what you’ve chosen to preserve.</Text>
 
-          <View style={styles.hero}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.lockIcon}>⌑</Text>
-            </View>
-            <Text style={styles.eyebrow}>WELCOME BACK</Text>
-            <Text style={styles.title}>Your legacy is waiting.</Text>
-            <Text style={styles.subtitle}>
-              Sign in to securely manage the information you've chosen to preserve.
-            </Text>
-          </View>
-
-          {/* Quick Biometric Login Button (Face ID / Fingerprint) */}
-          {biometricAvailable && (
+          {biometricAvailable ? (
             <Pressable
-              disabled={loading || googleLoading || biometricLoading}
-              onPress={handleBiometricLogin}
-              style={({ pressed }) => [
-                styles.biometricButton,
-                pressed && styles.buttonPressed,
-                biometricLoading && styles.biometricButtonDisabled,
-              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Sign in with ${biometricType}`}
+              accessibilityState={{ busy: biometricLoading, disabled: busy }}
+              disabled={busy}
+              onPress={() => void handleBiometricLogin()}
+              style={({ pressed }) => [styles.biometricButton, pressed && styles.pressed]}
             >
-              {biometricLoading ? (
-                <View style={styles.biometricLoadingRow}>
+              <View style={styles.biometricBadge}>
+                {biometricLoading ? (
                   <ActivityIndicator size="small" color={colors.primary.deepForest} />
-                  <Text style={styles.biometricLoadingText}>Scanning {biometricType}...</Text>
-                </View>
-              ) : (
-                <View style={styles.biometricContentRow}>
-                  <View style={styles.biometricBadge}>
-                    <Text style={styles.biometricIconSymbol}>
-                      {isFaceID ? '👤' : '👆'}
-                    </Text>
-                  </View>
-                  <View style={styles.biometricTextCol}>
-                    <Text style={styles.biometricTitle}>
-                      Sign in with {biometricType}
-                    </Text>
-                    <Text style={styles.biometricSub}>
-                      {hasSavedSession
-                        ? '1-Tap biometric vault unlock'
-                        : `Instant login with ${biometricType}`}
-                    </Text>
-                  </View>
-                  <Text style={styles.biometricArrowSymbol}>→</Text>
-                </View>
-              )}
-            </Pressable>
-          )}
-
-          <View style={styles.form}>
-            <View style={styles.field}>
-              <Text style={styles.label}>EMAIL ADDRESS</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor={colors.neutral.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                textContentType="emailAddress"
-                style={styles.input}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>PASSWORD</Text>
-                <Pressable
-                  onPress={() => {
-                    router.push({
-                      pathname: '/(auth)/forgot-password',
-                      params: email.trim() ? { email: email.trim() } : {},
-                    });
-                  }}
-                  hitSlop={8}
-                >
-                  <Text style={styles.forgot}>Forgot password?</Text>
-                </Pressable>
+                ) : (
+                  <AppIcon name={isFaceID ? 'face' : 'fingerprint'} size={26} color={colors.primary.deepForest} />
+                )}
               </View>
-
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Enter your password"
-                  placeholderTextColor={colors.neutral.textMuted}
-                  secureTextEntry={secureText}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="password"
-                  style={styles.passwordInput}
-                />
-                <Pressable onPress={() => setSecureText((value) => !value)} hitSlop={8} style={styles.visibilityButton}>
-                  <Text style={styles.visibilityText}>{secureText ? 'Show' : 'Hide'}</Text>
-                </Pressable>
+              <View style={styles.biometricTextCol}>
+                <Text style={styles.biometricTitle}>Sign in with {biometricType}</Text>
+                <Text style={styles.biometricSub}>
+                  {biometricLoading ? 'Waiting for your device…' : hasSavedSession ? 'Unlock with one tap' : 'Faster sign-in on this device'}
+                </Text>
               </View>
-            </View>
-
-            <Pressable
-              disabled={!canContinue || loading || biometricLoading}
-              onPress={handleLogin}
-              style={({ pressed }) => [styles.loginButton, !canContinue && styles.loginButtonDisabled, pressed && canContinue && !loading && styles.buttonPressed]}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.neutral.white} />
-              ) : (
-                <>
-                  <Text style={styles.loginButtonText}>Sign In</Text>
-                  <Text style={styles.loginArrow}>→</Text>
-                </>
-              )}
+              <AppIcon name="chevronRight" size={20} color={colors.neutral.textMuted} />
             </Pressable>
+          ) : null}
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Input
+            label="Email address"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="next"
+          />
+
+          <View>
+            <Input
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Your password"
+              secureTextEntry={secureText}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="current-password"
+              textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={() => void handleLogin()}
+              style={styles.passwordInput}
+              containerStyle={styles.passwordField}
+            />
+            <IconButton
+              icon={secureText ? 'eye' : 'eyeOff'}
+              accessibilityLabel={secureText ? 'Show password' : 'Hide password'}
+              onPress={() => setSecureText((value) => !value)}
+              color={colors.neutral.textSecondary}
+              size={22}
+              style={styles.eyeButton}
+            />
           </View>
+          <TextLink
+            title="Forgot password?"
+            onPress={() =>
+              router.push({
+                pathname: '/(auth)/forgot-password',
+                params: email.trim() ? { email: email.trim() } : {},
+              })
+            }
+            style={styles.forgot}
+          />
+
+          {error ? <InlineNotice tone="danger" message={error} style={styles.error} /> : null}
+
+          <Button title="Sign in" onPress={() => void handleLogin()} loading={loading} disabled={googleLoading || biometricLoading} />
 
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
+            <Text style={styles.dividerText}>or</Text>
             <View style={styles.divider} />
           </View>
 
-          <Pressable
-            onPress={handleGoogleLogin}
-            disabled={loading || googleLoading || biometricLoading}
-            style={({ pressed }) => [
-              styles.googleButton,
-              pressed && !googleLoading && styles.buttonPressed,
-            ]}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color={colors.neutral.textPrimary} />
-            ) : (
-              <>
-                <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleButtonText}>
-                  Continue with Google
-                </Text>
-              </>
-            )}
-          </Pressable>
+          <GoogleButton onPress={() => void handleGoogleLogin()} loading={googleLoading} disabled={loading || biometricLoading} />
 
-          <Pressable onPress={() => router.push('/(auth)/signup' as never)} style={({ pressed }) => [styles.signupButton, pressed && styles.buttonPressed]}>
-            <Text style={styles.signupText}>Create a new Virasat</Text>
-            <Text style={styles.signupArrow}>→</Text>
-          </Pressable>
-
-          <View style={styles.securityNote}>
-            <Text style={styles.securityIcon}>🔒</Text>
-            <Text style={styles.securityText}>Protected with hardware biometric encryption.</Text>
+          <View style={styles.signupRow}>
+            <Text style={styles.signupText}>New to Virasat?</Text>
+            <TextLink title="Create an account" onPress={() => router.push('/(auth)/signup' as never)} />
           </View>
 
-          <Text style={styles.footer}>
-            By continuing, you agree to Virasat's{' '}
-            <Text
-              style={{ color: colors.primary.deepForest, textDecorationLine: 'underline', fontWeight: '600' }}
-              onPress={() => void Linking.openURL('https://virasat.app/terms/')}
-            >
-              Terms
-            </Text>{' '}
-            and{' '}
-            <Text
-              style={{ color: colors.primary.deepForest, textDecorationLine: 'underline', fontWeight: '600' }}
-              onPress={() => void Linking.openURL('https://virasat.app/privacy/')}
-            >
-              Privacy Policy
-            </Text>.
-          </Text>
+          <Text style={styles.footer}>By continuing you agree to Virasat’s Terms and Privacy Policy.</Text>
+          <View style={styles.legalLinks}>
+            <TextLink title="Terms" tone="muted" onPress={() => void Linking.openURL('https://virasat.app/terms/')} />
+            <TextLink title="Privacy Policy" tone="muted" onPress={() => void Linking.openURL('https://virasat.app/privacy/')} />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -390,133 +329,62 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
   keyboard: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 10, paddingBottom: 28 },
-  header: { height: 48, alignItems: 'center', justifyContent: 'center' },
-  brand: { fontFamily: typography.fonts.playfair.bold, fontSize: 18, letterSpacing: 3, color: colors.primary.deepForest },
-  hero: { alignItems: 'center', marginTop: 14 },
-  iconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.brand.mint, alignItems: 'center', justifyContent: 'center' },
-  lockIcon: { fontSize: 21, color: colors.primary.forest },
-  eyebrow: { marginTop: 10, fontFamily: typography.fonts.inter.semiBold, fontSize: 9, letterSpacing: 1.6, color: colors.primary.forest },
-  title: { marginTop: 6, textAlign: 'center', fontFamily: typography.fonts.playfair.semiBold, fontSize: 25, lineHeight: 32, color: colors.primary.deepForest },
-  subtitle: { maxWidth: 330, marginTop: 4, textAlign: 'center', fontFamily: typography.fonts.inter.regular, fontSize: 12, lineHeight: 18, color: colors.neutral.textSecondary },
-
-  // Biometric Button Styles
-  biometricButton: {
-    marginTop: 18,
-    borderRadius: 16,
-    backgroundColor: '#EAF3EF',
-    borderWidth: 1.5,
-    borderColor: colors.primary.forest,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    shadowColor: colors.primary.forest,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  biometricButtonDisabled: {
-    opacity: 0.7,
-  },
-  biometricContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  biometricLoadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    gap: 10,
-  },
-  biometricLoadingText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
+  title: {
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-  biometricBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: colors.primary.deepForest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  biometricIconSymbol: {
-    fontSize: 20,
-    color: colors.brand.mint,
-  },
-  biometricTextCol: {
-    flex: 1,
-  },
-  biometricTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
-    color: colors.primary.deepForest,
-  },
-  biometricSub: {
+  subtitle: {
+    marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: colors.primary.forest,
-    marginTop: 1,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
+    color: colors.neutral.textSecondary,
   },
-  biometricArrowSymbol: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary.deepForest,
-    marginLeft: 8,
-  },
-
-  form: { marginTop: 16 },
-  googleButton: {
-    height: 50,
-    marginTop: 10,
-    borderRadius: 14,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
+  biometricButton: {
+    minHeight: 72,
+    marginBottom: 24,
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.brand.mint,
+    borderWidth: 1,
+    borderColor: colors.brand.sage,
+  },
+  pressed: { opacity: 0.85 },
+  biometricBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.neutral.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  googleIcon: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 17,
-    color: '#4285F4',
-    marginRight: 10,
-  },
-
-  googleButtonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-  field: { marginBottom: 12 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
-  label: { marginBottom: 5, fontFamily: typography.fonts.inter.semiBold, fontSize: 9, letterSpacing: 1.2, color: colors.neutral.textSecondary },
-  forgot: { fontFamily: typography.fonts.inter.semiBold, fontSize: 9.5, color: colors.primary.forest },
-  input: { height: 50, paddingHorizontal: 15, borderRadius: 13, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.neutral.border, fontFamily: typography.fonts.inter.regular, fontSize: 13, color: colors.neutral.textPrimary },
-  passwordContainer: { height: 50, flexDirection: 'row', alignItems: 'center', borderRadius: 13, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.neutral.border },
-  passwordInput: { flex: 1, height: '100%', paddingHorizontal: 15, fontFamily: typography.fonts.inter.regular, fontSize: 13, color: colors.neutral.textPrimary },
-  error: { marginTop: 8, fontFamily: typography.fonts.inter.regular, fontSize: 11, color: '#B42318' },
-  visibilityButton: { paddingHorizontal: 14 },
-  visibilityText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 10, color: colors.primary.forest },
-  loginButton: { height: 52, marginTop: 4, borderRadius: 14, backgroundColor: colors.primary.deepForest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  loginButtonDisabled: { opacity: 0.4 },
-  loginButtonText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 14, color: colors.neutral.white },
-  loginArrow: { marginLeft: 11, fontSize: 18, color: colors.neutral.white },
-  dividerRow: { marginTop: 16, flexDirection: 'row', alignItems: 'center' },
+  biometricTextCol: { flex: 1, gap: 2 },
+  biometricTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.body, lineHeight: 22, color: colors.neutral.textPrimary },
+  biometricSub: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, lineHeight: 18, color: colors.neutral.textSecondary },
+  passwordField: { marginBottom: 0 },
+  passwordInput: { paddingRight: 56 },
+  eyeButton: { position: 'absolute', right: 2, top: 30 },
+  forgot: { alignSelf: 'flex-end', marginBottom: 8 },
+  error: { marginBottom: 16 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
   divider: { flex: 1, height: 1, backgroundColor: colors.neutral.border },
-  dividerText: { marginHorizontal: 12, fontFamily: typography.fonts.inter.semiBold, fontSize: 8.5, letterSpacing: 1, color: colors.neutral.textMuted },
-  signupButton: { height: 50, marginTop: 10, borderRadius: 14, backgroundColor: colors.neutral.white, borderWidth: 1, borderColor: colors.primary.forest, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  signupText: { fontFamily: typography.fonts.inter.semiBold, fontSize: 13, color: colors.primary.forest },
-  signupArrow: { marginLeft: 10, fontSize: 17, color: colors.primary.forest },
-  securityNote: { marginTop: 14, paddingHorizontal: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  securityIcon: { marginRight: 7, fontSize: 11 },
-  securityText: { fontFamily: typography.fonts.inter.regular, fontSize: 9.5, color: colors.neutral.textMuted },
-  footer: { marginTop: 10, textAlign: 'center', fontFamily: typography.fonts.inter.regular, fontSize: 8.5, lineHeight: 14, color: colors.neutral.textMuted },
-  buttonPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+  dividerText: { fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.caption, color: colors.neutral.textMuted },
+  signupRow: { marginTop: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 6 },
+  signupText: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.callout, color: colors.neutral.textSecondary },
+  footer: {
+    marginTop: 16,
+    textAlign: 'center',
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.caption,
+    lineHeight: 18,
+    color: colors.neutral.textMuted,
+  },
+  legalLinks: { flexDirection: 'row', justifyContent: 'center', gap: 20 },
 });

@@ -1,53 +1,41 @@
 export const typography = {
   fonts: {
-    display: 'Playfair Display',
-    ui: 'Inter',
-    accent: 'Caveat',
-     inter: {
+    inter: {
       regular: 'InterRegular',
       medium: 'InterMedium',
       semiBold: 'InterSemiBold',
       bold: 'InterBold',
     },
-     playfair: {
+    playfair: {
       regular: 'PlayfairRegular',
       semiBold: 'PlayfairSemiBold',
       bold: 'PlayfairBold',
     },
-    
   },
 
+  // Nothing in the app may be smaller than `micro` (12).
   sizes: {
-    displayXL: 32,
-    displayL: 28,
-    h1: 24,
-    h2: 20,
-    h3: 17,
-
-    logo: 30,
-    title: 17,
-    body: 14,
-
-    bodyLarge: 16,
-    bodyMedium: 14,
-
-    caption: 12,
-    micro: 10,
-    button: 14,
+    display: 34,
+    title1: 28,
+    title2: 22,
+    title3: 18,
+    body: 16,
+    callout: 15,
+    label: 14,
+    caption: 13,
+    micro: 12,
   },
 
   lineHeights: {
-    displayXL: 38,
-    displayL: 34,
-    h1: 30,
-    h2: 26,
-    h3: 22,
-
-    bodyLarge: 24,
-    body: 20,
-    caption: 16,
-    micro: 14,
-    button: 18,
+    display: 40,
+    title1: 34,
+    title2: 28,
+    title3: 24,
+    body: 24,
+    callout: 22,
+    label: 20,
+    caption: 18,
+    micro: 16,
   },
 
   weights: {

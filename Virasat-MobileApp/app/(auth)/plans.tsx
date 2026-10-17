@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { PlanCode } from '@/src/types/subscription.types';
@@ -51,12 +52,12 @@ export default function PlansScreen() {
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={() => router.back()}
           hitSlop={12}
           style={styles.backButton}
         >
-          <Text style={styles.backArrow}>‹</Text>
+          <AppIcon name="chevronLeft" style={styles.backArrow} />
         </Pressable>
         <Text style={styles.brand}>VIRASAT</Text>
       </View>
@@ -66,7 +67,7 @@ export default function PlansScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>PLANS & PROTECTION</Text>
+          <Text style={styles.eyebrow}>Plans & protection</Text>
           <Text style={styles.title}>Choose Your Legacy Shield</Text>
           <Text style={styles.subtitle}>
             Starter access is available now. Paid checkout, purchase restoration, automatic reminders, verification workflows, and inheritance release are coming soon. Paid-tier benefits below are planned.
@@ -82,13 +83,13 @@ export default function PlansScreen() {
             </View>
             {isStarter && (
               <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
+                <Text style={styles.currentBadgeText}>Current plan</Text>
               </View>
             )}
           </View>
 
           <View style={styles.priceRow}>
-            <Text style={styles.priceCurrency}>₹</Text>
+            <AppIcon name="investment" style={styles.priceCurrency} />
             <Text style={styles.priceAmount}>0</Text>
             <Text style={styles.pricePeriod}>/ forever</Text>
           </View>
@@ -101,7 +102,7 @@ export default function PlansScreen() {
             <FeatureItem text="Basic activity history" />
           </View>
 
-          <Pressable
+          <Pressable accessibilityRole="button"
             disabled
             style={[styles.planButton, styles.planButtonDisabled]}
           >
@@ -126,13 +127,13 @@ export default function PlansScreen() {
             </View>
             {isSecure && (
               <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
+                <Text style={styles.currentBadgeText}>Current plan</Text>
               </View>
             )}
           </View>
 
           <View style={styles.priceRow}>
-            <Text style={styles.priceCurrency}>₹</Text>
+            <AppIcon name="investment" style={styles.priceCurrency} />
             <Text style={styles.priceAmount}>999</Text>
             <Text style={styles.pricePeriod}>/ year</Text>
           </View>
@@ -148,7 +149,7 @@ export default function PlansScreen() {
             <FeatureItem text="Full activity history & logs" />
           </View>
 
-          <Pressable
+          <Pressable accessibilityRole="button"
             disabled
             accessibilityState={{ disabled: true }}
                         style={({ pressed }) => [
@@ -173,13 +174,13 @@ export default function PlansScreen() {
             </View>
             {isFamily && (
               <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
+                <Text style={styles.currentBadgeText}>Current plan</Text>
               </View>
             )}
           </View>
 
           <View style={styles.priceRow}>
-            <Text style={styles.priceCurrency}>₹</Text>
+            <AppIcon name="investment" style={styles.priceCurrency} />
             <Text style={styles.priceAmount}>2,499</Text>
             <Text style={styles.pricePeriod}>/ year</Text>
           </View>
@@ -195,7 +196,7 @@ export default function PlansScreen() {
             <FeatureItem text="Priority support & future family vault readiness" />
           </View>
 
-          <Pressable
+          <Pressable accessibilityRole="button"
             disabled
             accessibilityState={{ disabled: true }}
                         style={({ pressed }) => [
@@ -243,7 +244,7 @@ function FeatureItem({
   return (
     <View style={styles.featureRow}>
       <View style={[styles.checkCircle, highlight && styles.checkCircleHighlight]}>
-        <Text style={styles.checkIcon}>✓</Text>
+        <AppIcon name="check" style={styles.checkIcon} />
       </View>
       <Text style={[styles.featureText, highlight && styles.featureTextHighlight]}>
         {text}
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.ivory,
   },
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -268,20 +269,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     top: 4,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backArrow: {
     fontSize: 32,
     color: colors.primary.deepForest,
-    lineHeight: 36,
+    lineHeight: 46,
   },
   brand: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 15,
     color: colors.primary.deepForest,
     letterSpacing: 2,
   },
@@ -294,24 +294,22 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   eyebrow: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 13,
     color: colors.primary.forest,
-    letterSpacing: 1.5,
+    
     marginBottom: 6,
   },
   title: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 26,
-    fontWeight: '700',
     color: colors.neutral.textPrimary,
-    lineHeight: 32,
+    lineHeight: 38,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
     lineHeight: 21,
   },
@@ -346,11 +344,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   recommendTagText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 13,
     color: colors.neutral.white,
-    letterSpacing: 0.5,
+    
   },
   planHeader: {
     flexDirection: 'row',
@@ -360,14 +357,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   planName: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 22,
-    fontWeight: '700',
     color: colors.neutral.textPrimary,
   },
   planSubtitle: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 13,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 14,
     color: colors.neutral.textSecondary,
     marginTop: 2,
     maxWidth: 240,
@@ -379,9 +375,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   currentBadgeText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 10,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 12,
     color: colors.primary.deepForest,
   },
   priceRow: {
@@ -390,23 +385,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F3F2',
+    borderBottomColor: colors.neutral.sunken,
   },
   priceCurrency: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 20,
-    fontWeight: '700',
     color: colors.neutral.textPrimary,
   },
   priceAmount: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 32,
-    fontWeight: '700',
     color: colors.neutral.textPrimary,
   },
   pricePeriod: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
     marginLeft: 6,
   },
@@ -423,7 +416,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#E5EBE8',
+    backgroundColor: colors.neutral.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -431,23 +424,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.mint,
   },
   checkIcon: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.primary.deepForest,
   },
   featureText: {
     flex: 1,
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
-    lineHeight: 19,
+    lineHeight: 22,
   },
   featureTextHighlight: {
     color: colors.neutral.textPrimary,
     fontWeight: '500',
   },
   planButton: {
-    height: 48,
+    minHeight: 48,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -456,18 +449,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.deepForest,
   },
   planButtonPrimaryText: {
-    fontFamily: typography.fonts.ui,
+    fontFamily: typography.fonts.inter.bold,
     fontSize: 15,
-    fontWeight: '700',
     color: colors.neutral.white,
   },
   planButtonDisabled: {
-    backgroundColor: '#ECEFEF',
+    backgroundColor: colors.neutral.border,
   },
   planButtonDisabledText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 15,
     color: colors.neutral.textMuted,
   },
   pressed: {
@@ -483,15 +474,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   restoreText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 15,
     color: colors.primary.deepForest,
     textDecorationLine: 'underline',
   },
   disclaimerText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 12,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 13,
     color: colors.neutral.textMuted,
     textAlign: 'center',
     lineHeight: 18,

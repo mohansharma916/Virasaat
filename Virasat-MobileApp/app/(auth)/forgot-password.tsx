@@ -11,18 +11,21 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import {
-  ArrowLeft,
   CheckCircle2,
-  Eye,
-  EyeOff,
   KeyRound,
   Lock,
   Mail,
-  RotateCcw,
   ShieldCheck,
 } from 'lucide-react-native';
+
+import { Button } from '@/src/components/Button';
+import { GoogleButton } from '@/src/components/GoogleButton';
+import { IconButton } from '@/src/components/IconButton';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { TextLink } from '@/src/components/TextLink';
 
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -69,6 +72,17 @@ export default function ForgotPasswordScreen() {
 
   // OTP inputs ref
   const otpInputs = useRef<(TextInput | null)[]>([]);
+
+  // Back (header, gesture or hardware) steps back to the email step instead of leaving the flow.
+  const navigation = useNavigation();
+  useEffect(() => {
+    return navigation.addListener('beforeRemove', (event) => {
+      if (step !== 'RESET_FORM') return;
+      event.preventDefault();
+      setStep('EMAIL_INPUT');
+      setError('');
+    });
+  }, [navigation, step]);
 
   useEffect(() => {
     if (searchParams.mode === 'reset' && searchParams.email) {
@@ -146,7 +160,7 @@ export default function ForgotPasswordScreen() {
 
       router.replace(result.isNewUser
         ? { pathname: '/(auth)/security', params: { onboarding: 'true' } } as never
-        : '/(auth)/home');
+        : '/(auth)/(tabs)/home');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Google sign-in failed. Please try again.'));
     } finally {
@@ -200,7 +214,7 @@ export default function ForgotPasswordScreen() {
         setDevelopmentOtp(res.developmentOtp);
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Could not resend code. Please try again.'));
+      setError(getApiErrorMessage(err, 'We couldn’t send a new code. Try again in a moment.'));
     } finally {
       setResending(false);
     }
@@ -210,12 +224,12 @@ export default function ForgotPasswordScreen() {
   const handleResetPassword = async () => {
     const fullOtp = otp.join('');
     if (fullOtp.length < OTP_LENGTH) {
-      setError('Please enter the complete 6-digit reset code.');
+      setError('Enter all 6 digits of the code.');
       return;
     }
 
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long.');
+      setError('Use at least 8 characters.');
       return;
     }
 
@@ -225,7 +239,7 @@ export default function ForgotPasswordScreen() {
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match. Please verify both fields.');
+      setError('The two passwords don’t match.');
       return;
     }
 
@@ -241,7 +255,7 @@ export default function ForgotPasswordScreen() {
 
       setStep('SUCCESS');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to reset password. Please check the code.'));
+      setError(getApiErrorMessage(err, 'That code didn’t work. Check it or send a new code.'));
     } finally {
       setLoading(false);
     }
@@ -258,25 +272,10 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Top Bar with Back Button */}
-          <View style={styles.topBar}>
-            <Pressable
-              onPress={() => {
-                if (step === 'RESET_FORM') {
-                  setStep('EMAIL_INPUT');
-                  setError('');
-                } else {
-                  router.back();
-                }
-              }}
-              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-              hitSlop={12}
-            >
-              <ArrowLeft size={20} color={colors.neutral.textPrimary} />
-            </Pressable>
-            <Text style={styles.topBarBrand}>VIRASAT</Text>
-            <View style={styles.topBarPlaceholder} />
-          </View>
+          <ScreenHeader
+            onBack={step === 'SUCCESS' ? undefined : 'default'}
+            backLabel={step === 'RESET_FORM' ? 'Back to email' : 'Go back'}
+          />
 
           {/* ==================================================== */}
           {/* STEP 1: ENTER EMAIL FOR RECOVERY                     */}
@@ -287,20 +286,15 @@ export default function ForgotPasswordScreen() {
                 <KeyRound size={28} color={colors.primary.forest} />
               </View>
 
-              <Text style={styles.title}>Forgot Password?</Text>
+              <Text style={styles.title} accessibilityRole="header">Forgot your password?</Text>
               <Text style={styles.subtitle}>
-                No worries! Enter your account email address and we will help you securely access your
-                vault.
+                Enter your account email and we’ll send you a code to choose a new password.
               </Text>
 
-              {error ? (
-                <View style={styles.errorAlert}>
-                  <Text style={styles.errorAlertText}>{error}</Text>
-                </View>
-              ) : null}
+              {error ? <InlineNotice tone="danger" message={error} style={styles.notice} /> : null}
 
               <View style={styles.field}>
-                <Text style={styles.label}>EMAIL ADDRESS</Text>
+                <Text style={styles.label}>Email address</Text>
                 <View style={styles.inputWrapper}>
                   <Mail size={18} color={colors.neutral.textMuted} style={styles.inputIcon} />
                   <TextInput
@@ -322,24 +316,7 @@ export default function ForgotPasswordScreen() {
                 </View>
               </View>
 
-              <Pressable
-                disabled={loading || !email.trim()}
-                onPress={handleCheckEmail}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  (!email.trim() || loading) && styles.buttonDisabled,
-                  pressed && email.trim() && !loading && styles.buttonPressed,
-                ]}
-              >
-                {loading ? (
-                  <ActivityIndicator color={colors.neutral.white} />
-                ) : (
-                  <>
-                    <Text style={styles.primaryButtonText}>Continue</Text>
-                    <Text style={styles.buttonArrow}>→</Text>
-                  </>
-                )}
-              </Pressable>
+              <Button title="Send reset code" onPress={() => void handleCheckEmail()} loading={loading} disabled={!email.trim()} />
 
               <View style={styles.infoBox}>
                 <ShieldCheck size={20} color={colors.primary.forest} />
@@ -348,34 +325,12 @@ export default function ForgotPasswordScreen() {
                 </Text>
               </View>
 
-              <Pressable
-                disabled={googleLoading}
-                onPress={handleGoogleSignIn}
-                style={({ pressed }) => [
-                  styles.googleButton,
-                  pressed && !googleLoading && styles.buttonPressed,
-                ]}
-              >
-                {googleLoading ? (
-                  <ActivityIndicator color={colors.neutral.textPrimary} />
-                ) : (
-                  <>
-                    <View style={styles.googleIconBox}>
-                      <Text style={styles.googleIconText}>G</Text>
-                    </View>
-                    <Text style={styles.googleButtonText}>Continue with Google</Text>
-                  </>
-                )}
-              </Pressable>
+              <GoogleButton onPress={() => void handleGoogleSignIn()} loading={googleLoading} disabled={loading} />
 
-              <Pressable
-                onPress={() => router.back()}
-                style={styles.switchRow}
-                hitSlop={8}
-              >
-                <Text style={styles.switchTextMuted}>Remember your password? </Text>
-                <Text style={styles.switchTextLink}>Sign In</Text>
-              </Pressable>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchTextMuted}>Remember your password?</Text>
+                <TextLink title="Sign in" onPress={() => router.back()} />
+              </View>
             </View>
           )}
 
@@ -388,27 +343,19 @@ export default function ForgotPasswordScreen() {
                 <Lock size={28} color={colors.primary.forest} />
               </View>
 
-              <Text style={styles.title}>Reset Password</Text>
+              <Text style={styles.title} accessibilityRole="header">Choose a new password</Text>
               <Text style={styles.subtitle}>
                 If an account uses <Text style={styles.boldText}>{email}</Text>, we sent it a 6-digit
-                code. Enter it and choose a strong new password.
+                code. Enter it below with your new password.
               </Text>
 
-              {infoMessage ? (
-                <View style={styles.infoAlert}>
-                  <Text style={styles.infoAlertText}>{infoMessage}</Text>
-                </View>
-              ) : null}
+              {infoMessage ? <InlineNotice tone="info" message={infoMessage} style={styles.notice} /> : null}
 
-              {error ? (
-                <View style={styles.errorAlert}>
-                  <Text style={styles.errorAlertText}>{error}</Text>
-                </View>
-              ) : null}
+              {error ? <InlineNotice tone="danger" message={error} style={styles.notice} /> : null}
 
               {/* Dev OTP Chip Helper (dev mode only) */}
               {developmentOtp ? (
-                <Pressable
+                <Pressable accessibilityRole="button"
                   onPress={() => {
                     const digits = developmentOtp.split('').slice(0, OTP_LENGTH);
                     setOtp(digits);
@@ -416,7 +363,7 @@ export default function ForgotPasswordScreen() {
                   style={styles.devOtpChip}
                 >
                   <Text style={styles.devOtpChipText}>
-                    ⚡ Dev Code: <Text style={styles.boldText}>{developmentOtp}</Text> (Tap to fill)
+                    Development code: <Text style={styles.boldText}>{developmentOtp}</Text> (tap to fill)
                   </Text>
                 </Pressable>
               ) : null}
@@ -424,32 +371,16 @@ export default function ForgotPasswordScreen() {
               {/* 6-Digit OTP Code Input */}
               <View style={styles.field}>
                 <View style={styles.labelRow}>
-                  <Text style={styles.label}>VERIFICATION CODE</Text>
-                  <Pressable
-                    disabled={secondsLeft > 0 || resending}
-                    onPress={handleResendCode}
-                    hitSlop={8}
-                    style={styles.resendButton}
-                  >
-                    {resending ? (
-                      <ActivityIndicator size="small" color={colors.primary.forest} />
-                    ) : (
-                      <>
-                        <RotateCcw
-                          size={12}
-                          color={secondsLeft > 0 ? colors.neutral.textMuted : colors.primary.forest}
-                        />
-                        <Text
-                          style={[
-                            styles.resendText,
-                            secondsLeft > 0 && styles.resendTextDisabled,
-                          ]}
-                        >
-                          {secondsLeft > 0 ? `Resend (${secondsLeft}s)` : 'Resend Code'}
-                        </Text>
-                      </>
-                    )}
-                  </Pressable>
+                  <Text style={styles.label}>Verification code</Text>
+                  {resending ? (
+                    <ActivityIndicator size="small" color={colors.primary.forest} accessibilityLabel="Sending a new code" />
+                  ) : (
+                    <TextLink
+                      title={secondsLeft > 0 ? `Resend in ${secondsLeft}s` : 'Send a new code'}
+                      disabled={secondsLeft > 0}
+                      onPress={() => void handleResendCode()}
+                    />
+                  )}
                 </View>
 
                 <View style={styles.otpRow}>
@@ -465,6 +396,9 @@ export default function ForgotPasswordScreen() {
                       keyboardType="number-pad"
                       maxLength={OTP_LENGTH}
                       selectTextOnFocus
+                      textContentType="oneTimeCode"
+                      autoComplete="one-time-code"
+                      accessibilityLabel={`Code digit ${index + 1} of ${OTP_LENGTH}`}
                       style={[
                         styles.otpBox,
                         digit ? styles.otpBoxFilled : null,
@@ -476,7 +410,7 @@ export default function ForgotPasswordScreen() {
 
               {/* New Password Input */}
               <View style={styles.field}>
-                <Text style={styles.label}>NEW PASSWORD</Text>
+                <Text style={styles.label}>New password</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     value={newPassword}
@@ -492,23 +426,19 @@ export default function ForgotPasswordScreen() {
                     textContentType="newPassword"
                     style={styles.inputWithToggle}
                   />
-                  <Pressable
+                  <IconButton
+                    icon={showPassword ? 'eyeOff' : 'eye'}
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                     onPress={() => setShowPassword((prev) => !prev)}
-                    hitSlop={8}
-                    style={styles.toggleButton}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={18} color={colors.neutral.textMuted} />
-                    ) : (
-                      <Eye size={18} color={colors.neutral.textMuted} />
-                    )}
-                  </Pressable>
+                    color={colors.neutral.textSecondary}
+                    size={22}
+                  />
                 </View>
               </View>
 
               {/* Confirm New Password Input */}
               <View style={styles.field}>
-                <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
+                <Text style={styles.label}>Confirm new password</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     value={confirmPassword}
@@ -524,45 +454,22 @@ export default function ForgotPasswordScreen() {
                     textContentType="newPassword"
                     style={styles.inputWithToggle}
                   />
-                  <Pressable
+                  <IconButton
+                    icon={showConfirmPassword ? 'eyeOff' : 'eye'}
+                    accessibilityLabel={showConfirmPassword ? 'Hide confirmation' : 'Show confirmation'}
                     onPress={() => setShowConfirmPassword((prev) => !prev)}
-                    hitSlop={8}
-                    style={styles.toggleButton}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff size={18} color={colors.neutral.textMuted} />
-                    ) : (
-                      <Eye size={18} color={colors.neutral.textMuted} />
-                    )}
-                  </Pressable>
+                    color={colors.neutral.textSecondary}
+                    size={22}
+                  />
                 </View>
               </View>
 
-              {/* Submit Button */}
-              <Pressable
-                disabled={
-                  loading ||
-                  otp.join('').length < OTP_LENGTH ||
-                  !newPassword ||
-                  !confirmPassword
-                }
-                onPress={handleResetPassword}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  (loading ||
-                    otp.join('').length < OTP_LENGTH ||
-                    !newPassword ||
-                    !confirmPassword) &&
-                    styles.buttonDisabled,
-                  pressed && !loading && styles.buttonPressed,
-                ]}
-              >
-                {loading ? (
-                  <ActivityIndicator color={colors.neutral.white} />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Update Password & Sign In</Text>
-                )}
-              </Pressable>
+              <Button
+                title="Update password"
+                onPress={() => void handleResetPassword()}
+                loading={loading}
+                disabled={otp.join('').length < OTP_LENGTH || !newPassword || !confirmPassword}
+              />
             </View>
           )}
 
@@ -575,22 +482,12 @@ export default function ForgotPasswordScreen() {
                 <CheckCircle2 size={36} color={colors.semantic.success} />
               </View>
 
-              <Text style={styles.title}>Password Reset Complete</Text>
+              <Text style={styles.title} accessibilityRole="header">Password updated</Text>
               <Text style={styles.subtitle}>
-                Your Virasat vault password has been successfully updated. You can now log in with
-                your new password.
+                Sign in with your new password.
               </Text>
 
-              <Pressable
-                onPress={() => router.replace('/(auth)/login')}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>Go to Sign In</Text>
-                <Text style={styles.buttonArrow}>→</Text>
-              </Pressable>
+              <Button title="Go to sign in" onPress={() => router.replace('/(auth)/login')} />
             </View>
           )}
         </ScrollView>
@@ -600,9 +497,10 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
+  notice: { marginBottom: 16 },
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: colors.neutral.white,
   },
   keyboardContainer: {
     flex: 1,
@@ -620,8 +518,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: 20,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
@@ -633,9 +531,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.mint,
   },
   topBarBrand: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 16,
-    fontWeight: '700',
     color: colors.primary.deepForest,
     letterSpacing: 2,
   },
@@ -647,7 +544,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#E8E4DC',
+    borderColor: colors.neutral.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -668,15 +565,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.semantic.successSoft,
   },
   title: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 24,
-    fontWeight: '700',
     color: colors.primary.deepForest,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
     lineHeight: 21,
     marginBottom: 24,
@@ -694,9 +590,9 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.semantic.error,
   },
   errorAlertText: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.semantic.error,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   infoAlert: {
     backgroundColor: colors.brand.mint,
@@ -707,9 +603,9 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.primary.forest,
   },
   infoAlertText: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.primary.deepForest,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   infoBox: {
     flexDirection: 'row',
@@ -722,14 +618,14 @@ const styles = StyleSheet.create({
   },
   infoBoxText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.primary.deepForest,
     lineHeight: 19,
   },
   devOtpChip: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: colors.semantic.warningSoft,
+    borderColor: colors.semantic.warning,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -737,8 +633,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   devOtpChipText: {
-    fontSize: 12,
-    color: '#92400E',
+    fontSize: 13,
+    color: colors.semantic.warning,
   },
   field: {
     marginBottom: 20,
@@ -750,10 +646,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.neutral.textSecondary,
-    letterSpacing: 1,
+    
     marginBottom: 8,
   },
   inputWrapper: {
@@ -770,13 +666,13 @@ const styles = StyleSheet.create({
   },
   inputWithIcon: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
     fontSize: 15,
     color: colors.neutral.textPrimary,
   },
   inputWithToggle: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
     fontSize: 15,
     color: colors.neutral.textPrimary,
   },
@@ -790,7 +686,7 @@ const styles = StyleSheet.create({
   },
   otpBox: {
     width: 44,
-    height: 52,
+    minHeight: 52,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: colors.neutral.border,
@@ -810,7 +706,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   resendText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.primary.forest,
   },
@@ -820,7 +716,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: colors.primary.forest,
     borderRadius: 12,
-    height: 50,
+    minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -847,7 +743,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.neutral.border,
     borderRadius: 12,
-    height: 50,
+    minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -866,7 +762,7 @@ const styles = StyleSheet.create({
   googleIconText: {
     color: colors.neutral.white,
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: 15,
   },
   googleButtonText: {
     fontSize: 15,
@@ -880,11 +776,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   switchTextMuted: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
   },
   switchTextLink: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.primary.forest,
   },

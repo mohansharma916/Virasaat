@@ -20,6 +20,7 @@ import { authenticateWithBiometric } from '@/src/services/biometric';
 import { useAppDispatch } from '@/src/store/hooks';
 import { clearSession, hydrateSession } from '@/src/store/session.slice';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
@@ -84,7 +85,7 @@ export default function SplashScreen() {
 
       try {
         await dispatch(hydrateSession()).unwrap();
-        return '/(auth)/home';
+        return '/(auth)/(tabs)/home';
       } catch (reason: any) {
         const isUnauthorized =
           reason?.isUnauthorized === true ||
@@ -164,7 +165,7 @@ export default function SplashScreen() {
       {error ? (
         <View style={styles.errorCard}>
           <View style={styles.errorIconCircle}>
-            <Text style={styles.errorIcon}>!</Text>
+            <AppIcon name="alert" style={styles.errorIcon} />
           </View>
           <Text style={styles.errorTitle}>{errorTitle}</Text>
           <Text style={styles.errorMessage} accessibilityRole="alert">
@@ -179,7 +180,7 @@ export default function SplashScreen() {
                 setRetry((val) => val + 1);
               }}
             />
-            <Pressable
+            <Pressable accessibilityRole="button"
               style={styles.switchAccountButton}
               onPress={async () => {
                 await removeAccessToken();
@@ -222,16 +223,16 @@ const styles = StyleSheet.create({
   },
 
   monogram: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.regular,
     fontSize: 64,
-    lineHeight: 72,
+    lineHeight: 93,
     color: colors.primary.deepForest,
   },
 
   logo: {
     marginTop: 4,
-    fontFamily: typography.fonts.display,
-    fontSize: typography.sizes.logo,
+    fontFamily: typography.fonts.playfair.regular,
+    fontSize: typography.sizes.title1,
     letterSpacing: 4,
     color: colors.primary.deepForest,
   },
@@ -242,15 +243,15 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    fontFamily: typography.fonts.ui,
-    fontSize: typography.sizes.title,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.title3,
     fontWeight: typography.weights.regular,
     color: colors.neutral.textSecondary,
   },
 
   subtitleStrong: {
     marginTop: 3,
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.regular,
     fontSize: 19,
     color: colors.primary.forest,
   },
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    fontFamily: typography.fonts.ui,
+    fontFamily: typography.fonts.inter.regular,
     fontSize: typography.sizes.caption,
     color: colors.neutral.textMuted,
   },
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
 
   errorTitle: {
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: typography.sizes.h3,
+    fontSize: typography.sizes.title3,
     color: colors.primary.deepForest,
     marginBottom: 6,
   },
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
 
   switchAccountText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: typography.sizes.bodyMedium,
+    fontSize: typography.sizes.callout,
     color: colors.primary.forest,
     textDecorationLine: 'underline',
   },

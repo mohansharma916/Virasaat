@@ -28,6 +28,7 @@ import {
 import { onSessionExpired } from '@/src/api/client';
 import { clearTemporaryVaultExports } from '@/src/storage/vault-export.storage';
 import { Button } from './Button';
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
@@ -232,7 +233,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
       {error ? (
         <View style={styles.errorBox}>
           <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>!</Text>
+            <AppIcon name="alert" style={styles.iconText} />
           </View>
           <Text style={styles.errorHeading}>Unable to Verify Session</Text>
           <Text style={styles.errorBody} accessibilityRole="alert">
@@ -244,7 +245,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
               title="Retry Connection"
               onPress={() => setRetry((value) => value + 1)}
             />
-            <Pressable
+            <Pressable accessibilityRole="button"
               style={styles.secondaryButton}
               onPress={async () => {
                 await removeAccessToken();
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   },
   errorHeading: {
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: typography.sizes.h3,
+    fontSize: typography.sizes.title3,
     color: colors.primary.deepForest,
     marginBottom: 6,
   },
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: typography.sizes.bodyMedium,
+    fontSize: typography.sizes.callout,
     color: colors.primary.forest,
     textDecorationLine: 'underline',
   },

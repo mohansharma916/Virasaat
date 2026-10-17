@@ -1,14 +1,15 @@
 import { useCallback, useMemo } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { StepProgress } from '@/src/components/StepProgress';
+import { LEGACY_CATEGORIES, type LegacyCategoryInfo } from '@/src/utils/legacy-categories';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { LEGACY_CATEGORY_KEYS,
@@ -16,57 +17,21 @@ import { LEGACY_CATEGORY_KEYS,
   type LegacyCategory, } from '@/src/utils/legacy-flow';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
-import { BottomNavBar } from '@/src/components/BottomNavBar';
-type CategoryConfig = {
-  id: LegacyCategory;
-  title: string;
-  description: string;
-  icon: string;
-  route: string;
+
+type CategoryConfig = LegacyCategoryInfo & { route: string };
+
+const CATEGORY_ROUTES: Record<LegacyCategory, string> = {
+  DOCUMENTS: '/(auth)/legacy-documents',
+  INVESTMENTS: '/(auth)/legacy-investments',
+  MESSAGES: '/(auth)/legacy-message',
+  VIDEOS: '/(auth)/legacy-documents',
+  OTHER: '/(auth)/legacy-documents',
 };
 
-const CATEGORY_CONFIG: CategoryConfig[] = [
-  {
-    id: 'DOCUMENTS',
-    title: 'Important Documents',
-    description:
-      'Wills, property papers, insurance, certificates and other documents.',
-    icon: '▤',
-    route: '/(auth)/legacy-documents',
-  },
-  {
-    id: 'INVESTMENTS',
-    title: 'Investments & Finance',
-    description:
-      'Investment information, accounts, policies and financial instructions.',
-    icon: '₹',
-    route: '/(auth)/legacy-investments',
-  },
-  {
-    id: 'MESSAGES',
-    title: 'Personal Messages',
-    description:
-      "Written messages you'd like someone to receive.",
-    icon: '✎',
-    route: '/(auth)/legacy-message',
-  },
-  {
-    id: 'VIDEOS',
-    title: 'Video Messages',
-    description:
-      'Original video files for your loved ones.',
-    icon: '▶',
-    route: '/(auth)/legacy-documents',
-  },
-  {
-    id: 'OTHER',
-    title: 'Other Files',
-    description:
-      'PDFs, images and other important files.',
-    icon: '□',
-    route: '/(auth)/legacy-documents',
-  },
-];
+const CATEGORY_CONFIG: CategoryConfig[] = LEGACY_CATEGORIES.map((category) => ({
+  ...category,
+  route: CATEGORY_ROUTES[category.id],
+}));
 
 export default function LegacyCategoryScreen() {
   const dispatch = useAppDispatch();
@@ -85,6 +50,12 @@ export default function LegacyCategoryScreen() {
     },
     [params.categories],
   );
+
+  const countByCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of savedItems) counts.set(item.category.toUpperCase(), (counts.get(item.category.toUpperCase()) ?? 0) + 1);
+    return counts;
+  }, [savedItems]);
 
   const savedCategories = useMemo(
     () => new Set(savedItems.map((item) => item.category.toUpperCase())),
@@ -112,7 +83,7 @@ export default function LegacyCategoryScreen() {
 
   const openCategory = (category: CategoryConfig) => {
     router.push({
-      pathname: completedCategories.includes(category.id) && params.add !== 'true' ? '/(auth)/saved-items' : category.route,
+      pathname: completedCategories.includes(category.id) && params.add !== 'true' ? '/(auth)/(tabs)/saved-items' : category.route,
       params: {
         category: category.id,
         categories: selectedCategories.join(','),
@@ -131,7 +102,7 @@ export default function LegacyCategoryScreen() {
   ).length;
 
   const handleReview = () => {
-    if (!allComplete) {
+    if (completedCount === 0) {
       return;
     }
 
@@ -143,425 +114,158 @@ export default function LegacyCategoryScreen() {
     } as never);
   };
 
+  const onboarding = params.add !== 'true';
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {onboarding ? <StepProgress phase="Legacy" /> : null}
+
+        <Text style={[styles.title, onboarding && styles.titleOnboarding]} accessibilityRole="header">
+          {onboarding ? 'Let’s preserve what matters' : 'Add to your vault'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {onboarding ? 'Add something to each category you chose. You’ll come back here after each one.' : 'Choose what you’d like to add.'}
+        </Text>
+
+        {onboarding ? (
+          <View
+            style={styles.progressRow}
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityLabel={`${completedCount} of ${selectedCategories.length} categories done`}
+            accessibilityValue={{ min: 0, max: selectedCategories.length, now: completedCount }}
           >
-            <Text style={styles.backArrow}>‹</Text>
-          </Pressable>
-
-          <Text style={styles.brand}>VIRASAT</Text>
-        </View>
-
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>YOUR DIGITAL LEGACY</Text>
-
-          <Text style={styles.title}>
-            Let's preserve what matters.
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Complete the categories you selected. You can
-            return here after adding each one.
-          </Text>
-        </View>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: selectedCategories.length > 0 ? `${Math.round((completedCount / selectedCategories.length) * 100)}%` : '0%' },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressCount}>
+              {completedCount} of {selectedCategories.length} done
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.categories}>
-          {CATEGORY_CONFIG
-            .filter((category) =>
-              selectedCategories.includes(category.id),
-            )
-            .map((category) => {
-              const complete = completedCategories.includes(
-                category.id,
-              );
+          {CATEGORY_CONFIG.filter((category) => selectedCategories.includes(category.id)).map((category) => {
+            const complete = completedCategories.includes(category.id);
+            const count = countByCategory.get(category.id) ?? 0;
+            const status = complete ? `${count} added` : 'Not started';
 
-              return (
-                <Pressable
-                  key={category.id}
-                  onPress={() => openCategory(category)}
-                  style={({ pressed }) => [
-                    styles.categoryCard,
-                    complete && styles.categoryCardComplete,
-                    pressed && styles.categoryCardPressed,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.iconContainer,
-                      complete &&
-                        styles.iconContainerComplete,
-                    ]}
-                  >
-                    <Text style={styles.icon}>
-                      {complete ? '✓' : category.icon}
-                    </Text>
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${category.title}. ${status}`}
+                accessibilityHint={complete && onboarding ? 'Opens what you’ve saved' : 'Opens a form to add one'}
+                key={category.id}
+                onPress={() => openCategory(category)}
+                style={({ pressed }) => [styles.categoryCard, complete && styles.categoryCardComplete, pressed && styles.pressed]}
+              >
+                <View style={[styles.iconContainer, complete && styles.iconContainerComplete]}>
+                  <AppIcon name={complete ? 'check' : category.icon} size={22} color={complete ? colors.neutral.white : colors.primary.deepForest} />
+                </View>
+
+                <View style={styles.categoryContent}>
+                  <Text style={styles.categoryTitle}>{category.title}</Text>
+                  <Text style={styles.categoryDescription}>{category.description}</Text>
+                  <View style={[styles.statusChip, complete && styles.statusChipComplete]}>
+                    <Text style={[styles.statusText, complete && styles.statusTextComplete]}>{status}</Text>
                   </View>
+                </View>
 
-                  <View style={styles.categoryContent}>
-                    <View style={styles.titleRow}>
-                      <Text style={styles.categoryTitle}>
-                        {category.title}
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.status,
-                          complete &&
-                            styles.statusComplete,
-                        ]}
-                      >
-                        {complete
-                          ? 'Complete'
-                          : 'Add now'}
-                      </Text>
-                    </View>
-
-                    <Text
-                      style={styles.categoryDescription}
-                    >
-                      {category.description}
-                    </Text>
-
-                    <Text style={styles.actionText}>
-                      {complete
-                        ? 'Open & edit →'
-                        : 'Open & add →'}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+                <AppIcon name="chevronRight" size={20} color={colors.neutral.textMuted} />
+              </Pressable>
+            );
+          })}
         </View>
 
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>
-              LEGACY SETUP PROGRESS
-            </Text>
-
-            <Text style={styles.progressCount}>
-              {completedCount}/{selectedCategories.length}
-            </Text>
-          </View>
-
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width:
-                    selectedCategories.length > 0
-                      ? `${Math.round(
-                          (completedCount /
-                            selectedCategories.length) *
-                            100,
-                        )}%`
-                      : '0%',
-                },
-              ]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.securityCard}>
-          <View style={styles.securityIcon}>
-            <Text style={styles.lock}>🔒</Text>
-          </View>
-
-          <View style={styles.securityContent}>
-            <Text style={styles.securityTitle}>
-              Private by design
-            </Text>
-
-            <Text style={styles.securityText}>
-              Everything you add to Virasat is intended to
-              remain private until your release conditions
-              are satisfied.
-            </Text>
-          </View>
-        </View>
+        <InlineNotice
+          tone="brand"
+          title="Private by design"
+          message="Everything you add stays private until your release rules are met."
+        />
       </ScrollView>
 
-      {/* Sticky Bottom Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: 8 }]}>
-        <Pressable
-          disabled={!allComplete}
-          onPress={handleReview}
-          style={({ pressed }) => [
-            styles.button,
-            !allComplete && styles.buttonDisabled,
-            pressed &&
-              allComplete &&
-              styles.buttonPressed,
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            Review My Legacy
-          </Text>
-
-          <Text style={styles.buttonArrow}>→</Text>
-        </Pressable>
-      </View>
-
-      <BottomNavBar activeTab="vault" />
+      {onboarding ? (
+        <ActionBar>
+          <Button
+            title={allComplete ? 'Review my legacy' : `Review my legacy (${completedCount} of ${selectedCategories.length} done)`}
+            onPress={handleReview}
+            disabled={completedCount === 0}
+          />
+        </ActionBar>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 35,
-  },
-  header: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 34,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-  },
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-  heading: {
-    marginTop: 35,
-    marginBottom: 24,
-  },
-  eyebrow: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    color: colors.primary.forest,
-  },
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
-    marginTop: 7,
+    marginTop: 8,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 29,
-    lineHeight: 38,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
+  titleOnboarding: { marginTop: 24 },
   subtitle: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 21,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-  categories: {
-    gap: 11,
-  },
+  progressRow: { marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  progressTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.brand.sage, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.primary.forest },
+  progressCount: { fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.caption, color: colors.neutral.textSecondary },
+  categories: { marginVertical: 24, gap: 12 },
   categoryCard: {
-    minHeight: 104,
-    padding: 15,
+    minHeight: 88,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
     borderRadius: 16,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
-  categoryCardComplete: {
-    borderColor: colors.primary.forest,
-    backgroundColor: colors.brand.mint,
-  },
-  categoryCardPressed: {
-    opacity: 0.86,
-    transform: [{ scale: 0.995 }],
-  },
+  categoryCardComplete: { borderColor: colors.primary.forest, backgroundColor: colors.brand.mint },
+  pressed: { opacity: 0.85 },
   iconContainer: {
-    width: 43,
-    height: 43,
-    borderRadius: 13,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: colors.brand.mint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconContainerComplete: {
-    backgroundColor: colors.brand.sage,
-  },
-  icon: {
-    fontSize: 18,
-    color: colors.primary.forest,
-  },
-  categoryContent: {
-    flex: 1,
-    marginLeft: 12,
-    marginRight: 8,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  categoryTitle: {
-    flex: 1,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-  status: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9.5,
-    color: colors.neutral.textMuted,
-  },
-  statusComplete: {
-    color: colors.primary.forest,
-  },
+  iconContainerComplete: { backgroundColor: colors.primary.forest },
+  categoryContent: { flex: 1, gap: 2 },
+  categoryTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.body, lineHeight: 22, color: colors.neutral.textPrimary },
   categoryDescription: {
-    marginTop: 4,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
-    lineHeight: 16,
+    fontSize: typography.sizes.caption,
+    lineHeight: typography.lineHeights.caption,
     color: colors.neutral.textSecondary,
   },
-  actionText: {
-    marginTop: 7,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
-    color: colors.primary.forest,
+  statusChip: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: colors.semantic.warningSoft,
   },
-  progressCard: {
-    marginTop: 18,
-    padding: 15,
-    borderRadius: 14,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9.5,
-    letterSpacing: 1.1,
-    color: colors.neutral.textSecondary,
-  },
-  progressCount: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
-    color: colors.primary.forest,
-  },
-  progressTrack: {
-    height: 6,
-    marginTop: 10,
-    borderRadius: 3,
-    backgroundColor: colors.neutral.border,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-    backgroundColor: colors.primary.forest,
-  },
-  securityCard: {
-    marginTop: 15,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  securityIcon: {
-    width: 29,
-    height: 29,
-    borderRadius: 15,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lock: {
-    fontSize: 12,
-  },
-  securityContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  securityTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
-    color: colors.neutral.textPrimary,
-  },
-  securityText: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
-    lineHeight: 16,
-    color: colors.neutral.textSecondary,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-  button: {
-    height: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.35,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-  buttonArrow: {
-    marginLeft: 10,
-    fontSize: 19,
-    color: colors.neutral.white,
-  },
+  statusChipComplete: { backgroundColor: colors.semantic.successSoft },
+  statusText: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.micro, lineHeight: 16, color: colors.semantic.warning },
+  statusTextComplete: { color: colors.semantic.success },
 });

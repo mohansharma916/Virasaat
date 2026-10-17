@@ -18,6 +18,7 @@ import {
 } from 'expo-camera';
 import { File } from 'expo-file-system';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
@@ -214,12 +215,12 @@ export default function LegacyVideoMessageScreen() {
         <View style={styles.content}>
           {saving && <Text accessibilityLiveRegion="polite">{progress}% transferred — confirming storage</Text>}
         <View style={styles.header}>
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() => router.back()}
               hitSlop={12}
               style={styles.backButton}
             >
-              <Text style={styles.backArrow}>‹</Text>
+              <AppIcon name="chevronLeft" style={styles.backArrow} />
             </Pressable>
 
             <Text style={styles.brand}>VIRASAT</Text>
@@ -227,7 +228,7 @@ export default function LegacyVideoMessageScreen() {
 
           <View style={styles.permissionBlock}>
             <View style={styles.permissionIcon}>
-              <Text style={styles.permissionSymbol}>▶</Text>
+              <AppIcon name="video" style={styles.permissionSymbol} />
             </View>
 
             <Text style={styles.title}>
@@ -239,7 +240,7 @@ export default function LegacyVideoMessageScreen() {
               record a private video message with audio for your loved ones.
             </Text>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={requestAllPermissions}
               style={({ pressed }) => [
                 styles.primaryButton,
@@ -249,10 +250,9 @@ export default function LegacyVideoMessageScreen() {
               <Text style={styles.primaryButtonText}>
                 Allow Access
               </Text>
-              <Text style={styles.primaryButtonArrow}>→</Text>
             </Pressable>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() => router.back()}
               style={styles.secondaryButton}
             >
@@ -274,7 +274,7 @@ export default function LegacyVideoMessageScreen() {
       >
         {saving && <Text accessibilityLiveRegion="polite">{progress}% transferred — confirming storage</Text>}
         <View style={styles.header}>
-          <Pressable
+          <Pressable accessibilityRole="button"
             onPress={() => {
               if (recording) {
                 stopRecording();
@@ -285,14 +285,14 @@ export default function LegacyVideoMessageScreen() {
             hitSlop={12}
             style={styles.backButton}
           >
-            <Text style={styles.backArrow}>‹</Text>
+            <AppIcon name="chevronLeft" style={styles.backArrow} />
           </Pressable>
 
           <Text style={styles.brand}>VIRASAT</Text>
         </View>
 
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>YOUR DIGITAL LEGACY</Text>
+          <Text style={styles.eyebrow}>Your digital legacy</Text>
 
           <Text style={styles.title}>
             Leave a video message
@@ -335,7 +335,7 @@ export default function LegacyVideoMessageScreen() {
 
             <View style={styles.cameraControls}>
               {recording ? (
-                <Pressable
+                <Pressable accessibilityRole="button"
                   onPress={stopRecording}
                   style={({ pressed }) => [
                     styles.stopButton,
@@ -345,7 +345,7 @@ export default function LegacyVideoMessageScreen() {
                   <View style={styles.stopInner} />
                 </Pressable>
               ) : (
-                <Pressable
+                <Pressable accessibilityRole="button"
                   onPress={startRecording}
                   style={({ pressed }) => [
                     styles.recordButton,
@@ -366,7 +366,7 @@ export default function LegacyVideoMessageScreen() {
         ) : (
           <View style={styles.previewCard}>
             <View style={styles.previewIcon}>
-              <Text style={styles.previewSymbol}>✓</Text>
+              <AppIcon name="check" style={styles.previewSymbol} />
             </View>
 
             <Text style={styles.previewTitle}>
@@ -378,7 +378,7 @@ export default function LegacyVideoMessageScreen() {
             </Text>
 
             <View style={styles.fileCard}>
-              <Text style={styles.fileIcon}>▶</Text>
+              <AppIcon name="video" style={styles.fileIcon} />
 
               <View style={styles.fileContent}>
                 <Text style={styles.fileTitle}>
@@ -390,7 +390,7 @@ export default function LegacyVideoMessageScreen() {
               </View>
             </View>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={handleRetake}
               style={styles.retakeButton}
             >
@@ -403,7 +403,7 @@ export default function LegacyVideoMessageScreen() {
 
         <View style={styles.securityCard}>
           <View style={styles.securityIcon}>
-            <Text style={styles.lock}>🔒</Text>
+            <AppIcon name="lock" style={styles.lock} />
           </View>
 
           <View style={styles.securityContent}>
@@ -423,7 +423,7 @@ export default function LegacyVideoMessageScreen() {
           <Text style={styles.error}>{error}</Text>
         ) : null}
 
-        <Pressable
+        <Pressable accessibilityRole="button"
           disabled={!recordedUri || saving}
           onPress={handleSave}
           style={({ pressed }) => [
@@ -439,7 +439,6 @@ export default function LegacyVideoMessageScreen() {
               <Text style={styles.primaryButtonText}>
                 Save Video Message
               </Text>
-              <Text style={styles.primaryButtonArrow}>→</Text>
             </>
           )}
         </Pressable>
@@ -484,11 +483,11 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.neutral.textSecondary,
   },
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -496,8 +495,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
   backArrow: {
@@ -531,8 +530,8 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
   title: {
@@ -545,7 +544,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 21,
     color: colors.neutral.textSecondary,
   },
@@ -589,7 +588,7 @@ const styles = StyleSheet.create({
   },
   recordingText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.neutral.white,
   },
   readyBadge: {
@@ -600,7 +599,7 @@ const styles = StyleSheet.create({
   },
   readyText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.neutral.white,
   },
   cameraControls: {
@@ -646,7 +645,7 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textSecondary,
   },
   previewCard: {
@@ -679,7 +678,7 @@ const styles = StyleSheet.create({
     marginTop: 7,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     color: colors.neutral.textSecondary,
   },
@@ -710,13 +709,13 @@ const styles = StyleSheet.create({
   },
   fileTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
   fileSubtitle: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textSecondary,
   },
   retakeButton: {
@@ -726,7 +725,7 @@ const styles = StyleSheet.create({
   },
   retakeText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.primary.forest,
   },
   securityCard: {
@@ -755,13 +754,13 @@ const styles = StyleSheet.create({
   },
   securityTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.primary.deepForest,
   },
   securityText: {
     marginTop: 4,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
@@ -786,7 +785,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.white,
   },
   primaryButtonArrow: {
@@ -802,7 +801,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.primary.forest,
   },
   buttonPressed: {
@@ -811,7 +810,7 @@ const styles = StyleSheet.create({
   error: {
     marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     color: colors.semantic.error,
   },

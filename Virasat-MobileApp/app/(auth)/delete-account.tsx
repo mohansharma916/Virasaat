@@ -12,6 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router';
 
 import { api } from '@/src/api/client';
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
@@ -87,8 +88,8 @@ export default function DeleteAccountScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable onPress={goBack} hitSlop={12} style={styles.backButton} accessibilityLabel="Back">
-          <Text style={styles.backArrow}>‹</Text>
+        <Pressable accessibilityRole="button" onPress={goBack} hitSlop={12} style={styles.backButton} accessibilityLabel="Back">
+          <AppIcon name="chevronLeft" style={styles.backArrow} />
         </Pressable>
         <Text style={styles.brand}>VIRASAT</Text>
       </View>
@@ -99,7 +100,7 @@ export default function DeleteAccountScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>CRITICAL ACTION</Text>
+          <Text style={styles.eyebrow}>Critical action</Text>
           <Text style={styles.title}>Delete Account</Text>
           <Text style={styles.subtitle}>
             This permanently deletes your Virasat account and everything in your vault.
@@ -108,7 +109,7 @@ export default function DeleteAccountScreen() {
 
         <View style={styles.warningCard}>
           <View style={styles.warningIcon}>
-            <Text style={styles.warningSymbol}>⚠️</Text>
+            <AppIcon name="warning" style={styles.warningSymbol} />
           </View>
           <View style={styles.warningContent}>
             <Text style={styles.warningTitle}>This cannot be undone</Text>
@@ -187,7 +188,7 @@ export default function DeleteAccountScreen() {
           )}
         </Pressable>
 
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={goBack}
           disabled={deleting}
           style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.ivory,
   },
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -214,8 +215,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 24,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
   backArrow: {
@@ -240,31 +241,31 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
-    color: '#B42318',
+    fontSize: 12,
+    
+    color: colors.semantic.error,
   },
   title: {
     marginTop: 6,
     fontFamily: typography.fonts.playfair.semiBold,
     fontSize: 27,
-    lineHeight: 34,
-    color: '#9B1C1C',
+    lineHeight: 39,
+    color: colors.semantic.error,
   },
   subtitle: {
     marginTop: 6,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 19,
     color: colors.neutral.textSecondary,
   },
   warningCard: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.semantic.errorSoft,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.semantic.errorBorder,
     marginBottom: 14,
   },
   warningIcon: {
@@ -279,15 +280,15 @@ const styles = StyleSheet.create({
   },
   warningTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
-    color: '#991B1B',
+    fontSize: 15,
+    color: colors.semantic.error,
     marginBottom: 4,
   },
   warningText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 17,
-    color: '#7F1D1D',
+    color: colors.semantic.error,
   },
   infoCard: {
     backgroundColor: colors.neutral.white,
@@ -299,13 +300,13 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.primary.deepForest,
     marginBottom: 6,
   },
   infoText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     color: colors.neutral.textSecondary,
   },
@@ -316,47 +317,47 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textMuted,
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.semantic.errorSoft,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F87171',
+    borderColor: colors.semantic.errorBorder,
     marginBottom: 14,
   },
   errorTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: '#991B1B',
+    fontSize: 13,
+    color: colors.semantic.error,
     marginBottom: 2,
   },
   errorText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11.5,
-    color: '#7F1D1D',
+    fontSize: 13,
+    color: colors.semantic.error,
   },
   noticeBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.semantic.warningSoft,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.semantic.warningBorder,
     marginBottom: 14,
   },
   noticeTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: '#92400E',
+    fontSize: 13,
+    color: colors.semantic.warning,
     marginBottom: 2,
   },
   noticeText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: '#78350F',
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.semantic.warning,
   },
   safeNote: {
     flexDirection: 'row',
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
   },
   safeText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textMuted,
     flex: 1,
   },
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryButton: {
-    height: 52,
+    minHeight: 52,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     alignItems: 'center',
@@ -392,33 +393,33 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.white,
   },
   secondaryButton: {
-    height: 48,
+    minHeight: 48,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#FECACA',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.semantic.errorBorder,
+    backgroundColor: colors.semantic.errorSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: '#991B1B',
+    fontSize: 14,
+    color: colors.semantic.error,
   },
   input: {
     marginTop: 8,
-    height: 48,
+    minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.neutral.border,
     backgroundColor: colors.neutral.white,
     paddingHorizontal: 14,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.primary.deepForest,
   },
   outlineButton: {
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
   },
   outlineButtonText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 12.5,
+    fontSize: 13,
     color: colors.primary.forest,
     textDecorationLine: 'underline',
   },

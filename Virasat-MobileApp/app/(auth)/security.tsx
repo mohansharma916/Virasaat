@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import {
@@ -27,12 +19,18 @@ import {
 } from '@/src/storage/auth.storage';
 import { getCurrentUser } from '@/src/api/auth.api';
 
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { StepProgress } from '@/src/components/StepProgress';
+import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
 export default function SecurityScreen() {
   const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
-  const insets = useSafeAreaInsets();
   const [biometricAvailable, setBiometricAvailable] =
     useState(false);
 
@@ -93,14 +91,14 @@ export default function SecurityScreen() {
         await clearBiometricSession();
         setBiometricEnabled(false);
       } catch {
-        setError('Unable to update secure storage. Please try again.');
+        setError('We couldn’t update this setting. Try again.');
       }
       return;
     }
 
     if (!biometricAvailable) {
       setError(
-        'Biometric authentication is not available on this device.'
+        'Fingerprint or face unlock isn’t set up on this device.'
       );
       return;
     }
@@ -118,16 +116,17 @@ export default function SecurityScreen() {
         await saveBiometricSession({ email: user.email });
         await saveBiometricUnlockEnabled(true);
         setBiometricEnabled(true);
+        haptics.success();
       } else {
         setBiometricEnabled(false);
         setError(
-          `${biometricType} verification was not completed.`
+          `${biometricType} wasn’t confirmed, so it’s still off.`
         );
       }
     } catch {
       setBiometricEnabled(false);
       setError(
-        `Unable to enable ${biometricType} security.`
+        `We couldn’t turn on ${biometricType}. Try again.`
       );
     } finally {
       setAuthenticating(false);
@@ -136,491 +135,151 @@ export default function SecurityScreen() {
 
   const handleContinue = async () => {
     await saveBiometricUnlockEnabled(biometricEnabled);
-    // New accounts continue to profile setup; settings visits return home.
-    router.replace(onboarding === 'true' ? '/(auth)/profile' : '/(auth)/home');
+    // New accounts continue to profile setup; settings visits go back to where they came from.
+    if (onboarding === 'true') router.replace('/(auth)/profile');
+    else if (router.canGoBack()) router.back();
+    else router.replace('/(auth)/(tabs)/account' as never);
   };
 
+  const onboardingFlow = onboarding === 'true';
+  const openDeviceSettings = () => {
+    if (Platform.OS === 'android') {
+      void Linking.sendIntent('android.settings.SECURITY_SETTINGS').catch(() => Linking.openSettings());
+    } else {
+      void Linking.openSettings();
+    }
+  };
+  const isFace = biometricType === 'Face ID';
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <Text style={styles.backArrow}>
-              ‹
-            </Text>
-          </Pressable>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {onboardingFlow ? <StepProgress phase="Account" /> : null}
 
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
-        </View>
+        <Text style={[styles.title, onboardingFlow && styles.titleOnboarding]} accessibilityRole="header">
+          {onboardingFlow ? 'Protect your vault' : 'Security and biometrics'}
+        </Text>
+        <Text style={styles.subtitle}>
+          Your vault can hold documents, investments and private messages. Add a second lock so only you can open it on this phone.
+        </Text>
 
-        {/* Hero */}
-        <View style={styles.hero}>
-          <View style={styles.securityIcon}>
-            <Text style={styles.securitySymbol}>
-              ◈
-            </Text>
-          </View>
-
-          <Text style={styles.title}>
-            Secure your Virasat
-          </Text>
-
-          <Text style={styles.description}>
-            Your vault may contain documents,
-            investments, memories and private
-            messages.
-          </Text>
-
-          <Text style={styles.description}>
-            Let's add another layer of protection
-            to your account.
-          </Text>
-        </View>
-
-        {/* Biometric Card */}
-        <View style={styles.securityCard}>
+        <View style={styles.card}>
           <View style={styles.cardIcon}>
-            <Text style={styles.cardIconText}>
-              {biometricType === 'Face ID' ? '👤' : '👆'}
+            <AppIcon name={isFace ? 'face' : 'fingerprint'} size={26} color={colors.primary.deepForest} />
+          </View>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>Unlock with {biometricType}</Text>
+            <Text style={styles.cardText}>
+              {checkingBiometric
+                ? 'Checking this device…'
+                : biometricAvailable
+                  ? biometricEnabled
+                    ? 'On. You’ll be asked when you open Virasat.'
+                    : 'Off. Turn on for faster, safer sign-in.'
+                  : 'Not available. Set up a fingerprint or face unlock on your phone first.'}
             </Text>
           </View>
-
-          <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>
-              {biometricType} Login
-            </Text>
-
-            <Text style={styles.cardDescription}>
-              Unlock your Virasat vault instantly using {biometricType}. Fast, private, and secure.
-            </Text>
-
-            {checkingBiometric ? (
-              <View style={styles.availability}>
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primary.forest}
-                />
-
-                <Text style={styles.availabilityText}>
-                  Checking device security...
-                </Text>
-              </View>
-            ) : !biometricAvailable ? (
-              <Text style={styles.unavailable}>
-                Biometrics are not currently available
-                on this device.
-              </Text>
-            ) : (
-              <View style={styles.enabledRow}>
-                <Text style={styles.enabledText}>
-                  {biometricEnabled
-                    ? 'Enabled'
-                    : 'Not enabled'}
-                </Text>
-
-                <Switch
-                  value={biometricEnabled}
-                  onValueChange={
-                    handleBiometricToggle
-                  }
-                  disabled={authenticating}
-                  trackColor={{
-                    false: colors.neutral.border,
-                    true: colors.primary.forest,
-                  }}
-                  thumbColor={
-                    colors.neutral.white
-                  }
-                />
-              </View>
-            )}
-          </View>
+          {checkingBiometric || authenticating ? (
+            <ActivityIndicator color={colors.primary.forest} accessibilityLabel="Working" />
+          ) : (
+            <Switch
+              accessibilityLabel={`Unlock with ${biometricType}`}
+              value={biometricEnabled}
+              onValueChange={(value) => void handleBiometricToggle(value)}
+              disabled={!biometricAvailable}
+              trackColor={{ false: colors.neutral.control, true: colors.primary.forest }}
+              thumbColor={colors.neutral.white}
+              ios_backgroundColor={colors.neutral.control}
+            />
+          )}
         </View>
 
-        {/* Authentication loading */}
-        {authenticating && (
-          <View style={styles.authenticating}>
-            <ActivityIndicator
-              color={colors.primary.forest}
-            />
-
-            <Text style={styles.authenticatingText}>
-              Verifying your identity...
-            </Text>
-          </View>
-        )}
-
-        {/* Error */}
-        {error ? (
-          <Text style={styles.error}>
-            {error}
-          </Text>
+        {!checkingBiometric && !biometricAvailable ? (
+          <InlineNotice
+            tone="warning"
+            title="Biometric unlock is off"
+            message="Your vault is protected by your password only. Add a fingerprint or face unlock in your phone’s settings, then come back here."
+            actionLabel="Open phone settings"
+            onAction={openDeviceSettings}
+            style={styles.notice}
+          />
         ) : null}
 
-        {/* Benefits */}
-        <View style={styles.benefits}>
-          <SecurityBenefit text="Your vault is protected" />
+        {error ? <InlineNotice tone="danger" message={error} style={styles.notice} /> : null}
 
-          <SecurityBenefit text="Your biometric data stays on your device" />
-
-          <SecurityBenefit text="Recovery options will be available" />
+        <View style={styles.points}>
+          <Point icon="smartphone" text={`Your ${isFace ? 'face data' : 'fingerprint'} never leaves your phone. Virasat never sees it.`} />
+          <Point icon="key" text="You can always sign in with your password instead." />
+          <Point icon="settings" text="Change this any time in Account → Security." />
         </View>
-
-        {/* Info */}
-        <Text style={styles.info}>
-          You can change these settings later from
-          Security Settings.
-        </Text>
       </ScrollView>
 
-      {/* Sticky Bottom CTA Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.continueButton,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleContinue}
-        >
-          <Text style={styles.continueText}>
-            Continue
-          </Text>
-
-          <Text style={styles.arrow}>
-            →
-          </Text>
-        </Pressable>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.footerIcon}>
-            <Text style={styles.footerCheck}>
-              ✓
-            </Text>
-          </View>
-
-          <Text style={styles.footerText}>
-            Security comes first
-          </Text>
-        </View>
-      </View>
+      <ActionBar>
+        <Button title={onboardingFlow ? 'Continue' : 'Done'} onPress={() => void handleContinue()} disabled={authenticating} />
+      </ActionBar>
     </SafeAreaView>
   );
 }
 
-function SecurityBenefit({
-  text,
-}: {
-  text: string;
-}) {
+function Point({ icon, text }: { icon: 'smartphone' | 'key' | 'settings'; text: string }) {
   return (
-    <View style={styles.benefit}>
-      <View style={styles.benefitIcon}>
-        <Text style={styles.benefitCheck}>
-          ✓
-        </Text>
-      </View>
-
-      <Text style={styles.benefitText}>
-        {text}
-      </Text>
+    <View style={styles.point}>
+      <AppIcon name={icon} size={20} color={colors.primary.forest} />
+      <Text style={styles.pointText}>{text}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
-
-  header: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    lineHeight: 36,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  hero: {
-    alignItems: 'center',
-    marginTop: 18,
-  },
-
-  securityIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-
-  securitySymbol: {
-    fontSize: 24,
-    color: colors.primary.forest,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
-    fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 27,
-    lineHeight: 34,
-    color: colors.primary.deepForest,
-    textAlign: 'center',
-  },
-
-  description: {
-    maxWidth: 350,
     marginTop: 8,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.neutral.textSecondary,
-    textAlign: 'center',
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
+    color: colors.primary.deepForest,
   },
-
-  securityCard: {
+  titleOnboarding: { marginTop: 24 },
+  subtitle: {
+    marginTop: 8,
+    marginBottom: 24,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
+    color: colors.neutral.textSecondary,
+  },
+  card: {
+    minHeight: 88,
     flexDirection: 'row',
-    marginTop: 20,
+    alignItems: 'center',
+    gap: 12,
     padding: 16,
     borderRadius: 16,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
   },
-
   cardIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: colors.brand.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  cardIconText: {
-    fontSize: 20,
-    color: colors.primary.forest,
-  },
-
-  cardContent: {
-    flex: 1,
-    marginLeft: 14,
-  },
-
-  cardTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.textPrimary,
-  },
-
-  cardDescription: {
-    marginTop: 5,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.neutral.textSecondary,
-  },
-
-  availability: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-
-  availabilityText: {
-    marginLeft: 8,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: colors.neutral.textMuted,
-  },
-
-  unavailable: {
-    marginTop: 10,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    lineHeight: 17,
-    color: colors.neutral.textMuted,
-  },
-
-  enabledRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-
-  enabledText: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
-    color: colors.primary.forest,
-  },
-
-  authenticating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-
-  authenticatingText: {
-    marginLeft: 8,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    color: colors.neutral.textSecondary,
-  },
-
-  error: {
-    marginTop: 12,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#B42318',
-    textAlign: 'center',
-  },
-
-  benefits: {
-    marginTop: 28,
-    gap: 12,
-  },
-
-  benefit: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  benefitIcon: {
-    width: 19,
-    height: 19,
-    borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.brand.sage,
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  benefitCheck: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary.forest,
-  },
-
-  benefitText: {
-    marginLeft: 9,
+  cardBody: { flex: 1, gap: 2 },
+  cardTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.body, lineHeight: 22, color: colors.neutral.textPrimary },
+  cardText: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, lineHeight: 18, color: colors.neutral.textSecondary },
+  notice: { marginTop: 16 },
+  points: { marginTop: 24, gap: 16 },
+  point: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  pointText: {
     flex: 1,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: typography.sizes.callout,
+    lineHeight: typography.lineHeights.callout,
     color: colors.neutral.textSecondary,
-  },
-
-  info: {
-    marginTop: 24,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    lineHeight: 17,
-    color: colors.neutral.textMuted,
-    textAlign: 'center',
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  continueButton: {
-    height: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  continueText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  arrow: {
-    marginLeft: 10,
-    fontSize: 20,
-    color: colors.neutral.white,
-  },
-
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 25,
-  },
-
-  footerIcon: {
-    width: 19,
-    height: 19,
-    borderRadius: 10,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  footerCheck: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary.forest,
-  },
-
-  footerText: {
-    marginLeft: 7,
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
-    color: colors.neutral.textMuted,
   },
 });

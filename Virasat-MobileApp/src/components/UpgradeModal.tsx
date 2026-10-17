@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { Button } from './Button';
@@ -38,14 +39,14 @@ export function UpgradeModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+      <Pressable accessibilityRole="button" style={styles.backdrop} onPress={onClose}>
+        <Pressable accessibilityRole="button" style={styles.card} onPress={(e) => e.stopPropagation()}>
           <View style={styles.badgeRow}>
             <View style={styles.iconCircle}>
-              <Text style={styles.shieldIcon}>✦</Text>
+              <AppIcon name="sparkles" style={styles.shieldIcon} />
             </View>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>VIRASAT PREMIUM</Text>
+              <Text style={styles.badgeText}>Virasat premium</Text>
             </View>
           </View>
 
@@ -59,7 +60,7 @@ export function UpgradeModal({
               {benefits.map((benefit, idx) => (
                 <View key={idx} style={styles.benefitRow}>
                   <View style={styles.checkCircle}>
-                    <Text style={styles.checkIcon}>✓</Text>
+                    <AppIcon name="check" style={styles.checkIcon} />
                   </View>
                   <Text style={styles.benefitText}>{benefit}</Text>
                 </View>
@@ -140,23 +141,21 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 13,
     color: colors.primary.deepForest,
-    letterSpacing: 0.5,
+    
   },
   title: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 22,
-    fontWeight: '700',
     color: colors.neutral.textPrimary,
-    lineHeight: 28,
+    lineHeight: 32,
     marginBottom: 8,
   },
   message: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
     lineHeight: 21,
     marginBottom: 16,
@@ -183,15 +182,14 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     color: colors.neutral.white,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   benefitText: {
     flex: 1,
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: 15,
     color: colors.neutral.textPrimary,
-    fontWeight: '500',
   },
   actionContainer: {
     gap: 10,
@@ -205,9 +203,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   secondaryText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
   },
 });

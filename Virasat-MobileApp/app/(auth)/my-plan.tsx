@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { Feature, PlanCode, PlanLimit, SubscriptionStatus } from '@/src/types/subscription.types';
@@ -70,12 +71,12 @@ export default function MyPlanScreen() {
       case SubscriptionStatus.ACTIVE:
         return { bg: colors.brand.mint, text: colors.primary.deepForest };
       case SubscriptionStatus.GRACE_PERIOD:
-        return { bg: '#FEF3C7', text: '#92400E' };
+        return { bg: colors.semantic.warningSoft, text: colors.semantic.warning };
       case SubscriptionStatus.PAYMENT_FAILED:
       case SubscriptionStatus.EXPIRED:
-        return { bg: '#FDE8E8', text: '#9B1C1C' };
+        return { bg: colors.semantic.errorSoft, text: colors.semantic.error };
       default:
-        return { bg: '#F1F3F5', text: colors.neutral.textSecondary };
+        return { bg: colors.neutral.sunken, text: colors.neutral.textSecondary };
     }
   };
 
@@ -85,12 +86,12 @@ export default function MyPlanScreen() {
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={() => router.back()}
           hitSlop={12}
           style={styles.backButton}
         >
-          <Text style={styles.backArrow}>‹</Text>
+          <AppIcon name="chevronLeft" style={styles.backArrow} />
         </Pressable>
         <Text style={styles.brand}>VIRASAT</Text>
       </View>
@@ -100,7 +101,7 @@ export default function MyPlanScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>MEMBERSHIP & BILLING</Text>
+          <Text style={styles.eyebrow}>Membership & billing</Text>
           <Text style={styles.title}>Current Plan</Text>
           <Text style={styles.subtitle}>
             Review your active plan, entitlements, and renewal preferences.
@@ -165,7 +166,6 @@ export default function MyPlanScreen() {
               <Text style={styles.primaryActionText}>
                 View planned paid tiers
               </Text>
-              <Text style={styles.actionArrow}>→</Text>
             </Pressable>
           )}
 
@@ -219,7 +219,7 @@ function BenefitRow({ text }: { text: string }) {
   return (
     <View style={styles.benefitRow}>
       <View style={styles.checkCircle}>
-        <Text style={styles.checkIcon}>✓</Text>
+        <AppIcon name="check" style={styles.checkIcon} />
       </View>
       <Text style={styles.benefitText}>{text}</Text>
     </View>
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.ivory,
   },
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -242,20 +242,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     top: 4,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backArrow: {
     fontSize: 32,
     color: colors.primary.deepForest,
-    lineHeight: 36,
+    lineHeight: 46,
   },
   brand: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 15,
     color: colors.primary.deepForest,
     letterSpacing: 2,
   },
@@ -268,24 +267,22 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   eyebrow: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 13,
     color: colors.primary.forest,
-    letterSpacing: 1.5,
+    
     marginBottom: 6,
   },
   title: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 26,
-    fontWeight: '700',
     color: colors.neutral.textPrimary,
-    lineHeight: 32,
+    lineHeight: 38,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
     lineHeight: 21,
   },
@@ -309,14 +306,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tierName: {
-    fontFamily: typography.fonts.display,
+    fontFamily: typography.fonts.playfair.bold,
     fontSize: 22,
-    fontWeight: '700',
     color: colors.neutral.textPrimary,
   },
   tierPrice: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textSecondary,
     marginTop: 2,
   },
@@ -326,9 +322,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusBadgeText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 13,
   },
   renewalRow: {
     flexDirection: 'row',
@@ -337,27 +332,25 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   renewalLabel: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 13,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 14,
     color: colors.neutral.textSecondary,
   },
   renewalValue: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
     color: colors.neutral.textPrimary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#EEF2F0',
+    backgroundColor: colors.neutral.sunken,
     marginVertical: 14,
   },
   benefitsTitle: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 13,
     color: colors.neutral.textMuted,
-    letterSpacing: 0.8,
+    
     marginBottom: 12,
   },
   benefitsList: {
@@ -377,13 +370,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkIcon: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.primary.deepForest,
   },
   benefitText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 15,
     color: colors.neutral.textPrimary,
   },
   actionsContainer: {
@@ -393,16 +386,15 @@ const styles = StyleSheet.create({
   primaryAction: {
     backgroundColor: colors.primary.deepForest,
     borderRadius: 14,
-    height: 52,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   primaryActionText: {
-    fontFamily: typography.fonts.ui,
+    fontFamily: typography.fonts.inter.bold,
     fontSize: 15,
-    fontWeight: '700',
     color: colors.neutral.white,
   },
   actionArrow: {
@@ -415,14 +407,13 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.sage,
     backgroundColor: colors.neutral.white,
     borderRadius: 14,
-    height: 50,
+    minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryActionText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 15,
     color: colors.primary.deepForest,
   },
   restoreAction: {
@@ -430,9 +421,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   restoreActionText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: 14,
     color: colors.neutral.textSecondary,
     textDecorationLine: 'underline',
   },
@@ -443,15 +433,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   guaranteeTitle: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: typography.fonts.inter.bold,
+    fontSize: 13,
     color: colors.primary.deepForest,
-    letterSpacing: 0.5,
+    
   },
   guaranteeText: {
-    fontFamily: typography.fonts.ui,
-    fontSize: 13,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 14,
     color: colors.primary.deepForest,
     lineHeight: 19,
   },

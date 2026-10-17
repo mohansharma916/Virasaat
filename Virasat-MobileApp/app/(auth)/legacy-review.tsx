@@ -10,6 +10,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { router, useFocusEffect } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
@@ -40,7 +41,7 @@ export default function LegacyReviewScreen() {
   };
 
   const handleSaveExit = () => {
-    router.replace('/(auth)/home');
+    router.replace('/(auth)/(tabs)/home');
   };
 
   return (
@@ -52,14 +53,12 @@ export default function LegacyReviewScreen() {
         {/* Header */}
 
         <View style={styles.header}>
-          <Pressable
+          <Pressable accessibilityRole="button"
             onPress={() => router.back()}
             hitSlop={12}
             style={styles.backButton}
           >
-            <Text style={styles.backArrow}>
-              ‹
-            </Text>
+            <AppIcon name="chevronLeft" style={styles.backArrow} />
           </Pressable>
 
           <Text style={styles.brand}>
@@ -71,7 +70,7 @@ export default function LegacyReviewScreen() {
 
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>
-            FINAL REVIEW
+            Final review
           </Text>
 
           <Text style={styles.title}>
@@ -88,7 +87,7 @@ export default function LegacyReviewScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardHeading}>
-            YOUR LEGACY
+            Your legacy
           </Text>
 
           <ReviewRow
@@ -147,10 +146,10 @@ export default function LegacyReviewScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardHeading}>
-              TRUSTED PERSON
+              Trusted person
             </Text>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() =>
                 router.push(
                   '/(auth)/trusted-person',
@@ -192,10 +191,10 @@ export default function LegacyReviewScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardHeading}>
-              RELEASE CONDITION
+              Release condition
             </Text>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() =>
                 router.push(
                   '/(auth)/release-rules',
@@ -242,7 +241,7 @@ export default function LegacyReviewScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {/* Continue */}
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={handleContinue}
           style={({ pressed }) => [
             styles.button,
@@ -252,14 +251,10 @@ export default function LegacyReviewScreen() {
           <Text style={styles.buttonText}>
             Continue
           </Text>
-
-          <Text style={styles.buttonArrow}>
-            →
-          </Text>
         </Pressable>
 
         {/* Save */}
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={handleSaveExit}
           style={styles.saveExit}
         >
@@ -287,7 +282,7 @@ function ReviewRow({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Pressable accessibilityRole="button"
       onPress={onPress}
       style={styles.reviewRow}
     >
@@ -306,10 +301,6 @@ function ReviewRow({
           {value}
         </Text>
       </View>
-
-      <Text style={styles.reviewArrow}>
-        →
-      </Text>
     </Pressable>
   );
 }
@@ -322,9 +313,7 @@ function SecurityRow({
   return (
     <View style={styles.securityRow}>
       <View style={styles.checkCircle}>
-        <Text style={styles.check}>
-          ✓
-        </Text>
+        <AppIcon name="check" style={styles.check} />
       </View>
 
       <Text style={styles.securityText}>
@@ -347,7 +336,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -356,8 +345,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
 
@@ -398,8 +387,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
 
@@ -407,14 +396,14 @@ const styles = StyleSheet.create({
     marginTop: 7,
     fontFamily: typography.fonts.playfair.semiBold,
     fontSize: 30,
-    lineHeight: 38,
+    lineHeight: 44,
     color: colors.primary.deepForest,
   },
 
   subtitle: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 20,
     color: colors.neutral.textSecondary,
   },
@@ -430,8 +419,8 @@ const styles = StyleSheet.create({
 
   cardHeading: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.2,
+    fontSize: 12,
+    
     color: colors.neutral.textMuted,
   },
 
@@ -443,7 +432,7 @@ const styles = StyleSheet.create({
 
   edit: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.primary.forest,
   },
 
@@ -473,14 +462,14 @@ const styles = StyleSheet.create({
 
   reviewTitle: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   reviewValue: {
     marginTop: 2,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.neutral.textSecondary,
   },
 
@@ -521,21 +510,21 @@ const styles = StyleSheet.create({
 
   personName: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12.5,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   personRelation: {
     marginTop: 2,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.neutral.textSecondary,
   },
 
   personEmail: {
     marginTop: 2,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
@@ -567,15 +556,15 @@ const styles = StyleSheet.create({
 
   conditionTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11.5,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   conditionDescription: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
 
@@ -600,14 +589,14 @@ const styles = StyleSheet.create({
   },
 
   check: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.primary.forest,
   },
 
   securityText: {
     marginLeft: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.neutral.textSecondary,
   },
 
@@ -620,7 +609,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -635,7 +624,7 @@ const styles = StyleSheet.create({
 
   buttonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.white,
   },
 
@@ -653,7 +642,7 @@ const styles = StyleSheet.create({
 
   saveExitText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textMuted,
   },
 

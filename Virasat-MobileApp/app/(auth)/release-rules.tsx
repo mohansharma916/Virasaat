@@ -12,6 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { router } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getReleasePolicy, updateReleasePolicy, type ReleasePolicy } from '@/src/api/release.api';
@@ -66,7 +67,7 @@ export default function ReleaseRulesScreen() {
         enabled: true,
       });
       await dispatch(refreshVaultData()).unwrap();
-      router.replace('/(auth)/home');
+      router.replace('/(auth)/(tabs)/home');
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, 'We could not save your release plan. Please try again.'));
     } finally {
@@ -83,14 +84,12 @@ export default function ReleaseRulesScreen() {
         {/* Header */}
 
         <View style={styles.header}>
-          <Pressable
+          <Pressable accessibilityRole="button"
             onPress={() => router.back()}
             hitSlop={12}
             style={styles.backButton}
           >
-            <Text style={styles.backArrow}>
-              ‹
-            </Text>
+            <AppIcon name="chevronLeft" style={styles.backArrow} />
           </Pressable>
 
           <Text style={styles.brand}>
@@ -110,7 +109,7 @@ export default function ReleaseRulesScreen() {
 
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>
-            RELEASE RULES
+            Release rules
           </Text>
 
           <Text style={styles.title}>
@@ -127,10 +126,10 @@ export default function ReleaseRulesScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>
-              CHECK-IN PREFERENCES
+              Check-in preferences
             </Text>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() =>
                 router.push(
                   '/(auth)/check-in-preferences',
@@ -145,9 +144,7 @@ export default function ReleaseRulesScreen() {
 
           <View style={styles.checkInRow}>
             <View style={styles.iconCircle}>
-              <Text style={styles.icon}>
-                ✓
-              </Text>
+              <AppIcon name="check" style={styles.icon} />
             </View>
 
             <View style={styles.checkInContent}>
@@ -171,7 +168,7 @@ export default function ReleaseRulesScreen() {
         {/* Missed Check-ins */}
 
         <Text style={styles.sectionTitle}>
-          PLANNED MISSED CHECK-IN PROCESS
+          Planned missed check-in process
         </Text>
 
         <View style={styles.timeline}>
@@ -200,7 +197,7 @@ export default function ReleaseRulesScreen() {
         {/* Verification */}
 
         <Text style={styles.sectionTitle}>
-          FUTURE RELEASE WORKFLOW
+          Future release workflow
         </Text>
 
         <View style={styles.processCard}>
@@ -233,9 +230,7 @@ export default function ReleaseRulesScreen() {
 
         <View style={styles.securityCard}>
           <View style={styles.securityIcon}>
-            <Text style={styles.lock}>
-              🔐
-            </Text>
+            <AppIcon name="lock" style={styles.lock} />
           </View>
 
           <View style={styles.securityContent}>
@@ -254,9 +249,9 @@ export default function ReleaseRulesScreen() {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {loading && <ActivityIndicator />}
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        {loadFailed && <Pressable onPress={() => setRetry((value) => value + 1)}><Text style={styles.edit}>Retry loading policy</Text></Pressable>}
+        {loadFailed && <Pressable accessibilityRole="button" onPress={() => setRetry((value) => value + 1)}><Text style={styles.edit}>Retry loading policy</Text></Pressable>}
 
-        <Pressable
+        <Pressable accessibilityRole="button"
           disabled={saving || loading || loadFailed}
           onPress={handleContinue}
           style={({ pressed }) => [
@@ -271,10 +266,6 @@ export default function ReleaseRulesScreen() {
             <>
               <Text style={styles.buttonText}>
                 Continue
-              </Text>
-
-              <Text style={styles.buttonArrow}>
-                →
               </Text>
             </>
           )}
@@ -363,7 +354,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -372,8 +363,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
 
@@ -414,8 +405,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
 
@@ -430,7 +421,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 9,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 19,
     color: colors.neutral.textSecondary,
   },
@@ -451,14 +442,14 @@ const styles = StyleSheet.create({
 
   cardTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.2,
+    fontSize: 12,
+    
     color: colors.neutral.textMuted,
   },
 
   edit: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.primary.forest,
   },
 
@@ -489,15 +480,15 @@ const styles = StyleSheet.create({
 
   checkInTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   checkInText: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
 
@@ -511,7 +502,7 @@ const styles = StyleSheet.create({
 
   activeQuote: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.primary.forest,
   },
 
@@ -519,8 +510,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.2,
+    fontSize: 12,
+    
     color: colors.neutral.textMuted,
   },
 
@@ -549,7 +540,7 @@ const styles = StyleSheet.create({
 
   numberText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.primary.deepForest,
   },
 
@@ -568,14 +559,14 @@ const styles = StyleSheet.create({
 
   timelineTitle: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11.5,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   timelineDescription: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
+    fontSize: 12,
     color: colors.neutral.textSecondary,
   },
 
@@ -595,7 +586,7 @@ const styles = StyleSheet.create({
   processNumber: {
     width: 27,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
+    fontSize: 12,
     color: colors.primary.forest,
   },
 
@@ -605,15 +596,15 @@ const styles = StyleSheet.create({
 
   processTitle: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   processDescription: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
 
@@ -635,7 +626,7 @@ const styles = StyleSheet.create({
   },
 
   lock: {
-    fontSize: 13,
+    fontSize: 14,
   },
 
   securityContent: {
@@ -645,15 +636,15 @@ const styles = StyleSheet.create({
 
   securityTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.neutral.textPrimary,
   },
 
   securityText: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
 
@@ -666,7 +657,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -687,13 +678,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: '#B42318',
+    fontSize: 13,
+    color: colors.semantic.error,
   },
 
   buttonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.white,
   },
 

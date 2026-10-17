@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "virasat",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.virasat.app",
@@ -58,6 +58,12 @@
         }
       ],
       "expo-font",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Virasat to read a contact you pick so you can add them as a trusted person."
+        }
+      ],
       "@react-native-google-signin/google-signin",
       [
         "expo-camera",

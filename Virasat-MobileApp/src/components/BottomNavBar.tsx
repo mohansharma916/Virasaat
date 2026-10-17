@@ -1,94 +1,58 @@
-import React from 'react';
+import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import {
-  Home as HomeIcon,
-  Shield as VaultIcon,
-  Users as PeopleIcon,
-  User as ProfileIcon,
-} from 'lucide-react-native';
+import type { Tabs } from 'expo-router';
 
+import { AppIcon, type IconName } from '@/src/components/AppIcon';
+import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
-export type TabName = 'home' | 'vault' | 'people' | 'profile';
+type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
-interface BottomNavBarProps {
-  activeTab: TabName;
-}
+const TABS: Record<string, { label: string; icon: IconName }> = {
+  home: { label: 'Home', icon: 'home' },
+  'saved-items': { label: 'Vault', icon: 'shield' },
+  people: { label: 'People', icon: 'users' },
+  account: { label: 'Account', icon: 'user' },
+};
 
-interface NavItemConfig {
-  id: TabName;
-  label: string;
-  icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
-}
-
-const NAV_ITEMS: NavItemConfig[] = [
-  { id: 'home', label: 'Home', icon: HomeIcon },
-  { id: 'vault', label: 'Vault', icon: VaultIcon },
-  { id: 'people', label: 'People', icon: PeopleIcon },
-  { id: 'profile', label: 'Profile', icon: ProfileIcon },
-];
-
-export function BottomNavBar({ activeTab }: BottomNavBarProps) {
-  const insets = useSafeAreaInsets();
-
-  const handleTabPress = (tab: TabName) => {
-    if (tab === activeTab) return;
-
-    switch (tab) {
-      case 'home':
-        router.replace('/(auth)/home');
-        break;
-      case 'vault':
-        router.replace('/(auth)/saved-items' as never);
-        break;
-      case 'people':
-        router.replace('/(auth)/people' as never);
-        break;
-      case 'profile':
-        router.replace({
-          pathname: '/(auth)/profile',
-          params: { mode: 'edit' },
-        } as never);
-        break;
-    }
-  };
-
+// Material 3 navigation bar: 80dp, 24dp icons, 12sp labels, 64x32 active pill.
+export function BottomNavBar({ state, navigation, insets }: TabBarProps) {
   return (
-    <View
-      style={[
-        styles.bottomNav,
-        {
-          paddingBottom: Math.max(insets.bottom, 12),
-        },
-      ]}
-    >
-      {NAV_ITEMS.map((item) => {
-        const active = item.id === activeTab;
-        const IconComponent = item.icon;
+    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityRole="tablist">
+      {state.routes.map((route, index) => {
+        const tab = TABS[route.name];
+        if (!tab) return null;
+        const focused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) {
+            haptics.selection();
+            navigation.navigate(route.name, route.params);
+          }
+        };
 
         return (
           <Pressable
-            key={item.id}
+            key={route.key}
             accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={item.label}
-            onPress={() => handleTabPress(item.id)}
-            style={({ pressed }) => [styles.navItem, pressed && styles.navItemPressed]}
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={`${tab.label}, tab ${index + 1} of ${state.routes.length}`}
+            onPress={onPress}
+            style={styles.item}
           >
-            <View style={[styles.iconContainer, active && styles.iconContainerActive]}>
-              <IconComponent
-                size={20}
-                color={active ? colors.primary.deepForest : colors.neutral.textMuted}
-                strokeWidth={active ? 2.4 : 1.8}
+            <View style={[styles.pill, focused && styles.pillActive]}>
+              <AppIcon
+                name={tab.icon}
+                size={24}
+                strokeWidth={focused ? 2.25 : 1.75}
+                color={focused ? colors.primary.deepForest : colors.neutral.textSecondary}
               />
             </View>
-            <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-              {item.label}
+            <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
+              {tab.label}
             </Text>
-            {active ? <View style={styles.activeDot} /> : <View style={styles.dotPlaceholder} />}
           </Pressable>
         );
       })}
@@ -97,65 +61,21 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
 }
 
 const styles = StyleSheet.create({
-  bottomNav: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    backgroundColor: colors.neutral.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: 'rgba(215, 225, 221, 0.7)',
+  bar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    shadowColor: '#063F34',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 12,
+    paddingTop: 12,
+    backgroundColor: colors.neutral.white,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.neutral.border,
   },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 2,
-  },
-  navItemPressed: {
-    transform: [{ scale: 0.93 }],
-    opacity: 0.85,
-  },
-  iconContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainerActive: {
-    backgroundColor: colors.brand.mint,
-  },
-  navLabel: {
-    marginTop: 3,
+  item: { flex: 1, minHeight: 56, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  pill: { width: 64, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  pillActive: { backgroundColor: colors.brand.sage },
+  label: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 10.5,
-    color: colors.neutral.textMuted,
+    fontSize: typography.sizes.micro,
+    lineHeight: 16,
+    color: colors.neutral.textSecondary,
   },
-  navLabelActive: {
-    fontFamily: typography.fonts.inter.semiBold,
-    color: colors.primary.deepForest,
-  },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary.forest,
-    marginTop: 3,
-  },
-  dotPlaceholder: {
-    width: 4,
-    height: 4,
-    marginTop: 3,
-  },
+  labelActive: { fontFamily: typography.fonts.inter.semiBold, color: colors.primary.deepForest },
 });

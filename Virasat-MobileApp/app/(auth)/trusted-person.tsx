@@ -1,26 +1,23 @@
 import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Contact, ContactField, requestPermissionsAsync } from 'expo-contacts';
 
 import { router, useLocalSearchParams } from 'expo-router';
 
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
 import { Input } from '@/src/components/Input';
-
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { StepProgress } from '@/src/components/StepProgress';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { setTrustedPersonDraft } from '@/src/store/trusted-person-draft.slice';
 
 export default function TrustedPersonScreen() {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const params = useLocalSearchParams<{ recipientId?: string; onboarding?: string }>();
   const existingRecipient = useAppSelector((state) =>
@@ -30,6 +27,7 @@ export default function TrustedPersonScreen() {
   const [relationship, setRelationship] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [pickerError, setPickerError] = useState('');
 
   const [errors, setErrors] = useState<{
     name?: string;
@@ -53,24 +51,17 @@ export default function TrustedPersonScreen() {
     const newErrors: typeof errors = {};
 
     if (!name.trim()) {
-      newErrors.name = 'Please enter their full name.';
+      newErrors.name = 'Enter their full name.';
     }
 
     if (!email.trim()) {
-      newErrors.email =
-        'Please enter their email address.';
+      newErrors.email = 'Enter their email address. We need it to reach them later.';
     } else if (
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
         email.trim()
       )
     ) {
-      newErrors.email =
-        'Please enter a valid email address.';
-    }
-
-    if (!phone.trim()) {
-      newErrors.phone =
-        'Please enter their phone number.';
+      newErrors.email = 'Enter an email address like name@example.com.';
     }
 
     setErrors(newErrors);
@@ -87,18 +78,43 @@ export default function TrustedPersonScreen() {
     }));
   };
 
+  const fillFromContact = (details: { fullName?: string | null; emails?: { address?: string }[]; phones?: { number?: string }[] }) => {
+    if (details.fullName) setName(details.fullName);
+    const pickedEmail = details.emails?.find((entry) => entry.address)?.address;
+    const pickedPhone = details.phones?.find((entry) => entry.number)?.number;
+    if (pickedEmail && !existingRecipient) setEmail(pickedEmail);
+    if (pickedPhone) setPhone(pickedPhone);
+    setErrors({});
+  };
+
+  const chooseFromContacts = async () => {
+    setPickerError('');
+    try {
+      const contact = await Contact.presentPicker();
+      if (!contact) return;
+      const fields = [ContactField.FULL_NAME, ContactField.EMAILS, ContactField.PHONES] as const;
+      try {
+        fillFromContact(await contact.getDetails(fields));
+      } catch {
+        // Android needs read access to load the picked contact's details.
+        const permission = await requestPermissionsAsync();
+        if (!permission.granted) {
+          setPickerError('Allow contacts access to fill in their details, or type them below.');
+          return;
+        }
+        fillFromContact(await contact.getDetails(fields));
+      }
+    } catch {
+      setPickerError('We couldn’t open your contacts. Type their details below instead.');
+    }
+  };
+
   const handleContinue = () => {
     if (!validate()) {
       return;
     }
 
-    /*
-     * We will NOT send the trusted person
-     * invitation yet.
-     *
-     * First we'll show a Review screen.
-     */
-
+    // Nothing is sent yet: the review screen saves after a final check.
     dispatch(setTrustedPersonDraft({
       recipientId: existingRecipient?.id ?? null,
       name: name.trim(),
@@ -112,332 +128,127 @@ export default function TrustedPersonScreen() {
     router.push('/(auth)/trusted-person-review');
   };
 
+  const fromOnboarding = params.onboarding === 'true';
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : undefined
-        }
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScreenHeader onBack="default" />
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          {fromOnboarding ? <StepProgress phase="Account" /> : null}
 
-          <View style={styles.header}>
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={12}
-              style={styles.backButton}
-            >
-              <Text style={styles.backArrow}>
-                ‹
-              </Text>
-            </Pressable>
+          <Text style={[styles.title, fromOnboarding && styles.titleOnboarding]} accessibilityRole="header">
+            {existingRecipient ? 'Edit trusted person' : 'Add a trusted person'}
+          </Text>
+          <Text style={styles.subtitle}>Someone you trust to receive parts of your legacy.</Text>
 
-            <Text style={styles.brand}>
-              VIRASAT
-            </Text>
-          </View>
+          {!existingRecipient ? (
+            <>
+              <Button
+                title="Choose from contacts"
+                variant="secondary"
+                onPress={() => void chooseFromContacts()}
+                icon={<AppIcon name="contact" size={20} color={colors.primary.forest} />}
+              />
+              {pickerError ? <InlineNotice tone="warning" message={pickerError} style={styles.notice} /> : null}
+              <Text style={styles.orText}>or enter their details</Text>
+            </>
+          ) : null}
 
-          {/* Heading */}
+          <Input
+            label="Full name"
+            placeholder="Their full name"
+            value={name}
+            onChangeText={(value) => {
+              setName(value);
+              clearError('name');
+            }}
+            error={errors.name}
+            autoCapitalize="words"
+            autoComplete="name"
+          />
 
-          <View style={styles.heading}>
-            <Text style={styles.title}>
-              Add your trusted person
-            </Text>
+          <Input
+            label="Relationship"
+            placeholder="For example: spouse, child, friend"
+            value={relationship}
+            onChangeText={setRelationship}
+            required={false}
+            autoCapitalize="words"
+          />
 
-            <Text style={styles.subtitle}>
-              Choose someone you trust to help with
-              your Virasat legacy.
-            </Text>
-          </View>
+          <Input
+            label="Email address"
+            placeholder="their@email.com"
+            value={email}
+            onChangeText={(value) => {
+              setEmail(value);
+              clearError('email');
+            }}
+            error={errors.email}
+            helper={existingRecipient ? 'Email can’t be changed after saving.' : undefined}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!existingRecipient}
+            autoComplete="email"
+          />
 
-          {/* Form */}
+          <Input
+            label="Phone number"
+            placeholder="With country code, e.g. +91 98765 43210"
+            value={phone}
+            onChangeText={(value) => {
+              setPhone(value);
+              clearError('phone');
+            }}
+            error={errors.phone}
+            required={false}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+          />
 
-          <View style={styles.form}>
-            <Input
-              label="Full name"
-              placeholder="Enter their full name"
-              value={name}
-              onChangeText={(value) => {
-                setName(value);
-                clearError('name');
-              }}
-              error={errors.name}
-              autoCapitalize="words"
-              autoComplete="name"
-            />
-
-            <Input
-              label="Relationship"
-              placeholder="e.g. Spouse, Child, Friend (optional)"
-              value={relationship}
-              onChangeText={setRelationship}
-              required={false}
-              autoCapitalize="words"
-            />
-
-            <Input
-              label="Email address"
-              placeholder="Their email address"
-              value={email}
-              onChangeText={(value) => {
-                setEmail(value);
-                clearError('email');
-              }}
-              error={errors.email}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!existingRecipient}
-              autoComplete="email"
-            />
-
-            <Input
-              label="Phone number"
-              placeholder="Their phone number"
-              value={phone}
-              onChangeText={(value) => {
-                setPhone(value);
-                clearError('phone');
-              }}
-              error={errors.phone}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-            />
-          </View>
-
-          {/* Security information */}
-
-          <View style={styles.securityCard}>
-            <View style={styles.securityIcon}>
-              <Text style={styles.securityIconText}>
-                🔒
-              </Text>
-            </View>
-
-            <View style={styles.securityContent}>
-              <Text style={styles.securityTitle}>
-                Important
-              </Text>
-
-              <Text style={styles.securityText}>
-                Adding this person does not give them
-                access to your vault. They will only
-                become part of the process you define.
-              </Text>
-            </View>
-          </View>
+          <InlineNotice
+            tone="brand"
+            title="They won’t get access yet"
+            message="Adding someone doesn’t give them access to your vault or notify them."
+          />
         </ScrollView>
 
-        {/* Sticky Bottom CTA */}
-        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable
-            onPress={handleContinue}
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            <Text style={styles.buttonText}>
-              Continue
-            </Text>
-
-            <Text style={styles.buttonArrow}>
-              →
-            </Text>
-          </Pressable>
-        </View>
+        <ActionBar>
+          <Button title="Review details" onPress={handleContinue} />
+        </ActionBar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 35,
-  },
-
-  header: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    lineHeight: 36,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-  },
-
-  progressDot: {
-    width: 22,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.neutral.border,
-  },
-
-  progressDotActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 18,
-    marginBottom: 16,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  flex: { flex: 1 },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
-    fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 27,
-    lineHeight: 34,
-    color: colors.primary.deepForest,
-  },
-
-  subtitle: {
-    marginTop: 6,
-    maxWidth: 350,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.neutral.textSecondary,
-  },
-
-  form: {
-    width: '100%',
-  },
-
-  error: {
-    marginTop: -12,
-    marginBottom: 18,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: '#B42318',
-  },
-
-  securityCard: {
-    flexDirection: 'row',
-    marginTop: 4,
-    padding: 15,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    borderWidth: 1,
-    borderColor: colors.brand.sage,
-  },
-
-  securityIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  securityIconText: {
-    fontSize: 13,
-  },
-
-  securityContent: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  securityTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: colors.primary.deepForest,
-  },
-
-  securityText: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  button: {
-    height: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  buttonArrow: {
-    marginLeft: 10,
-    fontSize: 20,
-    color: colors.neutral.white,
-  },
-
-  footer: {
     marginTop: 8,
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
+    color: colors.primary.deepForest,
+  },
+  titleOnboarding: { marginTop: 24 },
+  subtitle: {
+    marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: colors.neutral.textMuted,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
+    color: colors.neutral.textSecondary,
+  },
+  notice: { marginTop: 12 },
+  orText: {
+    marginVertical: 20,
     textAlign: 'center',
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: typography.sizes.caption,
+    color: colors.neutral.textMuted,
   },
 });

@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,13 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { TextLink } from '@/src/components/TextLink';
+import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import {
@@ -126,6 +132,7 @@ export default function VerifyScreen() {
       );
 
       inputs.current[nextIndex]?.focus();
+      if (digits.length === OTP_LENGTH) void handleVerify(digits);
 
       return;
     }
@@ -144,6 +151,7 @@ export default function VerifyScreen() {
     if (digit && index < OTP_LENGTH - 1) {
       inputs.current[index + 1]?.focus();
     }
+    if (digit && nextOtp.every(Boolean)) void handleVerify(nextOtp.join(''));
   };
 
   /*
@@ -170,7 +178,7 @@ export default function VerifyScreen() {
     setError('');
 
     if (!email) {
-      setError('Your signup email is missing. Please start again.');
+      setError('We don’t know which email to verify. Go back and sign up again.');
       return;
     }
 
@@ -179,7 +187,7 @@ export default function VerifyScreen() {
       const result = await resendVerification(email);
       setCurrentDevelopmentOtp(result.developmentOtp ?? '');
     } catch (error) {
-      setError(getApiErrorMessage(error, 'We could not resend the code. Please try again.'));
+      setError(getApiErrorMessage(error, 'We couldn’t send a new code. Try again in a moment.'));
       return;
     } finally {
       setLoading(false);
@@ -192,13 +200,12 @@ export default function VerifyScreen() {
     inputs.current[0]?.focus();
   };
 
-  const handleVerify = async () => {
-    const code = otp.join('');
+  const handleVerify = async (entered?: string) => {
+    if (loading) return;
+    const code = entered ?? otp.join('');
 
     if (code.length !== OTP_LENGTH) {
-      setError(
-        'Please enter the complete 6-digit verification code.'
-      );
+      setError('Enter all 6 digits of the code.');
       return;
     }
 
@@ -206,7 +213,7 @@ export default function VerifyScreen() {
       setLoading(true);
       setError('');
       if (!email) {
-        setError('Your signup email is missing. Please start again.');
+        setError('We don’t know which email to verify. Go back and sign up again.');
         return;
       }
 
@@ -214,459 +221,155 @@ export default function VerifyScreen() {
       const result = await verifyEmail(normalizedEmail, code.trim());
       await saveAccessToken(result.accessToken);
       dispatch(setSessionUser(result.user));
+      haptics.success();
       router.replace({ pathname: '/(auth)/security', params: { onboarding: 'true' } } as never);
     } catch (error) {
-      setError(getApiErrorMessage(error, 'The verification code is incorrect. Please try again.'));
+      haptics.error();
+      setError(getApiErrorMessage(error, 'That code didn’t work. Check it and try again, or send a new code.'));
     } finally {
       setLoading(false);
     }
   };
 
+  const openMailApp = () => void Linking.openURL('message:').catch(() => undefined);
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.keyboard}
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : undefined
-        }
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={12}
-              style={styles.backButton}
-            >
-              <Text style={styles.backArrow}>
-                ‹
-              </Text>
-            </Pressable>
-
-            <Text style={styles.brand}>
-              VIRASAT
-            </Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScreenHeader onBack="default" />
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={styles.iconCircle}>
+            <AppIcon name="mailCheck" size={28} color={colors.primary.deepForest} />
           </View>
 
-          {/* Main */}
-          <View style={styles.main}>
-            <Text style={styles.icon}>
-              ✉
-            </Text>
-
-            <Text style={styles.title}>
-              Verify your email
-            </Text>
-
-            <Text style={styles.description}>
-              We've sent a 6-digit verification code
-              to your email address.
-            </Text>
-
-            <Text
-              style={styles.email}
-              numberOfLines={1}
-              ellipsizeMode="middle"
-            >
-              {email || 'your email address'}
-            </Text>
-
-            {__DEV__ && currentDevelopmentOtp ? (
-              <Text style={styles.devCode}>
-                Development code: {currentDevelopmentOtp}
-              </Text>
-            ) : null}
-
-            {/* OTP */}
-            <View style={styles.otpSection}>
-              <Text style={styles.otpLabel}>
-                Enter verification code
-              </Text>
-
-              <View style={styles.otpContainer}>
-                {otp.map((digit, index) => (
-                  <TextInput
-                    key={index}
-                    ref={(ref) => {
-                      inputs.current[index] = ref;
-                    }}
-                    value={digit}
-                    onChangeText={(value) =>
-                      handleOtpChange(
-                        value,
-                        index
-                      )
-                    }
-                    onKeyPress={(event) =>
-                      handleKeyPress(
-                        event,
-                        index
-                      )
-                    }
-                    keyboardType="number-pad"
-                    maxLength={OTP_LENGTH}
-                    textContentType="oneTimeCode"
-                    autoComplete="one-time-code"
-                    selectTextOnFocus
-                    style={[
-                      styles.otpInput,
-                      error &&
-                        styles.otpInputError,
-                      digit &&
-                        styles.otpInputFilled,
-                    ]}
-                  />
-                ))}
-              </View>
-
-              {/* Error */}
-              {error && (
-                <Text style={styles.error}>
-                  {error}
-                </Text>
-              )}
-            </View>
-
-            {/* Timer */}
-            <View style={styles.timerContainer}>
-              {secondsLeft > 0 ? (
-                <>
-                  <Text style={styles.timerLabel}>
-                    Code expires in
-                  </Text>
-
-                  <Text style={styles.timer}>
-                    {formattedTime()}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.expired}>
-                  Your code has expired
-                </Text>
-              )}
-            </View>
-
-            {/* Resend */}
-            <View style={styles.resendContainer}>
-              <Text style={styles.resendText}>
-                Didn't receive it?
-              </Text>
-
-              <Pressable
-                disabled={secondsLeft > 0}
-                onPress={handleResend}
-                hitSlop={8}
-              >
-                <Text
-                  style={[
-                    styles.resendButton,
-                    secondsLeft > 0 &&
-                      styles.resendDisabled,
-                  ]}
-                >
-                  Resend code
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Verify */}
-            <Pressable
-              onPress={handleVerify}
-              disabled={loading}
-              style={({ pressed }) => [
-                styles.verifyButton,
-                pressed &&
-                  !loading &&
-                  styles.buttonPressed,
-                loading &&
-                  styles.buttonDisabled,
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator
-                  color={colors.neutral.white}
-                />
-              ) : (
-                <Text style={styles.verifyText}>
-                  Verify Email
-                </Text>
-              )}
-            </Pressable>
+          <Text style={styles.title} accessibilityRole="header">Check your email</Text>
+          <Text style={styles.description}>
+            {email ? 'We sent a 6-digit code to' : 'We sent a 6-digit code to the email you signed up with.'}
+          </Text>
+          {email ? (
+            <Text style={styles.email} numberOfLines={1} ellipsizeMode="middle">{email}</Text>
+          ) : null}
+          <View style={styles.inlineLinks}>
+            <TextLink title="Wrong email? Change it" onPress={() => router.back()} />
+            {Platform.OS === 'ios' ? <TextLink title="Open Mail" onPress={openMailApp} /> : null}
           </View>
 
-          {/* Security */}
-          <View style={styles.security}>
-            <View style={styles.securityIcon}>
-              <Text style={styles.securityCheck}>
-                ✓
-              </Text>
-            </View>
+          {__DEV__ && currentDevelopmentOtp ? (
+            <Text style={styles.devCode}>Development code: {currentDevelopmentOtp}</Text>
+          ) : null}
 
-            <Text style={styles.securityText}>
-              Your information is securely protected
-            </Text>
+          <Text style={styles.otpLabel} nativeID="otpLabel">Verification code</Text>
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => {
+                  inputs.current[index] = ref;
+                }}
+                value={digit}
+                onChangeText={(value) => handleOtpChange(value, index)}
+                onKeyPress={(event) => handleKeyPress(event, index)}
+                keyboardType="number-pad"
+                maxLength={OTP_LENGTH}
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
+                selectTextOnFocus
+                accessibilityLabel={`Digit ${index + 1} of ${OTP_LENGTH}`}
+                editable={!loading}
+                style={[styles.otpInput, !!error && styles.otpInputError, !!digit && styles.otpInputFilled]}
+              />
+            ))}
+          </View>
+          <Text style={styles.hint}>You can paste the whole code into the first box.</Text>
+
+          {error ? <InlineNotice tone="danger" message={error} style={styles.error} /> : null}
+
+          <View style={styles.resendRow}>
+            <Text style={styles.resendText}>{secondsLeft > 0 ? 'Didn’t get it?' : 'Your code may have expired.'}</Text>
+            <TextLink
+              title={secondsLeft > 0 ? `Resend in ${formattedTime()}` : 'Send a new code'}
+              disabled={secondsLeft > 0 || loading}
+              onPress={() => void handleResend()}
+            />
           </View>
         </ScrollView>
+
+        <ActionBar>
+          <Button title="Verify email" onPress={() => void handleVerify()} loading={loading} />
+        </ActionBar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  keyboard: {
-    flex: 1,
-  },
-
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 28,
-  },
-
-  header: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    lineHeight: 36,
-    fontWeight: '300',
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  main: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: 16,
-  },
-
-  icon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  keyboard: { flex: 1 },
+  content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.brand.sage,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    fontSize: 21,
-    color: colors.primary.forest,
-    marginBottom: 12,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
   title: {
+    marginTop: 20,
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
-    textAlign: 'center',
   },
-
   description: {
-    marginTop: 6,
-    maxWidth: 330,
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
-    textAlign: 'center',
   },
-
   email: {
-    marginTop: 4,
-    maxWidth: 280,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.primary.forest,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
+    color: colors.neutral.textPrimary,
   },
-
+  inlineLinks: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 20 },
   devCode: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
-    color: colors.primary.forest,
-    textAlign: 'center',
+    fontSize: typography.sizes.caption,
+    color: colors.semantic.warning,
   },
-
-  otpSection: {
-    width: '100%',
-    marginTop: 20,
-  },
-
   otpLabel: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
+    marginTop: 24,
+    marginBottom: 8,
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: typography.sizes.label,
     color: colors.neutral.textPrimary,
-    textAlign: 'center',
-    marginBottom: 14,
   },
-
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-
+  otpContainer: { flexDirection: 'row', gap: 8 },
   otpInput: {
-    width: 46,
-    height: 54,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
+    flex: 1,
+    minHeight: 56,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.neutral.control,
     backgroundColor: colors.neutral.white,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 20,
-    color: colors.primary.deepForest,
+    fontSize: 22,
+    color: colors.neutral.textPrimary,
   },
-
-  otpInputFilled: {
-    borderColor: colors.primary.forest,
-    backgroundColor: colors.brand.mint,
-  },
-
-  otpInputError: {
-    borderColor: '#B42318',
-  },
-
-  error: {
-    marginTop: 10,
+  otpInputFilled: { borderColor: colors.primary.forest, borderWidth: 2 },
+  otpInputError: { borderColor: colors.semantic.error, borderWidth: 2 },
+  hint: {
+    marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#B42318',
-    textAlign: 'center',
-  },
-
-  timerContainer: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-
-  timerLabel: {
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: typography.sizes.caption,
     color: colors.neutral.textMuted,
   },
-
-  timer: {
-    marginTop: 2,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
-    color: colors.primary.forest,
-  },
-
-  expired: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
-    color: '#B42318',
-  },
-
-  resendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-
-  resendText: {
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
-    color: colors.neutral.textSecondary,
-  },
-
-  resendButton: {
-    marginLeft: 5,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.primary.forest,
-  },
-
-  resendDisabled: {
-    color: colors.neutral.textMuted,
-  },
-
-  verifyButton: {
-    width: '100%',
-    height: 52,
-    marginTop: 18,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  verifyText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  security: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 18,
-  },
-
-  securityIcon: {
-    width: 19,
-    height: 19,
-    borderRadius: 10,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  securityCheck: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary.forest,
-  },
-
-  securityText: {
-    marginLeft: 7,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: colors.neutral.textMuted,
-  },
+  error: { marginTop: 16 },
+  resendRow: { marginTop: 16, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  resendText: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.callout, color: colors.neutral.textSecondary },
 });

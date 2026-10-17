@@ -9,12 +9,15 @@ import {
   ViewStyle,
 } from 'react-native';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
 type InputProps = TextInputProps & {
   label: string;
   error?: string;
+  helper?: string;
+  // Most fields are required, so only optional ones are marked.
   required?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 };
@@ -22,6 +25,7 @@ type InputProps = TextInputProps & {
 export function Input({
   label,
   error,
+  helper,
   required = true,
   containerStyle,
   ...props
@@ -30,17 +34,21 @@ export function Input({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <Text style={styles.label}>
+      <Text style={styles.label} nativeID={`${label}-label`}>
         {label}
-        {required && <Text style={styles.required}> *</Text>}
+        {!required && <Text style={styles.optional}> (optional)</Text>}
       </Text>
 
       <TextInput
+        accessibilityLabel={label}
+        accessibilityHint={error ?? helper}
         {...props}
         style={[
           styles.input,
+          props.multiline && styles.multiline,
           focused && styles.inputFocused,
-          error && styles.inputError,
+          !!error && styles.inputError,
+          props.style,
         ]}
         placeholderTextColor={colors.neutral.textMuted}
         onFocus={(event) => {
@@ -53,56 +61,84 @@ export function Input({
         }}
       />
 
-      {error && (
-        <Text style={styles.error}>
-          {error}
-        </Text>
-      )}
+      {error ? (
+        <View style={styles.messageRow} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          <AppIcon name="alert" size={16} color={colors.semantic.error} />
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : helper ? (
+        <Text style={styles.helper}>{helper}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
 
   label: {
     marginBottom: 8,
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: typography.sizes.label,
+    lineHeight: typography.lineHeights.label,
     color: colors.neutral.textPrimary,
   },
 
-  required: {
-    color: colors.primary.forest,
+  optional: {
+    fontFamily: typography.fonts.inter.regular,
+    color: colors.neutral.textMuted,
   },
 
   input: {
-    height: 52,
+    minHeight: 52,
     borderWidth: 1,
-    borderColor: colors.neutral.border,
+    borderColor: colors.neutral.control,
     borderRadius: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 15,
+    fontSize: typography.sizes.body,
     color: colors.neutral.textPrimary,
     backgroundColor: colors.neutral.white,
   },
 
+  multiline: {
+    minHeight: 140,
+    textAlignVertical: 'top',
+  },
+
   inputFocused: {
     borderColor: colors.primary.forest,
-    borderWidth: 1.5,
+    borderWidth: 2,
   },
 
   inputError: {
-    borderColor: '#B42318',
+    borderColor: colors.semantic.error,
+    borderWidth: 2,
+  },
+
+  messageRow: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 
   error: {
-    marginTop: 5,
+    flex: 1,
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: typography.sizes.caption,
+    lineHeight: typography.lineHeights.caption,
+    color: colors.semantic.error,
+  },
+
+  helper: {
+    marginTop: 6,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: '#B42318',
+    fontSize: typography.sizes.caption,
+    lineHeight: typography.lineHeights.caption,
+    color: colors.neutral.textMuted,
   },
 });

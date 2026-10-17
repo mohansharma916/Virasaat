@@ -13,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
@@ -145,7 +146,7 @@ export default function LegacyDocumentsScreen() {
       if (transfer.current.signal.aborted) { setUploadStatus('Upload stopped. Check your vault before retrying.'); return; }
       setUploadStatus('Files protected.');
 
-      router.replace('/(auth)/home');
+      router.replace('/(auth)/(tabs)/home');
     } catch (error) {
       const msg = transfer.current?.signal.aborted
         ? 'Transfer stopped. Confirmed files remain saved. Retry remaining files safely.'
@@ -167,14 +168,12 @@ export default function LegacyDocumentsScreen() {
         {/* Header */}
 
         <View style={styles.header}>
-          <Pressable
+          <Pressable accessibilityRole="button"
             onPress={() => router.back()}
             hitSlop={12}
             style={styles.backButton}
           >
-            <Text style={styles.backArrow}>
-              ‹
-            </Text>
+            <AppIcon name="chevronLeft" style={styles.backArrow} />
           </Pressable>
 
           <Text style={styles.brand}>
@@ -212,9 +211,7 @@ export default function LegacyDocumentsScreen() {
           ]}
         >
           <View style={styles.plusCircle}>
-            <Text style={styles.plus}>
-              +
-            </Text>
+            <AppIcon name="plus" style={styles.plus} />
           </View>
 
           <Text style={styles.uploadTitle}>
@@ -235,7 +232,7 @@ export default function LegacyDocumentsScreen() {
         {documents.length > 0 && (
           <View style={styles.documentsSection}>
             <Text style={styles.sectionTitle}>
-              ADDED DOCUMENTS
+              Added documents
             </Text>
 
             {documents.map((document) => (
@@ -244,9 +241,7 @@ export default function LegacyDocumentsScreen() {
                 style={styles.documentCard}
               >
                 <View style={styles.fileIcon}>
-                  <Text style={styles.fileIconText}>
-                    📄
-                  </Text>
+                  <AppIcon name="document" style={styles.fileIconText} />
                 </View>
 
                 <View style={styles.documentInfo}>
@@ -264,15 +259,13 @@ export default function LegacyDocumentsScreen() {
                   </Text>
                 </View>
 
-                <Pressable
+                <Pressable accessibilityRole="button"
                   onPress={() =>
                     removeDocument(document.id)
                   }
                   hitSlop={12}
                 >
-                  <Text style={styles.remove}>
-                    ×
-                  </Text>
+                  <AppIcon name="close" style={styles.remove} />
                 </Pressable>
               </View>
             ))}
@@ -283,9 +276,7 @@ export default function LegacyDocumentsScreen() {
 
         <View style={styles.securityCard}>
           <View style={styles.securityIcon}>
-            <Text style={styles.lock}>
-              🔒
-            </Text>
+            <AppIcon name="lock" style={styles.lock} />
           </View>
 
           <View style={styles.securityContent}>
@@ -324,7 +315,7 @@ export default function LegacyDocumentsScreen() {
         )}
 
         {/* Continue */}
-        <Pressable
+        <Pressable accessibilityRole="button"
           disabled={documents.length === 0 || saving}
           onPress={handleContinue}
           style={({ pressed }) => [
@@ -342,10 +333,6 @@ export default function LegacyDocumentsScreen() {
             <>
               <Text style={styles.buttonText}>
                 Continue
-              </Text>
-
-              <Text style={styles.buttonArrow}>
-                →
               </Text>
             </>
           )}
@@ -393,7 +380,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -402,8 +389,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
 
@@ -444,8 +431,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
 
@@ -460,7 +447,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 21,
     color: colors.neutral.textSecondary,
   },
@@ -500,21 +487,21 @@ const styles = StyleSheet.create({
 
   uploadTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.primary.deepForest,
   },
 
   uploadSubtitle: {
     marginTop: 4,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textSecondary,
   },
 
   uploadLimit: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
@@ -525,8 +512,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 11,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.3,
+    fontSize: 12,
+    
     color: colors.neutral.textMuted,
   },
 
@@ -563,14 +550,14 @@ const styles = StyleSheet.create({
 
   documentName: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   documentSize: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
@@ -600,7 +587,7 @@ const styles = StyleSheet.create({
   },
 
   lock: {
-    fontSize: 12,
+    fontSize: 13,
   },
 
   securityContent: {
@@ -610,14 +597,14 @@ const styles = StyleSheet.create({
 
   securityTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   securityText: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     lineHeight: 16,
     color: colors.neutral.textSecondary,
   },
@@ -626,10 +613,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textMuted,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 19,
   },
 
   bottomBar: {
@@ -656,7 +643,7 @@ const styles = StyleSheet.create({
   transferText: {
     flex: 1,
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.primary.deepForest,
   },
 
@@ -664,18 +651,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#FDE8E8',
+    backgroundColor: colors.semantic.errorSoft,
     marginLeft: 8,
   },
 
   stopText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
-    color: '#9B1C1C',
+    fontSize: 13,
+    color: colors.semantic.error,
   },
 
   button: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -707,7 +694,7 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

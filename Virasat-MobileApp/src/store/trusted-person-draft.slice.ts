@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { RecipientNotificationMode } from '@/src/api/recipients.api';
 
-// Contact details stay in memory between the form, review and confirmation
+// Contact details stay in memory between the form and the review screen
 // screens instead of travelling in route params (URLs on web).
 export type TrustedPersonDraft = {
   recipientId: string | null;

@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { router, useLocalSearchParams } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
@@ -130,14 +131,12 @@ const addAsset = (type: AssetType) => {
         {/* Header */}
 
         <View style={styles.header}>
-          <Pressable
+          <Pressable accessibilityRole="button"
             onPress={() => router.back()}
             hitSlop={12}
             style={styles.backButton}
           >
-            <Text style={styles.backArrow}>
-              ‹
-            </Text>
+            <AppIcon name="chevronLeft" style={styles.backArrow} />
           </Pressable>
 
           <Text style={styles.brand}>
@@ -149,7 +148,7 @@ const addAsset = (type: AssetType) => {
 
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>
-            INVESTMENTS & FINANCE
+            Investments & finance
           </Text>
 
           <Text style={styles.title}>
@@ -164,7 +163,7 @@ const addAsset = (type: AssetType) => {
 
         {/* Add Asset */}
 
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={() => setShowAssetModal(true)}
           style={({ pressed }) => [
             styles.addCard,
@@ -172,9 +171,7 @@ const addAsset = (type: AssetType) => {
           ]}
         >
           <View style={styles.addIcon}>
-            <Text style={styles.plus}>
-              +
-            </Text>
+            <AppIcon name="plus" style={styles.plus} />
           </View>
 
           <View style={styles.addContent}>
@@ -187,10 +184,6 @@ const addAsset = (type: AssetType) => {
               or other financial asset
             </Text>
           </View>
-
-          <Text style={styles.arrow}>
-            →
-          </Text>
         </Pressable>
 
         {/* Assets */}
@@ -198,7 +191,7 @@ const addAsset = (type: AssetType) => {
         {assets.length > 0 && (
           <View style={styles.assetsSection}>
             <Text style={styles.sectionTitle}>
-              YOUR FINANCIAL ASSETS
+              Your financial assets
             </Text>
 
             {assets.map((asset) => (
@@ -230,15 +223,13 @@ const addAsset = (type: AssetType) => {
                   )}
                 </View>
 
-                <Pressable
+                <Pressable accessibilityRole="button"
                   hitSlop={12}
                   onPress={() =>
                     removeAsset(asset.id)
                   }
                 >
-                  <Text style={styles.more}>
-                    ×
-                  </Text>
+                  <AppIcon name="close" style={styles.more} />
                 </Pressable>
               </View>
             ))}
@@ -249,9 +240,7 @@ const addAsset = (type: AssetType) => {
 
         <View style={styles.securityCard}>
           <View style={styles.securityIcon}>
-            <Text style={styles.lock}>
-              🔒
-            </Text>
+            <AppIcon name="lock" style={styles.lock} />
           </View>
 
           <View style={styles.securityContent}>
@@ -270,7 +259,7 @@ const addAsset = (type: AssetType) => {
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {/* Continue */}
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={handleContinue}
           style={({ pressed }) => [
             styles.button,
@@ -280,10 +269,6 @@ const addAsset = (type: AssetType) => {
         >
           <Text style={styles.buttonText}>
             Continue
-          </Text>
-
-          <Text style={styles.buttonArrow}>
-            →
           </Text>
         </Pressable>
 
@@ -322,7 +307,7 @@ const addAsset = (type: AssetType) => {
 
             <View style={styles.assetTypeGrid}>
               {assetTypes.map((type) => (
-                <Pressable
+                <Pressable accessibilityRole="button"
                   key={type.id}
                   onPress={() =>
                     addAsset(type.id)
@@ -344,7 +329,7 @@ const addAsset = (type: AssetType) => {
               ))}
             </View>
 
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() =>
                 setShowAssetModal(false)
               }
@@ -402,7 +387,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -411,8 +396,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
 
@@ -453,8 +438,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
 
@@ -469,7 +454,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 21,
     color: colors.neutral.textSecondary,
   },
@@ -512,14 +497,14 @@ const styles = StyleSheet.create({
 
   addTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.primary.deepForest,
   },
 
   addDescription: {
     marginTop: 4,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     lineHeight: 16,
     color: colors.neutral.textSecondary,
   },
@@ -537,8 +522,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 11,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.3,
+    fontSize: 12,
+    
     color: colors.neutral.textMuted,
   },
 
@@ -574,21 +559,21 @@ const styles = StyleSheet.create({
 
   assetTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12.5,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   assetProvider: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.neutral.textSecondary,
   },
 
   assetIdentifier: {
     marginTop: 2,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
@@ -617,7 +602,7 @@ const styles = StyleSheet.create({
   },
 
   lock: {
-    fontSize: 12,
+    fontSize: 13,
   },
 
   securityContent: {
@@ -627,14 +612,14 @@ const styles = StyleSheet.create({
 
   securityTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   securityText: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     lineHeight: 16,
     color: colors.neutral.textSecondary,
   },
@@ -648,7 +633,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -680,7 +665,7 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },
@@ -718,7 +703,7 @@ const styles = StyleSheet.create({
   modalSubtitle: {
     marginTop: 5,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textSecondary,
   },
 
@@ -752,13 +737,13 @@ const styles = StyleSheet.create({
 
   typeTitle: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
+    fontSize: 13,
     textAlign: 'center',
     color: colors.neutral.textPrimary,
   },
 
   cancelButton: {
-    height: 50,
+    minHeight: 50,
     marginTop: 18,
     borderRadius: 13,
     alignItems: 'center',
@@ -770,7 +755,7 @@ const styles = StyleSheet.create({
 
   cancelText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.primary.deepForest,
   },
 });

@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { router } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { createLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
@@ -100,7 +101,7 @@ export default function LegacyMessageScreen() {
       dispatch(addLegacyItem(item));
 
 
-      router.replace('/(auth)/home');
+      router.replace('/(auth)/(tabs)/home');
     } catch (error) {
       Alert.alert('Unable to save message', getApiErrorMessage(error));
     } finally {
@@ -127,14 +128,12 @@ export default function LegacyMessageScreen() {
           {/* Header */}
 
           <View style={styles.header}>
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() => router.back()}
               hitSlop={12}
               style={styles.backButton}
             >
-              <Text style={styles.backArrow}>
-                ‹
-              </Text>
+              <AppIcon name="chevronLeft" style={styles.backArrow} />
             </Pressable>
 
             <Text style={styles.brand}>
@@ -146,7 +145,7 @@ export default function LegacyMessageScreen() {
 
           <View style={styles.heading}>
             <Text style={styles.eyebrow}>
-              PERSONAL MESSAGE
+              Personal message
             </Text>
 
             <Text style={styles.title}>
@@ -207,7 +206,7 @@ export default function LegacyMessageScreen() {
                 recipient === item.id;
 
               return (
-                <Pressable
+                <Pressable accessibilityRole="button"
                   key={item.id}
                   onPress={() =>
                     setRecipient(item.id)
@@ -250,9 +249,7 @@ export default function LegacyMessageScreen() {
 
           <View style={styles.securityCard}>
             <View style={styles.securityIcon}>
-              <Text style={styles.lock}>
-                🔒
-              </Text>
+              <AppIcon name="lock" style={styles.lock} />
             </View>
 
             <View style={styles.securityContent}>
@@ -271,7 +268,7 @@ export default function LegacyMessageScreen() {
 
         {/* Sticky Bottom Bar */}
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable
+          <Pressable accessibilityRole="button"
             disabled={saving}
             onPress={handleSave}
             style={({ pressed }) => [
@@ -338,7 +335,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -347,8 +344,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
 
@@ -389,8 +386,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
 
@@ -398,14 +395,14 @@ const styles = StyleSheet.create({
     marginTop: 7,
     fontFamily: typography.fonts.playfair.semiBold,
     fontSize: 30,
-    lineHeight: 38,
+    lineHeight: 44,
     color: colors.primary.deepForest,
   },
 
   subtitle: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 20,
     color: colors.neutral.textSecondary,
   },
@@ -414,19 +411,19 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 7,
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   input: {
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: 15,
     borderRadius: 13,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
@@ -446,7 +443,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 20,
     color: colors.neutral.textPrimary,
   },
@@ -456,7 +453,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     marginBottom: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
@@ -505,7 +502,7 @@ const styles = StyleSheet.create({
   recipientText: {
     marginLeft: 11,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11.5,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
@@ -532,7 +529,7 @@ const styles = StyleSheet.create({
   },
 
   lock: {
-    fontSize: 12,
+    fontSize: 13,
   },
 
   securityContent: {
@@ -542,15 +539,15 @@ const styles = StyleSheet.create({
 
   securityTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.neutral.textPrimary,
   },
 
   securityText: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
 
@@ -563,7 +560,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     alignItems: 'center',
@@ -584,7 +581,7 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

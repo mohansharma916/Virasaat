@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { router } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { createLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
@@ -71,7 +72,7 @@ export default function LegacyInvestmentDetailsScreen() {
       dispatch(addLegacyItem(item));
 
 
-      router.replace('/(auth)/home');
+      router.replace('/(auth)/(tabs)/home');
     } catch (error) {
       Alert.alert('Unable to save investment', getApiErrorMessage(error));
     } finally {
@@ -98,14 +99,12 @@ export default function LegacyInvestmentDetailsScreen() {
           {/* Header */}
 
           <View style={styles.header}>
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() => router.back()}
               hitSlop={12}
               style={styles.backButton}
             >
-              <Text style={styles.backArrow}>
-                ‹
-              </Text>
+              <AppIcon name="chevronLeft" style={styles.backArrow} />
             </Pressable>
 
             <Text style={styles.brand}>
@@ -117,7 +116,7 @@ export default function LegacyInvestmentDetailsScreen() {
 
           <View style={styles.heading}>
             <Text style={styles.eyebrow}>
-              INVESTMENT DETAILS
+              Investment details
             </Text>
 
             <Text style={styles.title}>
@@ -134,14 +133,12 @@ export default function LegacyInvestmentDetailsScreen() {
 
           <FieldLabel label="Investment type" />
 
-          <Pressable style={styles.select}>
+          <Pressable accessibilityRole="button" style={styles.select}>
             <Text style={styles.selectText}>
               Mutual Fund
             </Text>
 
-            <Text style={styles.chevron}>
-              ▼
-            </Text>
+            <AppIcon name="chevronDown" style={styles.chevron} />
           </Pressable>
 
           {/* Provider */}
@@ -202,9 +199,7 @@ export default function LegacyInvestmentDetailsScreen() {
           />
 
           <View style={styles.amountInput}>
-            <Text style={styles.rupee}>
-              ₹
-            </Text>
+            <AppIcon name="investment" style={styles.rupee} />
 
             <TextInput
               value={value}
@@ -244,10 +239,8 @@ export default function LegacyInvestmentDetailsScreen() {
             optional
           />
 
-          <Pressable style={styles.documentButton}>
-            <Text style={styles.documentPlus}>
-              +
-            </Text>
+          <Pressable accessibilityRole="button" style={styles.documentButton}>
+            <AppIcon name="plus" style={styles.documentPlus} />
 
             <Text style={styles.documentText}>
               Add document
@@ -258,9 +251,7 @@ export default function LegacyInvestmentDetailsScreen() {
 
           <View style={styles.securityCard}>
             <View style={styles.securityIcon}>
-              <Text style={styles.lock}>
-                🔒
-              </Text>
+              <AppIcon name="lock" style={styles.lock} />
             </View>
 
             <View style={styles.securityContent}>
@@ -278,7 +269,7 @@ export default function LegacyInvestmentDetailsScreen() {
 
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           {/* Save */}
-          <Pressable
+          <Pressable accessibilityRole="button"
             disabled={saving}
             onPress={handleSave}
             style={({ pressed }) => [
@@ -339,7 +330,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -348,8 +339,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
 
@@ -390,8 +381,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
 
@@ -406,7 +397,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 8,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 20,
     color: colors.neutral.textSecondary,
   },
@@ -421,30 +412,30 @@ const styles = StyleSheet.create({
 
   label: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   optional: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
   input: {
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: 15,
     borderRadius: 13,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   select: {
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: 15,
     borderRadius: 13,
     backgroundColor: colors.neutral.white,
@@ -457,17 +448,17 @@ const styles = StyleSheet.create({
 
   selectText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   chevron: {
-    fontSize: 9,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
   amountInput: {
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: 15,
     borderRadius: 13,
     backgroundColor: colors.neutral.white,
@@ -479,7 +470,7 @@ const styles = StyleSheet.create({
 
   rupee: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.primary.forest,
     marginRight: 8,
   },
@@ -487,7 +478,7 @@ const styles = StyleSheet.create({
   amountTextInput: {
     flex: 1,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
@@ -500,13 +491,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.neutral.border,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 19,
     color: colors.neutral.textPrimary,
   },
 
   documentButton: {
-    height: 50,
+    minHeight: 50,
     borderRadius: 13,
     borderWidth: 1,
     borderColor: colors.brand.sage,
@@ -524,7 +515,7 @@ const styles = StyleSheet.create({
 
   documentText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.primary.forest,
   },
 
@@ -546,7 +537,7 @@ const styles = StyleSheet.create({
   },
 
   lock: {
-    fontSize: 12,
+    fontSize: 13,
   },
 
   securityContent: {
@@ -556,15 +547,15 @@ const styles = StyleSheet.create({
 
   securityTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.neutral.textPrimary,
   },
 
   securityText: {
     marginTop: 3,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
 
@@ -577,7 +568,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     alignItems: 'center',
@@ -591,14 +582,14 @@ const styles = StyleSheet.create({
 
   buttonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.white,
   },
 
   footer: {
     marginTop: 10,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 10.5,
+    fontSize: 12,
     color: colors.neutral.textMuted,
     textAlign: 'center',
   },

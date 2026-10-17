@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { router } from 'expo-router';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getCheckInStatus, updateCheckInSettings, type CheckInPolicy } from '@/src/api/check-in.api';
@@ -104,14 +105,12 @@ export default function CheckInPreferencesScreen() {
         {/* Header */}
 
         <View style={styles.header}>
-          <Pressable
+          <Pressable accessibilityRole="button"
             onPress={() => router.back()}
             hitSlop={12}
             style={styles.backButton}
           >
-            <Text style={styles.backArrow}>
-              ‹
-            </Text>
+            <AppIcon name="chevronLeft" style={styles.backArrow} />
           </Pressable>
 
           <Text style={styles.brand}>
@@ -123,7 +122,7 @@ export default function CheckInPreferencesScreen() {
 
         <View style={styles.heading}>
           <Text style={styles.eyebrow}>
-            CHECK-IN PREFERENCES
+            Check-in preferences
           </Text>
 
           <Text style={styles.title}>
@@ -138,17 +137,15 @@ export default function CheckInPreferencesScreen() {
         {/* Frequency */}
 
         <Text style={styles.sectionLabel}>
-          CHECK-IN FREQUENCY
+          Check-in frequency
         </Text>
 
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={() => setSelectedSchedule('MONTHLY')}
           style={[styles.frequencyCard, selectedSchedule === 'MONTHLY' && styles.frequencyCardSelected]}
         >
           <View style={[styles.checkCircle, selectedSchedule === 'MONTHLY' && styles.checkCircleSelected]}>
-            <Text style={[styles.check, selectedSchedule === 'MONTHLY' && styles.checkSelected]}>
-              ✓
-            </Text>
+            <AppIcon name="check" style={[styles.check, selectedSchedule === 'MONTHLY' && styles.checkSelected]} />
           </View>
 
           <View style={styles.optionContent}>
@@ -162,7 +159,7 @@ export default function CheckInPreferencesScreen() {
           </View>
         </Pressable>
 
-        <Pressable
+        <Pressable accessibilityRole="button"
           onPress={() => {
             if (!hasCustomCheckIn) {
               setCustomModalVisible(true);
@@ -185,7 +182,7 @@ export default function CheckInPreferencesScreen() {
               </Text>
               {!hasCustomCheckIn && (
                 <View style={styles.lockBadge}>
-                  <Text style={styles.lockBadgeText}>SECURE</Text>
+                  <Text style={styles.lockBadgeText}>Secure</Text>
                 </View>
               )}
             </View>
@@ -199,7 +196,7 @@ export default function CheckInPreferencesScreen() {
         {/* Schedule */}
 
         <Text style={styles.sectionLabel}>
-          SCHEDULE
+          Schedule
         </Text>
 
         <View style={styles.selectCard}>
@@ -213,10 +210,10 @@ export default function CheckInPreferencesScreen() {
         {/* Time */}
 
         <Text style={styles.sectionLabel}>
-          PREFERRED TIME
+          Preferred time
         </Text>
 
-        <Pressable onPress={selectPreferredTime} style={styles.selectCard}>
+        <Pressable accessibilityRole="button" onPress={selectPreferredTime} style={styles.selectCard}>
           <Text style={styles.selectValue}>
             {new Date(`2000-01-01T${preferredTime}`).toLocaleTimeString([], {
               hour: 'numeric',
@@ -224,15 +221,13 @@ export default function CheckInPreferencesScreen() {
             })}
           </Text>
 
-          <Text style={styles.chevron}>
-            ›
-          </Text>
+          <AppIcon name="chevronRight" style={styles.chevron} />
         </Pressable>
 
         {/* Contact */}
 
         <Text style={styles.sectionLabel}>
-          HOW SHOULD WE CONTACT YOU?
+          How should we contact you?
         </Text>
 
         <View style={styles.contactCard}>
@@ -246,7 +241,7 @@ export default function CheckInPreferencesScreen() {
         {/* Response Window */}
 
         <Text style={styles.sectionLabel}>
-          REMINDER WINDOW
+          Reminder window
         </Text>
 
         <View style={styles.selectCard}>
@@ -259,9 +254,7 @@ export default function CheckInPreferencesScreen() {
 
         <View style={styles.infoCard}>
           <View style={styles.infoIcon}>
-            <Text style={styles.infoText}>
-              i
-            </Text>
+            <AppIcon name="info" style={styles.infoText} />
           </View>
 
           <Text style={styles.infoDescription}>
@@ -274,9 +267,9 @@ export default function CheckInPreferencesScreen() {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {loading && <ActivityIndicator />}
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        {loadFailed && <Pressable onPress={() => setRetry((value) => value + 1)}><Text style={{ color: colors.primary.forest, paddingVertical: 12 }}>Retry loading settings</Text></Pressable>}
+        {loadFailed && <Pressable accessibilityRole="button" onPress={() => setRetry((value) => value + 1)}><Text style={{ color: colors.primary.forest, paddingVertical: 12 }}>Retry loading settings</Text></Pressable>}
 
-        <Pressable
+        <Pressable accessibilityRole="button"
           disabled={saving || loading || loadFailed}
           onPress={handleContinue}
           style={({ pressed }) => [
@@ -291,10 +284,6 @@ export default function CheckInPreferencesScreen() {
             <>
               <Text style={styles.buttonText}>
                 Continue
-              </Text>
-
-              <Text style={styles.buttonArrow}>
-                →
               </Text>
             </>
           )}
@@ -330,7 +319,7 @@ function ContactOption({
   subtitle?: string;
 }) {
   return (
-    <Pressable style={styles.contactOption}>
+    <Pressable accessibilityRole="button" style={styles.contactOption}>
       <View
         style={[
           styles.radio,
@@ -370,7 +359,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -379,8 +368,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
 
@@ -421,8 +410,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
 
@@ -437,7 +426,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 9,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 19,
     color: colors.neutral.textSecondary,
   },
@@ -446,8 +435,8 @@ const styles = StyleSheet.create({
     marginTop: 17,
     marginBottom: 8,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.1,
+    fontSize: 12,
+    
     color: colors.neutral.textMuted,
   },
 
@@ -483,7 +472,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#E5EBE8',
+    backgroundColor: colors.neutral.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -494,7 +483,7 @@ const styles = StyleSheet.create({
 
   check: {
     color: colors.neutral.textMuted,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
   },
 
@@ -517,9 +506,9 @@ const styles = StyleSheet.create({
 
   lockBadgeText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
+    fontSize: 12,
     color: colors.neutral.white,
-    letterSpacing: 0.5,
+    
   },
 
   optionContent: {
@@ -528,19 +517,19 @@ const styles = StyleSheet.create({
 
   optionTitle: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11.5,
+    fontSize: 13,
     color: colors.primary.deepForest,
   },
 
   optionSubtitle: {
     marginTop: 2,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
+    fontSize: 12,
     color: colors.primary.forest,
   },
 
   selectCard: {
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: 15,
     borderRadius: 13,
     backgroundColor: colors.neutral.white,
@@ -553,7 +542,7 @@ const styles = StyleSheet.create({
 
   selectValue: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
@@ -605,14 +594,14 @@ const styles = StyleSheet.create({
 
   contactTitle: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textPrimary,
   },
 
   contactSubtitle: {
     marginTop: 2,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9,
+    fontSize: 12,
     color: colors.neutral.textMuted,
   },
 
@@ -642,7 +631,7 @@ const styles = StyleSheet.create({
 
   infoText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.primary.forest,
   },
 
@@ -650,8 +639,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 9,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 9.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.neutral.textSecondary,
   },
 
@@ -664,7 +653,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',
@@ -685,13 +674,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: '#B42318',
+    fontSize: 13,
+    color: colors.semantic.error,
   },
 
   buttonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.white,
   },
 

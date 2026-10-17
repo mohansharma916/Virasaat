@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { assignLegacyItem, listLegacyItems, type LegacyItem } from '@/src/api/vault.api';
 import { listRecipients, type Recipient } from '@/src/api/recipients.api';
 import { getReleasePolicy, type ReleasePolicy } from '@/src/api/release.api';
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
@@ -126,12 +127,12 @@ export default function ItemSettingsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.replace('/(auth)/home')}
+        <Pressable accessibilityRole="button"
+          onPress={() => router.replace('/(auth)/(tabs)/home')}
           hitSlop={12}
           style={styles.backButton}
         >
-          <Text style={styles.backArrow}>‹</Text>
+          <AppIcon name="chevronLeft" style={styles.backArrow} />
         </Pressable>
         <Text style={styles.brand}>VIRASAT</Text>
       </View>
@@ -141,7 +142,7 @@ export default function ItemSettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>
-          <Text style={styles.eyebrow}>VAULT ASSIGNMENT</Text>
+          <Text style={styles.eyebrow}>Vault assignment</Text>
           <Text style={styles.title}>Release Settings</Text>
           <Text style={styles.subtitle}>
             Save recipient and policy preferences for each item. Recipient access and inheritance release are not available yet.
@@ -158,7 +159,7 @@ export default function ItemSettingsScreen() {
         {error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>{error}</Text>
-            <Pressable
+            <Pressable accessibilityRole="button"
               onPress={() => setRetry((v) => v + 1)}
               style={styles.retryButton}
             >
@@ -183,7 +184,7 @@ export default function ItemSettingsScreen() {
             {items.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyText}>No items found in your vault.</Text>
-                <Pressable
+                <Pressable accessibilityRole="button"
                   onPress={() => router.push('/(auth)/legacy-setup')}
                   style={styles.outlineButton}
                 >
@@ -240,7 +241,7 @@ export default function ItemSettingsScreen() {
             {people.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyText}>No recipients added yet.</Text>
-                <Pressable
+                <Pressable accessibilityRole="button"
                   onPress={() => router.push('/(auth)/trusted-person')}
                   style={styles.outlineButton}
                 >
@@ -306,7 +307,7 @@ export default function ItemSettingsScreen() {
             ) : (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyText}>Release policy is not yet configured.</Text>
-                <Pressable
+                <Pressable accessibilityRole="button"
                   onPress={() => router.push('/(auth)/release-rules')}
                   style={styles.outlineButton}
                 >
@@ -348,7 +349,7 @@ export default function ItemSettingsScreen() {
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Pressable
+        <Pressable accessibilityRole="button"
           disabled={!canSave}
           onPress={() => void save()}
           style={({ pressed }) => [
@@ -362,7 +363,6 @@ export default function ItemSettingsScreen() {
           ) : (
             <>
               <Text style={styles.primaryButtonText}>Confirm Assignment</Text>
-              <Text style={styles.buttonArrow}>→</Text>
             </>
           )}
         </Pressable>
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.ivory,
   },
   header: {
-    height: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -386,8 +386,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 24,
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
   },
   backArrow: {
@@ -412,21 +412,21 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9,
-    letterSpacing: 1.5,
+    fontSize: 12,
+    
     color: colors.primary.forest,
   },
   title: {
     marginTop: 6,
     fontFamily: typography.fonts.playfair.semiBold,
     fontSize: 27,
-    lineHeight: 34,
+    lineHeight: 39,
     color: colors.primary.deepForest,
   },
   subtitle: {
     marginTop: 6,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12.5,
+    fontSize: 13,
     lineHeight: 19,
     color: colors.neutral.textSecondary,
   },
@@ -437,48 +437,48 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textMuted,
   },
   errorCard: {
-    backgroundColor: '#FDE8E8',
+    backgroundColor: colors.semantic.errorSoft,
     padding: 14,
     borderRadius: 12,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#F8B4B4',
+    borderColor: colors.semantic.errorBorder,
     alignItems: 'center',
   },
   errorText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
-    color: '#9B1C1C',
+    fontSize: 13,
+    color: colors.semantic.error,
     textAlign: 'center',
   },
   retryButton: {
     marginTop: 8,
     paddingHorizontal: 14,
     paddingVertical: 5,
-    backgroundColor: '#9B1C1C',
+    backgroundColor: colors.semantic.error,
     borderRadius: 8,
   },
   retryText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.white,
   },
   successCard: {
-    backgroundColor: '#DEF7EC',
+    backgroundColor: colors.semantic.successSoft,
     padding: 14,
     borderRadius: 12,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#BCF0DA',
+    borderColor: colors.semantic.successSoft,
   },
   successText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
-    color: '#03543F',
+    fontSize: 13,
+    color: colors.semantic.success,
     textAlign: 'center',
   },
   sectionHeader: {
@@ -487,8 +487,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 9.5,
-    letterSpacing: 1.2,
+    fontSize: 12,
+    
     color: colors.neutral.textMuted,
   },
   reauthCard: {
@@ -503,17 +503,17 @@ const styles = StyleSheet.create({
   },
   reauthTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.primary.deepForest,
   },
   reauthInput: {
-    height: 48,
+    minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.neutral.border,
     paddingHorizontal: 14,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.textPrimary,
   },
   emptyCard: {
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12.5,
+    fontSize: 13,
     color: colors.neutral.textSecondary,
     marginBottom: 10,
   },
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   },
   outlineButtonText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.primary.forest,
   },
   selectCard: {
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   },
   selectCardActive: {
     borderColor: colors.primary.forest,
-    backgroundColor: '#FAFDFB',
+    backgroundColor: colors.neutral.white,
   },
   cardPressed: {
     opacity: 0.85,
@@ -584,12 +584,12 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.primary.deepForest,
   },
   itemMeta: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textSecondary,
     marginTop: 2,
   },
@@ -609,26 +609,26 @@ const styles = StyleSheet.create({
   },
   policyBadge: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10,
-    letterSpacing: 1,
+    fontSize: 12,
+    
     color: colors.primary.deepForest,
   },
   policyActive: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.primary.forest,
   },
   policyDesc: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 17,
     color: colors.primary.deepForest,
     marginBottom: 4,
   },
   policySubtext: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 19,
     color: colors.neutral.textSecondary,
   },
   bottomBar: {
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.neutral.border,
   },
   primaryButton: {
-    height: 54,
+    minHeight: 54,
     borderRadius: 14,
     backgroundColor: colors.primary.deepForest,
     flexDirection: 'row',

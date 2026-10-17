@@ -1,381 +1,207 @@
-import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, router } from 'expo-router';
 
+import { ActionBar } from '@/src/components/ActionBar';
+import { AppIcon } from '@/src/components/AppIcon';
+import { Button } from '@/src/components/Button';
+import { InlineNotice } from '@/src/components/InlineNotice';
+import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { SelectionRow } from '@/src/components/SelectionRow';
+import { TextLink } from '@/src/components/TextLink';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
+import { createItemRequestKey } from '@/src/api/vault.api';
+import { createRecipient, updateRecipient } from '@/src/api/recipients.api';
+import type { RecipientNotificationMode as NotificationMode } from '@/src/api/recipients.api';
+import { getApiErrorMessage } from '@/src/utils/api-error';
+import { haptics } from '@/src/utils/haptics';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { updateTrustedPersonDraft } from '@/src/store/trusted-person-draft.slice';
+import { addRecipient, refreshVaultData } from '@/src/store/vault.slice';
 
-import type { RecipientNotificationMode as NotificationMode } from '@/src/api/recipients.api';
-
+// Review and save in one step (previously split across review + confirmation).
 export default function TrustedPersonReviewScreen() {
-  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const draft = useAppSelector((state) => state.trustedPersonDraft);
 
-  const [notificationMode, setNotificationMode] =
-    useState<NotificationMode | null>(draft?.notificationMode ?? 'INFORM_ON_ACTIVATION');
-
+  const [notificationMode] = useState<NotificationMode>(draft?.notificationMode ?? 'INFORM_ON_ACTIVATION');
   const [verificationRequired, setVerificationRequired] = useState(draft?.verificationRequired ?? true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const busy = useRef(false);
+  const requestKey = useRef(createItemRequestKey());
+  const savedId = useRef(draft?.recipientId ?? undefined);
 
-  const handleContinue = () => {
-    if (!notificationMode) {
+  // Opened without the form (e.g. after a restart): start again from the people list.
+  if (!draft) return <Redirect href="/(auth)/(tabs)/people" />;
+
+  const name = draft.name?.trim() ?? '';
+  const email = draft.email?.trim() ?? '';
+  const phone = draft.phone?.trim() ?? '';
+  const relationship = draft.relationship?.trim() ?? '';
+
+  const handleSave = async () => {
+    if (busy.current) return;
+
+    if (!name || !email) {
+      setError('Some details are missing. Go back and add their name and email.');
+      haptics.error();
       return;
     }
 
-    dispatch(updateTrustedPersonDraft({ notificationMode, verificationRequired }));
-    router.push('/(auth)/trusted-person-confirmation');
+    try {
+      busy.current = true;
+      setSaving(true);
+      setError('');
+      const preferences = { verificationRequired, notificationMode, phone, relationship } as const;
+      const recipient = savedId.current
+        ? await updateRecipient(savedId.current, { name, email, ...preferences })
+        : await createRecipient({ requestKey: requestKey.current, name, email, ...preferences });
+      savedId.current = recipient.id;
+      dispatch(updateTrustedPersonDraft({ recipientId: recipient.id, name: recipient.name, notificationMode, verificationRequired }));
+      if (draft.recipientId) {
+        await dispatch(refreshVaultData()).unwrap();
+      } else {
+        dispatch(addRecipient(recipient));
+      }
+      haptics.success();
+      router.replace('/(auth)/trusted-person-success');
+    } catch (requestError) {
+      haptics.error();
+      setError(getApiErrorMessage(requestError, 'We couldn’t save this trusted person. Check your connection and try again.'));
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
   };
 
-  // Opened without the form (e.g. after a restart): start again from the people list.
-  if (!draft) return <Redirect href="/(auth)/people" />;
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <ScreenHeader onBack="default" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title} accessibilityRole="header">Review and save</Text>
+        <Text style={styles.subtitle}>Check these details before saving.</Text>
 
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.backButton}
-          >
-            <Text style={styles.backArrow}>‹</Text>
-          </Pressable>
-
-          <Text style={styles.brand}>
-            VIRASAT
-          </Text>
-        </View>
-
-        {/* Heading */}
-
-        <View style={styles.heading}>
-          <Text style={styles.title}>
-            Review trusted person
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Make sure these details are correct
-            before continuing.
-          </Text>
-        </View>
-
-        {/* Person card */}
-
-        <View style={styles.personCard}>
+        <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardLabel}>
-              TRUSTED PERSON
-            </Text>
-
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={10}
-            >
-              <Text style={styles.editText}>
-                Edit →
-              </Text>
-            </Pressable>
+            <Text style={styles.cardLabel}>Trusted person</Text>
+            <TextLink title="Edit" onPress={() => router.back()} accessibilityHint="Go back to the details form" />
           </View>
 
           <View style={styles.personRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {draft.name
-                  ?.charAt(0)
-                  .toUpperCase() || '?'}
-              </Text>
+              {name ? (
+                <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+              ) : (
+                <AppIcon name="user" size={22} color={colors.primary.forest} />
+              )}
             </View>
-
             <View style={styles.personDetails}>
-              <Text style={styles.personName}>
-                {draft.name || 'Trusted Person'}
-              </Text>
-
-              <Text style={styles.relationship}>
-                {draft.relationship?.trim() ||
-                  'Relationship not specified'}
-              </Text>
+              <Text style={styles.personName}>{name || 'Name missing'}</Text>
+              {relationship ? <Text style={styles.meta}>{relationship}</Text> : null}
             </View>
           </View>
 
-          <View style={styles.contactRow}>
-            <Text style={styles.contactIcon}>
-              ✉
-            </Text>
-
-            <Text style={styles.contactText}>
-              {draft.email || 'No email provided'}
-            </Text>
-          </View>
-
-          <View style={styles.contactRow}>
-            <Text style={styles.contactIcon}>
-              ☎
-            </Text>
-
-            <Text style={styles.contactText}>
-              {draft.phone || 'No phone provided'}
-            </Text>
-          </View>
+          {email ? (
+            <View style={styles.contactRow}>
+              <AppIcon name="mail" size={18} color={colors.neutral.textSecondary} />
+              <Text style={styles.contactText}>{email}</Text>
+            </View>
+          ) : null}
+          {phone ? (
+            <View style={styles.contactRow}>
+              <AppIcon name="phone" size={18} color={colors.neutral.textSecondary} />
+              <Text style={styles.contactText}>{phone}</Text>
+            </View>
+          ) : null}
         </View>
 
-        {/* Notification heading */}
-
-        <Text style={styles.sectionTitle}>
-          When should we contact them?
-        </Text>
-
-        {/* Inform now */}
-
-        <NotificationOption
-          selected={
-            notificationMode === 'INFORM_NOW'
-          }
-          disabled
-          title="Invitations coming soon"
-          description="Invitation sending and recipient acceptance are not available yet."
-          onPress={() =>
-            setNotificationMode('INFORM_NOW')
-          }
-        />
-
-        {/* Inform later */}
-
-        <NotificationOption
-          selected={
-            notificationMode ===
-            'INFORM_ON_ACTIVATION'
-          }
-          title="Keep private"
-          description="Save their details privately. No invitation is sent and no item access is granted."
-          onPress={() =>
-            setNotificationMode(
-              'INFORM_ON_ACTIVATION'
-            )
-          }
-        />
-
-        <Text style={styles.sectionTitle}>Identity verification preference</Text>
-        <NotificationOption selected={verificationRequired} title="Required" description="If the assigned policy requires verification, it must be completed before released content can be opened." onPress={() => setVerificationRequired(true)} />
-        <NotificationOption selected={!verificationRequired} title="Not required" description="Choose a compatible policy when assigning an item. Authentication and release authorization always apply." onPress={() => setVerificationRequired(false)} />
-        {/* Security note */}
-
-        <View style={styles.securityCard}>
-          <View style={styles.lockCircle}>
-            <Text style={styles.lock}>
-              🔒
-            </Text>
-          </View>
-
-          <Text style={styles.securityText}>
-            They won't have access to your vault
-            just by being added as a trusted person.
-          </Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">When should we contact them?</Text>
+        <View style={styles.options} accessibilityRole="radiogroup">
+          <SelectionRow
+            kind="radio"
+            selected={notificationMode === 'INFORM_ON_ACTIVATION'}
+            onPress={() => undefined}
+            title="Keep private for now"
+            description="We save their details privately. No invitation is sent and they get no access to any item."
+          />
+          <SelectionRow
+            kind="radio"
+            selected={false}
+            disabled
+            onPress={() => undefined}
+            title="Invite them now"
+            description="Coming soon. Invitations can’t be sent yet."
+          />
         </View>
+
+        <Text style={styles.sectionTitle} accessibilityRole="header">Identity check before access</Text>
+        <View style={styles.options} accessibilityRole="radiogroup">
+          <SelectionRow
+            kind="radio"
+            selected={verificationRequired}
+            onPress={() => setVerificationRequired(true)}
+            title="Require an ID check"
+            description="They must verify their identity before opening anything released to them."
+          />
+          <SelectionRow
+            kind="radio"
+            selected={!verificationRequired}
+            onPress={() => setVerificationRequired(false)}
+            title="No ID check"
+            description="Sign-in and your release rules still apply."
+          />
+        </View>
+
+        <InlineNotice
+          tone="brand"
+          title="Your vault stays private"
+          message="Adding someone doesn’t give them access to your vault."
+          style={styles.notice}
+        />
       </ScrollView>
 
-      {/* Sticky Bottom Bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Pressable
-          disabled={!notificationMode}
-          onPress={handleContinue}
-          style={({ pressed }) => [
-            styles.button,
-            !notificationMode &&
-              styles.buttonDisabled,
-            pressed &&
-              notificationMode &&
-              styles.buttonPressed,
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            Continue
-          </Text>
-
-          <Text style={styles.buttonArrow}>
-            →
-          </Text>
-        </Pressable>
-      </View>
+      <ActionBar>
+        {error ? <InlineNotice tone="danger" message={error} style={styles.error} /> : null}
+        <Button title="Save trusted person" onPress={() => void handleSave()} loading={saving} />
+      </ActionBar>
     </SafeAreaView>
   );
 }
 
-function NotificationOption({
-  selected,
-  title,
-  description,
-  onPress,
-  disabled = false,
-}: {
-  selected: boolean;
-  title: string;
-  description: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      disabled={disabled}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected, disabled }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.option,
-        disabled && { opacity: 0.5 },
-        selected && styles.optionSelected,
-        pressed && styles.optionPressed,
-      ]}
-    >
-      <View
-        style={[
-          styles.radio,
-          selected && styles.radioSelected,
-        ]}
-      >
-        {selected && (
-          <View style={styles.radioInner} />
-        )}
-      </View>
-
-      <View style={styles.optionContent}>
-        <Text style={styles.optionTitle}>
-          {title}
-        </Text>
-
-        <Text style={styles.optionDescription}>
-          {description}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.brand.ivory,
-  },
-
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 35,
-  },
-
-  header: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-
-  backButton: {
-    position: 'absolute',
-    left: 0,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-
-  backArrow: {
-    fontSize: 34,
-    color: colors.primary.deepForest,
-  },
-
-  brand: {
-    fontFamily: typography.fonts.playfair.bold,
-    fontSize: 18,
-    letterSpacing: 3,
-    color: colors.primary.deepForest,
-  },
-
-  progressContainer: {
-    marginTop: 27,
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  progressItem: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.neutral.border,
-  },
-
-  progressItemActive: {
-    backgroundColor: colors.primary.forest,
-  },
-
-  heading: {
-    marginTop: 38,
-    marginBottom: 27,
-  },
-
+  safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
   title: {
     fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 30,
-    lineHeight: 39,
+    fontSize: typography.sizes.title1,
+    lineHeight: typography.lineHeights.title1,
     color: colors.primary.deepForest,
   },
-
   subtitle: {
     marginTop: 8,
+    marginBottom: 24,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textSecondary,
   },
-
-  personCard: {
-    padding: 18,
+  card: {
+    padding: 16,
     borderRadius: 16,
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
   },
-
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardLabel: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: colors.neutral.textMuted,
+    fontSize: typography.sizes.label,
+    color: colors.neutral.textSecondary,
   },
-
-  editText: {
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 11,
-    color: colors.primary.forest,
-  },
-
-  personRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 17,
-  },
-
+  personRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 12 },
   avatar: {
     width: 48,
     height: 48,
@@ -384,189 +210,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  avatarText: {
-    fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: 20,
-    color: colors.primary.forest,
-  },
-
-  personDetails: {
-    marginLeft: 12,
-  },
-
+  avatarText: { fontFamily: typography.fonts.playfair.semiBold, fontSize: 20, color: colors.primary.forest },
+  personDetails: { flex: 1 },
   personName: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
+    fontSize: typography.sizes.body,
+    lineHeight: typography.lineHeights.body,
     color: colors.neutral.textPrimary,
   },
-
-  relationship: {
-    marginTop: 3,
+  meta: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: typography.sizes.caption,
+    lineHeight: typography.lineHeights.caption,
     color: colors.neutral.textSecondary,
   },
-
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 13,
-  },
-
-  contactIcon: {
-    width: 24,
-    fontSize: 13,
-    color: colors.primary.forest,
-  },
-
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   contactText: {
+    flex: 1,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: typography.sizes.callout,
     color: colors.neutral.textSecondary,
   },
-
   sectionTitle: {
-    marginTop: 29,
-    marginBottom: 13,
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
-    color: colors.neutral.textPrimary,
-  },
-
-  option: {
-    flexDirection: 'row',
-    padding: 17,
+    marginTop: 28,
     marginBottom: 12,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: colors.neutral.border,
-    backgroundColor: colors.neutral.white,
-  },
-
-  optionSelected: {
-    borderColor: colors.primary.forest,
-    backgroundColor: colors.brand.mint,
-  },
-
-  optionPressed: {
-    opacity: 0.85,
-  },
-
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.neutral.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-
-  radioSelected: {
-    borderColor: colors.primary.forest,
-  },
-
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary.forest,
-  },
-
-  optionContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  optionTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
+    fontSize: typography.sizes.title3,
+    lineHeight: typography.lineHeights.title3,
     color: colors.neutral.textPrimary,
   },
-
-  optionDescription: {
-    marginTop: 5,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-
-  securityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 7,
-    padding: 14,
-    borderRadius: 13,
-    backgroundColor: colors.brand.mint,
-  },
-
-  lockCircle: {
-    width: 27,
-    height: 27,
-    borderRadius: 14,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  lock: {
-    fontSize: 12,
-  },
-
-  securityText: {
-    flex: 1,
-    marginLeft: 10,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    lineHeight: 17,
-    color: colors.neutral.textSecondary,
-  },
-
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: colors.brand.ivory,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral.border,
-  },
-
-  button: {
-    height: 54,
-    borderRadius: 14,
-    backgroundColor: colors.primary.deepForest,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-
-  buttonPressed: {
-    transform: [{ scale: 0.99 }],
-  },
-
-  buttonText: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 15,
-    color: colors.neutral.white,
-  },
-
-  buttonArrow: {
-    marginLeft: 10,
-    fontSize: 19,
-    color: colors.neutral.white,
-  },
-
-  footer: {
-    marginTop: 8,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
-    color: colors.neutral.textMuted,
-    textAlign: 'center',
-  },
+  options: { gap: 12 },
+  notice: { marginTop: 24 },
+  error: { marginBottom: 8 },
 });

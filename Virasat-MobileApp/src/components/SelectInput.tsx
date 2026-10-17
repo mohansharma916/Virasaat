@@ -7,6 +7,7 @@ import {
   ViewStyle,
 } from 'react-native';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
@@ -16,6 +17,7 @@ type SelectInputProps = {
   placeholder: string;
   onPress: () => void;
   required?: boolean;
+  error?: string;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
@@ -25,78 +27,88 @@ export function SelectInput({
   placeholder,
   onPress,
   required = true,
+  error,
   containerStyle,
 }: SelectInputProps) {
   return (
     <View style={[styles.container, containerStyle]}>
       <Text style={styles.label}>
         {label}
-
-        {required && (
-          <Text style={styles.required}> *</Text>
-        )}
+        {!required && <Text style={styles.optional}> (optional)</Text>}
       </Text>
 
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value || 'not selected'}`}
+        accessibilityHint="Opens a list to choose from"
         onPress={onPress}
         style={({ pressed }) => [
           styles.input,
+          !!error && styles.inputError,
           pressed && styles.pressed,
         ]}
       >
-        <Text
-          style={[
-            styles.value,
-            !value && styles.placeholder,
-          ]}
-        >
+        <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1}>
           {value || placeholder}
         </Text>
 
-        <Text style={styles.arrow}>
-          ˅
-        </Text>
+        <AppIcon name="chevronDown" size={20} color={colors.neutral.textSecondary} />
       </Pressable>
+
+      {error ? (
+        <View style={styles.messageRow} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          <AppIcon name="alert" size={16} color={colors.semantic.error} />
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
 
   label: {
     marginBottom: 8,
-    fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: typography.sizes.label,
+    lineHeight: typography.lineHeights.label,
     color: colors.neutral.textPrimary,
   },
 
-  required: {
-    color: colors.primary.forest,
+  optional: {
+    fontFamily: typography.fonts.inter.regular,
+    color: colors.neutral.textMuted,
   },
 
   input: {
-    height: 52,
+    minHeight: 52,
     borderWidth: 1,
-    borderColor: colors.neutral.border,
+    borderColor: colors.neutral.control,
     borderRadius: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: colors.neutral.white,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
+  },
+
+  inputError: {
+    borderColor: colors.semantic.error,
+    borderWidth: 2,
   },
 
   pressed: {
-    opacity: 0.8,
+    backgroundColor: colors.brand.mint,
   },
 
   value: {
     flex: 1,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 15,
+    fontSize: typography.sizes.body,
     color: colors.neutral.textPrimary,
   },
 
@@ -104,9 +116,18 @@ const styles = StyleSheet.create({
     color: colors.neutral.textMuted,
   },
 
-  arrow: {
-    marginLeft: 10,
-    fontSize: 18,
-    color: colors.neutral.textSecondary,
+  messageRow: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
+  error: {
+    flex: 1,
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: typography.sizes.caption,
+    lineHeight: typography.lineHeights.caption,
+    color: colors.semantic.error,
   },
 });

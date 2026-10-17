@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppIcon } from '@/src/components/AppIcon';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 
@@ -90,7 +91,7 @@ export function SearchablePickerModal({
         selectedId.toLowerCase() === item.title.toLowerCase());
 
     return (
-      <Pressable
+      <Pressable accessibilityRole="button"
         onPress={() => handleSelect(item)}
         style={({ pressed }) => [
           styles.itemRow,
@@ -135,7 +136,7 @@ export function SearchablePickerModal({
         <View style={styles.trailingContainer}>
           {isSelected ? (
             <View style={styles.checkCircle}>
-              <Text style={styles.checkText}>✓</Text>
+              <AppIcon name="check" style={styles.checkText} />
             </View>
           ) : (
             <View style={styles.uncheckCircle} />
@@ -155,7 +156,7 @@ export function SearchablePickerModal({
     >
       <View style={styles.backdrop}>
         {/* Backdrop tap to dismiss */}
-        <Pressable style={styles.dismissOverlay} onPress={handleClose} />
+        <Pressable accessibilityRole="button" style={styles.dismissOverlay} onPress={handleClose} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -186,7 +187,7 @@ export function SearchablePickerModal({
                 ) : null}
               </View>
 
-              <Pressable
+              <Pressable accessibilityRole="button"
                 onPress={handleClose}
                 hitSlop={12}
                 style={({ pressed }) => [
@@ -194,7 +195,7 @@ export function SearchablePickerModal({
                   pressed && styles.closeButtonPressed,
                 ]}
               >
-                <Text style={styles.closeIcon}>✕</Text>
+                <AppIcon name="close" style={styles.closeIcon} />
               </Pressable>
             </View>
 
@@ -214,12 +215,12 @@ export function SearchablePickerModal({
                   returnKeyType="search"
                 />
                 {searchQuery ? (
-                  <Pressable
+                  <Pressable accessibilityRole="button"
                     onPress={() => setSearchQuery('')}
                     hitSlop={8}
                     style={styles.clearButton}
                   >
-                    <Text style={styles.clearIcon}>✕</Text>
+                    <AppIcon name="close" style={styles.clearIcon} />
                   </Pressable>
                 ) : null}
               </View>
@@ -228,7 +229,7 @@ export function SearchablePickerModal({
             {/* Popular items chips row (shown when search query is empty) */}
             {popularItems.length > 0 && !searchQuery ? (
               <View style={styles.popularSection}>
-                <Text style={styles.popularLabel}>POPULAR CHOICES</Text>
+                <Text style={styles.popularLabel}>Popular choices</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -242,7 +243,7 @@ export function SearchablePickerModal({
                           popular.title.toLowerCase());
 
                     return (
-                      <Pressable
+                      <Pressable accessibilityRole="button"
                         key={popular.id}
                         onPress={() => handleSelect(popular)}
                         style={({ pressed }) => [
@@ -378,14 +379,14 @@ const styles = StyleSheet.create({
 
   countBadgeText: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.primary.forest,
   },
 
   subtitle: {
     marginTop: 4,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.neutral.textSecondary,
   },
 
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
   },
 
   closeIcon: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.primary.deepForest,
   },
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
   },
 
   searchBar: {
-    height: 48,
+    minHeight: 48,
     backgroundColor: colors.neutral.white,
     borderRadius: 14,
     borderWidth: 1,
@@ -427,7 +428,7 @@ const styles = StyleSheet.create({
   },
 
   searchIcon: {
-    fontSize: 14,
+    fontSize: 15,
     marginRight: 8,
     opacity: 0.7,
   },
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
   },
 
   clearIcon: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
     color: colors.neutral.textSecondary,
   },
@@ -464,8 +465,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 8,
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
+    fontSize: 13,
+    
     color: colors.neutral.textMuted,
   },
 
@@ -502,7 +503,7 @@ const styles = StyleSheet.create({
 
   chipText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.neutral.textPrimary,
   },
 
@@ -580,7 +581,7 @@ const styles = StyleSheet.create({
 
   badgeText: {
     fontFamily: typography.fonts.inter.medium,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.neutral.textSecondary,
     textTransform: 'uppercase',
   },
@@ -588,7 +589,7 @@ const styles = StyleSheet.create({
   itemSubtitle: {
     marginTop: 2,
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.neutral.textSecondary,
   },
 
@@ -613,7 +614,7 @@ const styles = StyleSheet.create({
 
   checkText: {
     color: colors.neutral.white,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
   },
 
@@ -653,9 +654,9 @@ const styles = StyleSheet.create({
 
   emptySubtitle: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.neutral.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
 });

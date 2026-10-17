@@ -30,16 +30,17 @@ const screens = [
   { number: '15', title: 'Trusted Person Intro', route: '/(auth)/trusted-person-intro' },
   { number: '16', title: 'Trusted Person Form', route: '/(auth)/trusted-person' },
   { number: '17', title: 'Trusted Person Review', route: '/(auth)/trusted-person-review' },
-  { number: '18', title: 'Trusted Person Confirmation', route: '/(auth)/trusted-person-confirmation' },
   { number: '19', title: 'Trusted Person Success', route: '/(auth)/trusted-person-success' },
-  { number: '20', title: 'Trusted Persons Directory', route: '/(auth)/people' },
+  { number: '20', title: 'Trusted Persons Directory', route: '/(auth)/(tabs)/people' },
   { number: '21', title: 'Legacy Review', route: '/(auth)/legacy-review' },
   { number: '22', title: 'Item Assignment Settings', route: '/(auth)/item-settings' },
   { number: '23', title: 'Release Rules', route: '/(auth)/release-rules' },
   { number: '24', title: 'Check-in Preferences', route: '/(auth)/check-in-preferences' },
-  { number: '25', title: 'Dashboard (Home)', route: '/(auth)/home' },
+  { number: '25', title: 'Dashboard (Home)', route: '/(auth)/(tabs)/home' },
   { number: '26', title: 'Plan Comparison', route: '/(auth)/plans' },
   { number: '27', title: 'My Plan & Billing', route: '/(auth)/my-plan' },
+  { number: '29', title: 'Account (tab)', route: '/(auth)/(tabs)/account' },
+  { number: '30', title: 'Vault (tab)', route: '/(auth)/(tabs)/saved-items' },
   { number: '28', title: 'Delete Account', route: '/(auth)/delete-account' },
 ];
 
@@ -62,17 +63,17 @@ export default function DevScreen() {
             <Code2 size={22} color={colors.primary.deepForest} />
           </View>
 
-          <Text style={styles.eyebrow}>DEVELOPMENT ONLY</Text>
+          <Text style={styles.eyebrow}>Development only</Text>
           <Text style={styles.title}>Screen Navigator</Text>
           <Text style={styles.description}>
-            Direct access to all 28 Virasat mobile screens for testing and verification.
+            Direct access to the Virasat mobile screens for testing and verification.
           </Text>
         </View>
 
         {/* Screen List */}
         <View style={styles.list}>
           {screens.map((screen) => (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={screen.number}
               style={styles.screenCard}
               onPress={() => openScreen(screen.route)}
@@ -130,8 +131,8 @@ const styles = StyleSheet.create({
 
   eyebrow: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 10,
-    letterSpacing: 2,
+    fontSize: 12,
+    
     color: colors.primary.forest,
     marginBottom: 6,
   },
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
 
   description: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.textMuted,
     marginTop: 6,
     lineHeight: 20,
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
 
   numberText: {
     fontFamily: typography.fonts.inter.bold,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.primary.deepForest,
   },
 
@@ -188,20 +189,20 @@ const styles = StyleSheet.create({
 
   screenTitle: {
     fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.neutral.textPrimary,
   },
 
   route: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textMuted,
     marginTop: 2,
   },
 
   warning: {
     fontFamily: typography.fonts.inter.regular,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.neutral.textMuted,
     textAlign: 'center',
     marginTop: 24,

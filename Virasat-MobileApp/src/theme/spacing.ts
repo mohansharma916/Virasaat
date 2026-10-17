@@ -1,3 +1,4 @@
+// 4-point scale. Screen side margin is `screen` (16).
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -7,4 +8,6 @@ export const spacing = {
   xxl: 24,
   xxxl: 32,
   huge: 40,
+  screen: 16,
+  touch: 48,
 } as const;
