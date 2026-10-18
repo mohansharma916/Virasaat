@@ -27,14 +27,14 @@ export const metadata: Metadata = {
   authors: [{ name: 'Virasat Technologies Inc.' }],
   creator: 'Virasat',
   publisher: 'Virasat Technologies',
-  metadataBase: new URL('https://virasat.app'),
+  metadataBase: new URL('https://www.virasat.knowyourviews.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://virasat.app',
+    url: 'https://www.virasat.knowyourviews.com',
     title: 'Virasat (विरासत) — Keep Your Family’s Money & Memories Safe',
     description:
       'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Join the free waitlist for launch updates.',

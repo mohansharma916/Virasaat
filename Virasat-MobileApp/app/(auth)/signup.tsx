@@ -231,8 +231,8 @@ export default function SignupScreen() {
             <Text style={styles.termsText}>I agree to the Terms and Privacy Policy</Text>
           </Pressable>
           <View style={styles.legalLinks}>
-            <TextLink title="Read the Terms" onPress={() => void Linking.openURL('https://virasat.app/terms/')} />
-            <TextLink title="Read the Privacy Policy" onPress={() => void Linking.openURL('https://virasat.app/privacy/')} />
+            <TextLink title="Read the Terms" onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/terms/')} />
+            <TextLink title="Read the Privacy Policy" onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/privacy/')} />
           </View>
           {errors.terms ? <InlineNotice tone="danger" message={errors.terms} /> : null}
 

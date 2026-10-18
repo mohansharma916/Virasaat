@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next';
 export const dynamic = 'force-static';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://virasat.app';
+  const baseUrl = 'https://www.virasat.knowyourviews.com';
 
   return [
     {

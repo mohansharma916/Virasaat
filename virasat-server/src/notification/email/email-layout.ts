@@ -236,11 +236,11 @@ export function wrapInEmailLayout(options: EmailLayoutOptions): string {
                         </td>
                         <td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
                         <td style="padding: 0 10px;">
-                          <a href="https://virasat.app/privacy" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Privacy Policy</a>
+                          <a href="https://www.virasat.knowyourviews.com/privacy/" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Privacy Policy</a>
                         </td>
                         <td style="color: ${BRAND_COLORS.border}; font-size: 12px;">&bull;</td>
                         <td style="padding: 0 10px;">
-                          <a href="https://virasat.app/terms" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Terms of Service</a>
+                          <a href="https://www.virasat.knowyourviews.com/terms/" target="_blank" style="font-family: 'Inter', sans-serif; font-size: 12px; color: ${BRAND_COLORS.primaryForest}; font-weight: 500; text-decoration: none;">Terms of Service</a>
                         </td>
                         ${
                           unsubscribeUrl
@@ -307,8 +307,8 @@ Descriptions and uploaded files are encrypted on the server using AES-256-GCM. A
 ${options.securityNotice || 'This is an automated communication regarding your Virasat digital vault and security settings.'}
 
 Security Settings: ${getEmailAppLink('security')}
-Privacy Policy: https://virasat.app/privacy
-Terms of Service: https://virasat.app/terms
+Privacy Policy: https://www.virasat.knowyourviews.com/privacy/
+Terms of Service: https://www.virasat.knowyourviews.com/terms/
 
 (C) ${year} Virasat Technologies Inc. All rights reserved.
 Safeguarding digital legacies with sovereignty, dignity, and care.

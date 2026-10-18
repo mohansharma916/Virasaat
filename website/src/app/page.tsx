@@ -11,8 +11,8 @@ export default function Home() {
     applicationCategory: 'FinanceApplication',
     description:
       'Organize financial records, documents and personal messages. Automated family handover and recipient access are planned and currently unavailable.',
-    url: 'https://virasat.app',
-    image: 'https://virasat.app/images/hero-vault.jpg',
+    url: 'https://www.virasat.knowyourviews.com',
+    image: 'https://www.virasat.knowyourviews.com/images/hero-vault.jpg',
     featureList: [
       'Mobile apps in development for iOS and Android',
       'Financial and document record organization',
@@ -41,8 +41,8 @@ export default function Home() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Virasat Technologies Inc.',
-    url: 'https://virasat.app',
-    logo: 'https://virasat.app/images/vault-security.jpg',
+    url: 'https://www.virasat.knowyourviews.com',
+    logo: 'https://www.virasat.knowyourviews.com/images/vault-security.jpg',
     sameAs: [
       'https://twitter.com/VirasatApp',
       'https://linkedin.com/company/virasat-app',

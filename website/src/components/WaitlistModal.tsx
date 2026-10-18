@@ -26,7 +26,7 @@ export default function WaitlistModal({ onClose, defaultEmail = '', onJoined }: 
   const [errorMessage, setErrorMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
-  const shareUrl = 'https://virasat.app/';
+  const shareUrl = 'https://www.virasat.knowyourviews.com/';
 
   useEffect(() => {
     const dialog = dialogRef.current;

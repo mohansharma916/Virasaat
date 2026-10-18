@@ -96,8 +96,8 @@ export default function AccountScreen() {
 
         <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
         <View style={styles.group}>
-          <SettingsRow icon="lock" title="Privacy policy" subtitle="Opens virasat.app" external onPress={() => void Linking.openURL('https://virasat.app/privacy/')} />
-          <SettingsRow icon="document" title="Terms of service" subtitle="Opens virasat.app" external onPress={() => void Linking.openURL('https://virasat.app/terms/')} />
+          <SettingsRow icon="lock" title="Privacy policy" subtitle="Opens virasat.knowyourviews.com" external onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/privacy/')} />
+          <SettingsRow icon="document" title="Terms of service" subtitle="Opens virasat.knowyourviews.com" external onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/terms/')} />
           <View style={styles.aboutNote}>
             <Text style={styles.aboutText}>
               Your records stay private. Automatic reminders and releasing items to your people aren’t available yet.

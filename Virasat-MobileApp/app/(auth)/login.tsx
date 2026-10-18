@@ -317,8 +317,8 @@ export default function LoginScreen() {
 
           <Text style={styles.footer}>By continuing you agree to Virasat’s Terms and Privacy Policy.</Text>
           <View style={styles.legalLinks}>
-            <TextLink title="Terms" tone="muted" onPress={() => void Linking.openURL('https://virasat.app/terms/')} />
-            <TextLink title="Privacy Policy" tone="muted" onPress={() => void Linking.openURL('https://virasat.app/privacy/')} />
+            <TextLink title="Terms" tone="muted" onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/terms/')} />
+            <TextLink title="Privacy Policy" tone="muted" onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/privacy/')} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

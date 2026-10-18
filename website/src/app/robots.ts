@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/internal/'],
     },
-    sitemap: 'https://virasat.app/sitemap.xml',
+    sitemap: 'https://www.virasat.knowyourviews.com/sitemap.xml',
   };
 }
