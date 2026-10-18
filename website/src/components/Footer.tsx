@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Shield, ArrowUp } from 'lucide-react';
+import { PLAY_STORE_URL } from '@/lib/links';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -161,14 +162,14 @@ export default function Footer() {
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <li>
-                <a href="#mobile-app" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>📱 Apple iOS (App Store Soon)</span>
+                <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🤖 Get it on Google Play</span>
                 </a>
               </li>
               <li>
-                <a href="#mobile-app" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>🤖 Google Android (Play Store Soon)</span>
-                </a>
+                <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📱 Apple iOS (Coming Soon)
+                </span>
               </li>
               <li>
                 <a href="#mobile-app" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
@@ -221,7 +222,7 @@ export default function Footer() {
             lineHeight: 1.6,
           }}
         >
-          <strong style={{ color: 'var(--sage)' }}>Legal & Regulatory Disclaimer:</strong> Virasat provides record organization and server-encrypted vault content. Automated handover, recipient access and scheduled notifications are planned and currently unavailable. Virasat does not act as a law firm, investment advisor, or substitute for formal probate court certification. Users are encouraged to execute their formal legal testamentary wills in accordance with local state and national statutes.
+          <strong style={{ color: 'var(--sage)' }}>Legal & Regulatory Disclaimer:</strong> Virasat provides record organization and server-encrypted vault content. Releases to trusted people happen only after a Virasat review and are not an emergency service. Virasat does not act as a law firm, investment advisor, or substitute for formal probate court certification. Users are encouraged to execute their formal legal testamentary wills in accordance with local state and national statutes.
         </div>
 
         {/* Bottom Bar */}

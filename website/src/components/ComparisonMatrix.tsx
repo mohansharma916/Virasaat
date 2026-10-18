@@ -8,12 +8,12 @@ export default function ComparisonMatrix() {
   const comparisonData = [
     {
       feature: 'Automated Reminder & Family Workflow',
-      virasat: 'Planned',
+      virasat: 'Email reminders',
       lawyer: false,
       google: 'Only for Gmail',
       cloud: false,
       pwManager: false,
-      note: 'Check-in recording is available; automated notification and family handover are planned.',
+      note: 'Check-ins with scheduled email reminders and a Virasat-reviewed family handover.',
     },
     {
       feature: 'Complete Bank & Investment List',
@@ -53,12 +53,12 @@ export default function ComparisonMatrix() {
     },
     {
       feature: 'Verified Family Handover',
-      virasat: 'Unavailable',
+      virasat: 'Reviewed release',
       lawyer: false,
       google: false,
       cloud: false,
       pwManager: false,
-      note: 'Release and recipient access are disabled while verified controls are developed.',
+      note: 'A person reviews every release; trusted people see only the items assigned to them.',
     },
     {
       feature: 'Time to Set Up',

@@ -79,7 +79,7 @@ export default function VaultPillars() {
       sampleUI: {
         title: '"To My Little Girl On Your Wedding Day"',
         subtitle: 'Personal Video Capsule • 12:40 mins',
-        items: ['For: Meera (Daughter)', 'Example intended recipient; delivery unavailable'],
+        items: ['For: Meera (Daughter)', 'Example intended recipient'],
       },
     },
     {
@@ -99,7 +99,7 @@ export default function VaultPillars() {
       ],
       sampleUI: {
         title: 'Emergency Master Access Guide',
-        subtitle: 'Server-encrypted content; recipient access unavailable',
+        subtitle: 'Server-encrypted content; released only after review',
         items: ['Apple ID Legacy Contact Configured', 'Home Laptop Emergency Access Notes'],
       },
     },
@@ -352,7 +352,7 @@ export default function VaultPillars() {
                       lineHeight: 1.4,
                     }}
                   >
-                    ✦ Descriptions and files use server-managed encryption. Family access is unavailable.
+                    ✦ Descriptions and files use server-managed encryption. Family access only after a Virasat review.
                   </div>
                 </div>
               </div>

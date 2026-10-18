@@ -7,14 +7,14 @@ export default function Home() {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: 'Virasat Vault',
-    operatingSystem: 'iOS, Android',
+    operatingSystem: 'Android',
     applicationCategory: 'FinanceApplication',
     description:
-      'Organize financial records, documents and personal messages. Automated family handover and recipient access are planned and currently unavailable.',
+      'Organize financial records, documents and personal messages. Check-in reminders and a Virasat-reviewed handover to the trusted people you choose.',
     url: 'https://www.virasat.knowyourviews.com',
     image: 'https://www.virasat.knowyourviews.com/images/hero-vault.jpg',
     featureList: [
-      'Mobile apps in development for iOS and Android',
+      'Android app on Google Play',
       'Financial and document record organization',
       'Personal messages and supported file uploads',
       'Server-managed encryption of descriptions and files',

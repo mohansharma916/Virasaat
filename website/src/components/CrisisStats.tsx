@@ -159,7 +159,7 @@ export default function CrisisStats() {
               One Simple List. Total Peace of Mind.
             </h3>
             <p style={{ fontSize: '0.94rem', color: 'var(--sage)', lineHeight: 1.6, margin: 0 }}>
-              Virasat helps you organize account references, policies and personal messages. Automated family sharing is planned and currently unavailable.
+              Virasat helps you organize account references, policies and personal messages. If you stop checking in, Virasat reviews the case before sharing only what you chose.
             </p>
           </div>
 

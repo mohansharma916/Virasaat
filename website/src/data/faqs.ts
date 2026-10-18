@@ -18,7 +18,7 @@ export const faqsData: FaqItem[] = [
   },
   {
     question: 'Can my trusted people access the vault?',
-    answer: 'No recipient access is currently available. Saving a person or an intended assignment does not send an invitation, verify their identity or grant them access. Verified family handover is planned.',
+    answer: 'Not while you are active. If you stop checking in past the deadline you chose, Virasat reviews the case. If approved, each trusted person can open only the items you assigned to them, in the app. Checking in at any time ends their access.',
   },
   {
     question: 'How is vault content encrypted?',
@@ -34,6 +34,6 @@ export const faqsData: FaqItem[] = [
   },
   {
     question: 'Where can I get Virasat?',
-    answer: 'Virasat is available free on Google Play for Android: https://play.google.com/store/apps/details?id=in.virasat.app. Starter is free; paid plans are not on sale yet. An iOS app is planned.',
+    answer: 'Virasat is available free on Google Play for Android: https://play.google.com/store/apps/details?id=in.virasat.app. Starter is free; paid plans are not on sale yet. The iOS app is coming soon.',
   },
 ];

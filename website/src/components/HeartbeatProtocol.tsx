@@ -24,32 +24,32 @@ export default function HeartbeatProtocol() {
       systemLog: 'DEMO::Check-in recorded. No emergency release authorized.',
     },
     {
-      step: '02', title: 'Reminder Delivery', subtitle: 'Planned capability',
-      badge: 'Planned', badgeColor: '#F4A62A', icon: Bell,
-      desc: 'Reliable scheduled reminders are still being developed. SMS and push delivery are not currently available. Keep a separate reminder for important tasks.',
-      details: ['Email transport is used for account messages', 'Scheduled reminder delivery is not guaranteed', 'Vacation pause is not currently available'],
-      systemLog: 'DEMO::Scheduled reminder workflow is planned.',
+      step: '02', title: 'Reminders', subtitle: 'If you miss a check-in',
+      badge: 'Email', badgeColor: '#F4A62A', icon: Bell,
+      desc: 'Check-in opens two days early and stays open. If you miss it, we email you after 7, 15, 21, 30 and 45 days, then more often, and every day in the final two weeks before your deadline.',
+      details: ['Email reminders on a fixed schedule', 'Check in at any time to stop them', 'SMS, push and vacation pause are not available yet'],
+      systemLog: 'DEMO::Reminder sent. Check-in still open.',
     },
     {
-      step: '03', title: 'Safety Review', subtitle: 'Planned capability',
-      badge: 'Planned', badgeColor: '#D4AF37', icon: Clock,
-      desc: 'A future release workflow will need explicit policies, a verified review process and a tested waiting period. The current app does not start a 14-day release countdown.',
-      details: ['Missed check-ins do not authorize release', 'No guarantee of emergency detection', 'Keep independent emergency arrangements'],
-      systemLog: 'DEMO::Release workflow unavailable.',
+      step: '03', title: 'Safety Review', subtitle: 'After your deadline',
+      badge: 'Reviewed', badgeColor: '#D4AF37', icon: Clock,
+      desc: 'If you still have not checked in by the deadline you chose (1 to 6 months, 3 by default), Virasat opens a review and asks your trusted people what happened. A person reviews every case.',
+      details: ['Missed check-ins alone never release anything', 'Checking in cancels the review', 'Not an emergency or health service'],
+      systemLog: 'DEMO::Review opened. Nothing released.',
     },
     {
-      step: '04', title: 'Trusted People', subtitle: 'Save details now; invitations planned',
-      badge: 'Saved Contacts', badgeColor: '#3D68C5', icon: UserCheck,
-      desc: 'You can organize trusted person details and intended assignments. Invitation delivery, acceptance and recipient identity verification are not currently available.',
-      details: ['Get permission before recording contact details', 'Saving a person does not send an invitation', 'Saving an assignment does not grant access'],
-      systemLog: 'DEMO::Contact saved. No invitation or access granted.',
+      step: '04', title: 'Trusted People', subtitle: 'Invite them now or later',
+      badge: 'Invitations', badgeColor: '#3D68C5', icon: UserCheck,
+      desc: 'Add the people you trust and choose what each one receives. Invite them now, or only if they are ever needed. They accept in the app and can see nothing until a release is approved.',
+      details: ['Get permission before adding someone', 'Invitations are sent by email', 'Being invited never grants access on its own'],
+      systemLog: 'DEMO::Invitation sent. No access granted.',
     },
     {
-      step: '05', title: 'Family Handover', subtitle: 'Not currently available',
-      badge: 'Planned', badgeColor: '#ECC862', icon: KeyRound,
-      desc: 'Automated family handover and recipient access are disabled while verified release controls are developed. Do not rely on the app to deliver accounts, documents or personal messages in an emergency.',
-      details: ['No automatic release of vault items', 'No milestone delivery of personal messages', 'Maintain your own estate and emergency plan'],
-      systemLog: 'DEMO::Handover disabled. Vault items have not been delivered.',
+      step: '05', title: 'Family Handover', subtitle: 'Only after approval',
+      badge: 'Released', badgeColor: '#ECC862', icon: KeyRound,
+      desc: 'When Virasat approves a release, each trusted person can open only the items you assigned to them, in the app. If you check in afterwards, their access ends immediately.',
+      details: ['Only assigned items, never the whole vault', 'Every access is logged', 'Keep a formal will and estate plan too'],
+      systemLog: 'DEMO::Release approved for assigned items only.',
     },
   ];
 
@@ -81,11 +81,11 @@ export default function HeartbeatProtocol() {
             }}
           >
             Check-Ins Today. <br />
-            <span className="text-gradient-gold">Family Handover Is Planned</span>
+            <span className="text-gradient-gold">A Reviewed Family Handover</span>
           </h2>
 
           <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-            Explore the current check-in tools and the planned family workflow. This interactive illustration does not send notifications or release any data.
+            See how check-ins, reminders and a reviewed handover work together. This interactive illustration does not send notifications or release any data.
           </p>
         </div>
 

@@ -44,7 +44,7 @@ export default function MobileAppShowcase() {
                   { label: 'Personal messages', id: 'video' as const, icon: Video },
                   { label: 'Check-in activity', id: 'heartbeat' as const, icon: Activity },
                 ].map((item) => <button key={item.id} type="button" className="glass-card" onClick={() => setActiveScreen(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '18px', marginBottom: '12px', color: 'var(--sage)', textAlign: 'left', cursor: 'pointer' }}><item.icon size={20} color="#D4AF37" />{item.label}<ArrowRight size={14} style={{ marginLeft: 'auto' }} /></button>)}
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '24px' }}>Family handover and recipient access are planned and currently disabled.</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '24px' }}>Your trusted people receive only what you assign them, and only after a Virasat review.</p>
               </>}
               {activeScreen === 'finance' && <>
                 <h3 style={{ fontSize: '1.5rem', marginBottom: '18px' }}>Important records</h3>
@@ -59,7 +59,7 @@ export default function MobileAppShowcase() {
               {activeScreen === 'heartbeat' && <>
                 <h3 style={{ fontSize: '1.5rem', marginBottom: '18px' }}>Check-in activity</h3>
                 <div className="glass-card" style={{ padding: '28px 18px', textAlign: 'center' }}><Activity size={38} color="#35B86B" style={{ margin: '0 auto 18px' }} /><p style={{ color: 'var(--sage)', marginBottom: '18px' }}>Try the example check-in.</p><button type="button" className="btn btn-gold" onClick={() => setChecked(!checked)} aria-pressed={checked}>{checked ? <Check size={17} /> : <Activity size={17} />}{checked ? 'Demo check-in recorded' : 'Try demo check-in'}</button><p role="status" style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '18px' }}>{checked ? 'This changes the preview only; no account activity was saved.' : 'Check-ins record activity, not proof of health.'}</p></div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '24px' }}>Scheduled reminders, SMS, push notifications, vacation pause and automated release are unavailable.</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '24px' }}>Reminders are sent by email. SMS, push notifications and vacation pause are not available yet.</p>
               </>}
               {activeScreen === 'security' && <>
                 <h3 style={{ fontSize: '1.5rem', marginBottom: '18px' }}>Your security model</h3>

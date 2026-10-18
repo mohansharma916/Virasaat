@@ -72,7 +72,7 @@ export default function Hero() {
       />
 
       <div className="container">
-        {/* Top Coming Soon Badge */}
+        {/* Top availability badge */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div className="glass-pill animate-float">
             <span
@@ -87,7 +87,7 @@ export default function Hero() {
             />
             <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>NOW ON ANDROID</span>
             <span style={{ opacity: 0.5 }}>|</span>
-            <span style={{ color: 'var(--sage)' }}>Free to start on Google Play · iOS coming later</span>
+            <span style={{ color: 'var(--sage)' }}>Free on Google Play · iOS coming soon</span>
           </div>
         </div>
 
@@ -501,7 +501,7 @@ export default function Hero() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Access:</span>
-                      <span style={{ color: 'var(--mint)' }}>Recipient access unavailable</span>
+                      <span style={{ color: 'var(--mint)' }}>Released only after review</span>
                     </div>
                   </div>
                 </div>
@@ -810,9 +810,9 @@ export default function Hero() {
                       borderLeft: '3px solid #F4A62A',
                     }}
                   >
-                    <div style={{ fontSize: '0.74rem', color: '#F4A62A', fontWeight: 700 }}>STEP 2 (PLANNED)</div>
+                    <div style={{ fontSize: '0.74rem', color: '#F4A62A', fontWeight: 700 }}>STEP 2</div>
                     <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Gentle Reminders</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Reminder delivery planned</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Email reminders for months</div>
                   </div>
 
                   <div
@@ -823,9 +823,9 @@ export default function Hero() {
                       borderLeft: '3px solid #D4AF37',
                     }}
                   >
-                    <div style={{ fontSize: '0.74rem', color: '#D4AF37', fontWeight: 700 }}>STEP 3 (PLANNED)</div>
-                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Safety Review Is Planned</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>No release countdown is active</div>
+                    <div style={{ fontSize: '0.74rem', color: '#D4AF37', fontWeight: 700 }}>STEP 3</div>
+                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Virasat Safety Review</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>After your chosen deadline</div>
                   </div>
 
                   <div
@@ -836,9 +836,9 @@ export default function Hero() {
                       borderLeft: '3px solid #3D68C5',
                     }}
                   >
-                    <div style={{ fontSize: '0.74rem', color: '#3D68C5', fontWeight: 700 }}>STEP 4 (PLANNED)</div>
-                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Family Access Is Planned</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Recipient access unavailable</div>
+                    <div style={{ fontSize: '0.74rem', color: '#3D68C5', fontWeight: 700 }}>STEP 4</div>
+                    <div style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 600 }}>Family Access</div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Only the items you assigned</div>
                   </div>
                 </div>
               </div>

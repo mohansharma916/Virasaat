@@ -9,9 +9,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Virasat (विरासत) — Keep Your Family’s Money & Memories Safe | Coming Soon',
+  title: 'Virasat (विरासत) — Keep Your Family’s Money & Memories Safe | Android App',
   description:
-    'Organize financial records, important documents and personal messages with Virasat. Server-encrypted vault content and check-in tools; automated family handover is planned. Join for launch updates.',
+    'Organize financial records, important documents and personal messages with Virasat. Server-encrypted vault, check-in reminders, and a reviewed handover to the people you choose. Free on Google Play.',
   keywords: [
     'Virasat',
     'family vault',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     'family emergency handover',
     'personal video messages',
     'Virasat app',
-    'Virasat iOS app',
+    'Virasat Android app',
     'Virasat Android app',
   ],
   authors: [{ name: 'Virasat Technologies Inc.' }],

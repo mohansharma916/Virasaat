@@ -178,10 +178,11 @@ export default function Navbar() {
           {/* Action CTAs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
 
-            {/* App Coming Soon Badge (Desktop) */}
+            {/* Available on Android badge (Desktop) */}
             <a
-              href="#mobile-app"
-              onClick={(e) => handleAnchorClick(e, '#mobile-app')}
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="desktop-nav"
               style={{
                 display: 'flex',
@@ -199,7 +200,7 @@ export default function Navbar() {
               }}
             >
               <Smartphone size={13} color="#ECC862" />
-              <span>App Coming Soon</span>
+              <span>Available on Android</span>
               <span
                 style={{
                   width: '6px',

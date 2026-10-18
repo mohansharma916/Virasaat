@@ -17,7 +17,7 @@ export default function Testimonials() {
     },
     {
       name: 'A busy professional', role: 'Illustrative use case', location: 'Example scenario',
-      quote: 'Save important notes and intended assignments to trusted people. Invitation delivery, identity verification and family handover are still planned.',
+      quote: 'Save important notes and intended assignments to trusted people. Invite them, and decide exactly what each one receives if a release is ever approved.',
       badge: 'Personal Organization',
     },
   ];
