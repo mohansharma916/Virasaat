@@ -142,7 +142,8 @@ jobs:
 
               set -e
 
-              cd /opt/VirasatServer/Virasat
+              # The live checkout on the server (/home/<SERVER_USER>/Virasaat).
+              cd ~/Virasaat
 
               echo "Checking out tested code..."
               git fetch origin
