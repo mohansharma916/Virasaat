@@ -37,6 +37,18 @@ export interface ReleaseAuthorization {
   expiresAt: string;
 }
 
+export interface LiveReleaseCase {
+  id: string;
+  status: ReleaseCaseStatus;
+  openedAt: string | null;
+}
+
+/** A review that started because the owner stopped checking in. */
+export async function getLiveReleaseCase(): Promise<LiveReleaseCase | null> {
+  const response = await api.get<{ case: LiveReleaseCase | null }>('/release/live-case');
+  return response.data.case;
+}
+
 export async function getReleasePolicy(): Promise<ReleasePolicy | null> {
   const response = await api.get<ReleasePolicy | null>('/release/policy');
   return response.data;

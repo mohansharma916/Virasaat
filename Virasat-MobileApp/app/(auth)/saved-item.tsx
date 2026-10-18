@@ -7,6 +7,7 @@ import type { File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { downloadLegacyItem, getLegacyItem, updateLegacyItem, type LegacyItemDetail } from '@/src/api/vault.api';
+import { downloadReleasedFile, getReleasedItem } from '@/src/api/shared.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
@@ -41,7 +42,10 @@ function SavedVideoPlayer({ uri }: { uri: string }) {
 }
 
 export default function SavedItemScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; shared?: string; owner?: string }>();
+  const { id } = params;
+  // An item someone released to this user: read-only, through /shared.
+  const shared = params.shared === '1';
   const dispatch = useAppDispatch();
   const [item, setItem] = useState<LegacyItemDetail | null>(null);
   const [title, setTitle] = useState('');
@@ -74,7 +78,7 @@ export default function SavedItemScreen() {
       setError('This saved item link is invalid.');
       return () => request.abort();
     }
-    void getLegacyItem(id, request.signal).then((detail) => {
+    void (shared ? getReleasedItem : getLegacyItem)(id, request.signal).then((detail) => {
       if (request.signal.aborted) return;
       setItem(detail);
       setTitle(detail.title);
@@ -83,7 +87,7 @@ export default function SavedItemScreen() {
       if (!request.signal.aborted) setError(getApiErrorMessage(reason, 'We couldn’t open this item. Check your connection and try again.'));
     });
     return () => request.abort();
-  }, [id, retry]);
+  }, [id, retry, shared]);
 
   const save = async () => {
     if (!item || busy || !title.trim()) return;
@@ -112,7 +116,7 @@ export default function SavedItemScreen() {
     setError('');
     try {
       if (Platform.OS !== 'web' && !(await Sharing.isAvailableAsync())) throw new Error('File sharing is unavailable on this device.');
-      const data = await downloadLegacyItem(item.id, signal);
+      const data = await (shared ? downloadReleasedFile : downloadLegacyItem)(item.id, signal);
       if (signal?.aborted) return;
       const name = (item.fileName || item.title || 'vault-file').replace(/[^\w. -]/g, '_').slice(0, 180);
       if (Platform.OS === 'web') {
@@ -149,6 +153,7 @@ export default function SavedItemScreen() {
       const extension = item.mimeType === 'video/quicktime' ? 'mov' : 'mp4';
       const file = await downloadVaultFileToCache(item.id, `${item.id}-play.${extension}`, {
         expectedBytes: item.sizeBytes,
+        shared,
         signal,
         onProgress: setVideoProgress,
       });
@@ -178,7 +183,7 @@ export default function SavedItemScreen() {
           onBack={editing ? cancelEdit : 'default'}
           backLabel={editing ? 'Cancel editing' : 'Back to vault'}
           title={editing ? 'Edit item' : undefined}
-          trailing={item && !editing ? <TextLink title="Edit" onPress={() => setEditing(true)} disabled={busy} /> : null}
+          trailing={item && !editing && !shared ? <TextLink title="Edit" onPress={() => setEditing(true)} disabled={busy} /> : null}
         />
         <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {!item && !error ? (
@@ -235,7 +240,7 @@ export default function SavedItemScreen() {
                   disabled={busy}
                   style={({ pressed }) => [styles.videoFrame, styles.videoPoster, pressed && styles.videoPressed]}
                 >
-                  <ItemThumbnail itemId={item.id} hasThumbnail={item.hasThumbnail} icon="video" fill hideIcon style={styles.posterImage} />
+                  <ItemThumbnail itemId={item.id} hasThumbnail={item.hasThumbnail} shared={shared} icon="video" fill hideIcon style={styles.posterImage} />
                   {videoProgress !== null ? (
                     <>
                       <ActivityIndicator color={colors.neutral.white} />
@@ -254,7 +259,7 @@ export default function SavedItemScreen() {
 
               {!isVideo && item.hasThumbnail ? (
                 <View style={styles.imageFrame}>
-                  <ItemThumbnail itemId={item.id} hasThumbnail icon="image" fill hideIcon />
+                  <ItemThumbnail itemId={item.id} hasThumbnail shared={shared} icon="image" fill hideIcon />
                 </View>
               ) : null}
 
@@ -263,6 +268,7 @@ export default function SavedItemScreen() {
                   <ItemThumbnail
                     itemId={item.id}
                     hasThumbnail={item.hasThumbnail}
+                    shared={shared}
                     icon={isVideo ? 'video' : item.mimeType?.startsWith('image/') ? 'image' : 'document'}
                     size={44}
                   />
@@ -280,6 +286,16 @@ export default function SavedItemScreen() {
                 </Text>
               </View>
 
+              {shared ? (
+                <InlineNotice
+                  tone="brand"
+                  title={params.owner ? `Shared with you by ${params.owner}` : 'Shared with you'}
+                  message="This item was released to you after a Virasat review. You can view and save it."
+                  style={styles.sharedNotice}
+                />
+              ) : null}
+
+              {!shared ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={item.assignment ? 'Release settings. Assigned to a person' : 'Release settings. Not assigned yet'}
@@ -297,6 +313,7 @@ export default function SavedItemScreen() {
                 </View>
                 <AppIcon name="chevronRight" size={20} color={colors.neutral.textMuted} />
               </Pressable>
+              ) : null}
 
               {item.hasFile ? (
                 <Text style={styles.footnote}>
@@ -355,6 +372,7 @@ const styles = StyleSheet.create({
   },
   video: { width: '100%', height: '100%' },
   posterImage: { opacity: 0.55 },
+  sharedNotice: { marginTop: 20 },
   imageFrame: {
     marginTop: 20,
     height: 240,

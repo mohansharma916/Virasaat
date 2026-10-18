@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     'insurance policy tracker',
     'family emergency handover',
     'personal video messages',
-    'Virasat waitlist',
+    'Virasat app',
     'Virasat iOS app',
     'Virasat Android app',
   ],
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     url: 'https://www.virasat.knowyourviews.com',
     title: 'Virasat (विरासत) — Keep Your Family’s Money & Memories Safe',
     description:
-      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Join the free waitlist for launch updates.',
+      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Download Virasat free on Google Play.',
     siteName: 'Virasat',
     images: [
       {
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Virasat — Keep Your Family’s Money & Memories Safe',
     description:
-      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Join the free waitlist for launch updates.',
+      'Keep all your bank accounts, investments, insurance, and personal video notes safe in one place. Download Virasat free on Google Play.',
     images: ['/images/hero-vault.jpg'],
     creator: '@VirasatApp',
   },

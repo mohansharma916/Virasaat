@@ -1,10 +1,4 @@
-import { AuditResult } from '../audit/entities/audit-event.entity';
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,7 +6,6 @@ import { Repository } from 'typeorm';
 import {
   ReleaseCase,
   ReleaseCaseStatus,
-  ReleaseReason,
 } from './entities/release-case.entity';
 
 import {
@@ -21,17 +14,11 @@ import {
   VerificationLevel,
 } from './entities/release-policy.entity';
 
-import {
-  AuthorizationStatus,
-  ReleaseAuthorization,
-} from './entities/release-authorization.entity';
+import { ReleaseAuthorization } from './entities/release-authorization.entity';
 
 import { CreateReleaseCaseDto } from './dto/create-release-case.dto';
 
-import {
-  Recipient,
-  RecipientStatus,
-} from '../recipients/entities/recipient.entity';
+import { Recipient } from '../recipients/entities/recipient.entity';
 import { AuditService } from '../audit/audit.service';
 
 import { Optional } from '@nestjs/common';

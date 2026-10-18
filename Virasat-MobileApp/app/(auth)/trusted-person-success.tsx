@@ -42,13 +42,15 @@ export default function TrustedPersonSuccessScreen() {
           {personName ? `${personName} is saved` : 'Trusted person saved'}
         </Text>
         <Text style={styles.subtitle}>
-          {personName ? `We’ve saved ${personName}’s details privately.` : 'We’ve saved their details privately.'} No invitation was sent.
+          {draft?.notificationMode === 'INFORM_NOW'
+            ? `We’ve emailed ${personName || 'them'} an invitation to download Virasat and accept.`
+            : `We’ve saved ${personName ? `${personName}’s` : 'their'} details privately. We’ll only contact them if they’re needed.`}
         </Text>
 
         <InlineNotice
           tone="brand"
           title="Your vault stays private"
-          message="Being a trusted person doesn’t give them access to your encrypted documents. Invitations and releasing items are coming soon."
+          message="Being a trusted person doesn’t give them access to anything now. Only the items you assign to them are released, and only after a Virasat review."
           style={styles.notice}
         />
       </ScrollView>

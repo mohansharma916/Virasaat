@@ -7,6 +7,7 @@ import { EmailTemplateService } from './email/email-template.service';
 import { EmailPreviewController } from './email/email-preview.controller';
 import { MailService } from './email/mail.service';
 import { EmailDiagnosticsGuard } from './email/email-diagnostics.guard';
+import { ReminderChannelsService } from './reminder-channels.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Notification])],
@@ -17,7 +18,13 @@ import { EmailDiagnosticsGuard } from './email/email-diagnostics.guard';
     EmailTemplateService,
     MailService,
     EmailDiagnosticsGuard,
+    ReminderChannelsService,
   ],
-  exports: [NotificationsService, EmailTemplateService, MailService],
+  exports: [
+    NotificationsService,
+    EmailTemplateService,
+    MailService,
+    ReminderChannelsService,
+  ],
 })
 export class NotificationsModule {}

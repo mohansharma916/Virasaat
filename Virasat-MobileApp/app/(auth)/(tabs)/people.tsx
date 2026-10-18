@@ -3,7 +3,9 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 
-import { listRecipients, type Recipient } from '@/src/api/recipients.api';
+import { inviteRecipient, listRecipients, type Recipient } from '@/src/api/recipients.api';
+import { TextLink } from '@/src/components/TextLink';
+import { haptics } from '@/src/utils/haptics';
 import { ActionBar } from '@/src/components/ActionBar';
 import { AppIcon } from '@/src/components/AppIcon';
 import { Button } from '@/src/components/Button';
@@ -31,6 +33,8 @@ export default function PeopleScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [inviteNotice, setInviteNotice] = useState('');
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
 
   const load = useCallback(async (mode: 'focus' | 'pull' = 'focus') => {
@@ -60,6 +64,24 @@ export default function PeopleScreen() {
   const isAtAllowedLimit = activePeople.length >= trustedPersonLimit;
   const planName = currentPlan?.name ?? 'Starter';
   const limitText = `${trustedPersonLimit} trusted ${trustedPersonLimit === 1 ? 'person' : 'people'}`;
+
+  const invite = async (person: Recipient) => {
+    if (inviting) return;
+    setInviting(person.id);
+    setError('');
+    setInviteNotice('');
+    try {
+      const updated = await inviteRecipient(person.id);
+      setPeople((current) => current.map((entry) => (entry.id === person.id ? { ...entry, ...updated } : entry)));
+      setInviteNotice(`We emailed ${person.name} an invitation.`);
+      haptics.success();
+    } catch (reason) {
+      haptics.error();
+      setError(getApiErrorMessage(reason, 'We couldn’t send the invitation. Try again.'));
+    } finally {
+      setInviting(null);
+    }
+  };
 
   const handleAddPerson = () => {
     if (isAtAllowedLimit) {
@@ -96,6 +118,7 @@ export default function PeopleScreen() {
           />
         ) : null}
 
+        {inviteNotice ? <InlineNotice tone="success" message={inviteNotice} style={styles.inviteNotice} /> : null}
         {error ? (
           <InlineNotice tone="danger" message={error} actionLabel="Try again" onAction={() => void load()} style={styles.notice} />
         ) : null}
@@ -157,6 +180,15 @@ export default function PeopleScreen() {
                       <Text style={styles.verifyText}>{person.verificationRequired ? 'ID check required' : 'No ID check'}</Text>
                     </View>
                   </View>
+                  {person.status === 'PRIVATE' || person.status === 'INVITED' ? (
+                    <TextLink
+                      title={inviting === person.id ? 'Sending…' : person.status === 'PRIVATE' ? 'Send invitation' : 'Resend invitation'}
+                      onPress={() => void invite(person)}
+                      disabled={inviting !== null}
+                      accessibilityHint={`Emails ${person.name} that you chose them as a trusted person`}
+                      style={styles.inviteLink}
+                    />
+                  ) : null}
                 </View>
 
                 <AppIcon name="chevronRight" size={20} color={colors.neutral.textMuted} />
@@ -187,6 +219,8 @@ export default function PeopleScreen() {
 }
 
 const styles = StyleSheet.create({
+  inviteLink: { alignSelf: 'flex-start', marginTop: 6 },
+  inviteNotice: { marginBottom: 12 },
   safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
   content: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
   title: {

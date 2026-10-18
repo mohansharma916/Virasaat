@@ -28,6 +28,12 @@ import { UsersService } from '../users/users.service';
 import { getEmailAppLink } from '../notification/email/email-links';
 import { nextCheckInAt } from './check-in-time';
 import { ReleaseFlowService } from '../release/release-flow.service';
+import { ReleasePolicy } from '../release/entities/release-policy.entity';
+import {
+  checkInDeadline,
+  checkInOpensAt,
+  deadlineDays,
+} from './check-in-schedule';
 
 @Injectable()
 export class CheckInService {
@@ -200,6 +206,15 @@ export class CheckInService {
           throw new BadRequestException(
             'This check-in needs a secure activity review. No release has been authorized by this request.',
           );
+        // Check-in opens two days before it is due and stays open after.
+        const opensAt = checkInOpensAt(event.dueAt);
+        if (Date.now() < opensAt.getTime())
+          throw new BadRequestException(
+            `This check-in opens on ${opensAt.toLocaleDateString('en-IN', {
+              dateStyle: 'long',
+              timeZone: policy.timezone || 'Asia/Kolkata',
+            })}.`,
+          );
         event.status = CheckInEventStatus.COMPLETED;
         event.respondedAt = new Date();
         await events.save(event);
@@ -321,9 +336,20 @@ export class CheckInService {
       },
     });
 
+    const releasePolicy = await this.policyRepository.manager
+      .getRepository(ReleasePolicy)
+      .findOne({ where: { userId } });
+    const deadline = deadlineDays(
+      releasePolicy?.escalationConfig?.checkInDeadlineDays,
+    );
+    const open = latestEvent?.status === CheckInEventStatus.PENDING;
     return {
       policy,
       currentEvent: latestEvent,
+      // When the app may offer the check-in, and when a review would start.
+      opensAt: open ? checkInOpensAt(latestEvent.dueAt) : null,
+      deadlineAt: open ? checkInDeadline(latestEvent.dueAt, deadline) : null,
+      deadlineDays: deadline,
     };
   }
 

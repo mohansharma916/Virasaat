@@ -26,7 +26,7 @@ export default function TrustedPersonReviewScreen() {
   const dispatch = useAppDispatch();
   const draft = useAppSelector((state) => state.trustedPersonDraft);
 
-  const [notificationMode] = useState<NotificationMode>(draft?.notificationMode ?? 'INFORM_ON_ACTIVATION');
+  const [notificationMode, setNotificationMode] = useState<NotificationMode>(draft?.notificationMode ?? 'INFORM_ON_ACTIVATION');
   const [verificationRequired, setVerificationRequired] = useState(draft?.verificationRequired ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -123,17 +123,16 @@ export default function TrustedPersonReviewScreen() {
           <SelectionRow
             kind="radio"
             selected={notificationMode === 'INFORM_ON_ACTIVATION'}
-            onPress={() => undefined}
-            title="Keep private for now"
-            description="We save their details privately. No invitation is sent and they get no access to any item."
+            onPress={() => setNotificationMode('INFORM_ON_ACTIVATION')}
+            title="Only if they’re needed"
+            description="We keep their details private. We email them only if you stop checking in and a review starts."
           />
           <SelectionRow
             kind="radio"
-            selected={false}
-            disabled
-            onPress={() => undefined}
+            selected={notificationMode === 'INFORM_NOW'}
+            onPress={() => setNotificationMode('INFORM_NOW')}
             title="Invite them now"
-            description="Coming soon. Invitations can’t be sent yet."
+            description="We email them today so they know you chose them. They still can’t see anything you saved."
           />
         </View>
 

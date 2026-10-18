@@ -13,12 +13,9 @@ import {
   Check,
   Layers,
 } from 'lucide-react';
+import { PLAY_STORE_URL } from '@/lib/links';
 
-interface VaultPillarsProps {
-  onOpenWaitlist: () => void;
-}
-
-export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
+export default function VaultPillars() {
   const [selectedPillar, setSelectedPillar] = useState(0);
 
   const pillars = [
@@ -272,15 +269,17 @@ export default function VaultPillars({ onOpenWaitlist }: VaultPillarsProps) {
                     ))}
                   </div>
 
-                  <button
-                    onClick={onOpenWaitlist}
+                  <a
+                    href={PLAY_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="btn btn-gold"
                     style={{ padding: '13px 26px', fontSize: '0.95rem' }}
                   >
                     <Sparkles size={16} />
-                    <span>Join for Launch Updates</span>
+                    <span>Download on Google Play</span>
                     <ArrowRight size={16} />
-                  </button>
+                  </a>
                 </div>
 
                 {/* Right Mockup Card Preview */}

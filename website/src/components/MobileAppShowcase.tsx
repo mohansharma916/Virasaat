@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Activity, ArrowRight, Check, FileText, Home, Lock, ShieldCheck, Smartphone, Video, Wallet } from 'lucide-react';
+import { PLAY_STORE_URL } from '@/lib/links';
 
-interface MobileAppShowcaseProps { onOpenWaitlist: () => void; }
 const screens = [
   { id: 'home', label: 'Overview', icon: Home },
   { id: 'finance', label: 'Records', icon: Wallet },
@@ -13,7 +13,7 @@ const screens = [
 ] as const;
 type Screen = typeof screens[number]['id'];
 
-export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseProps) {
+export default function MobileAppShowcase() {
   const [activeScreen, setActiveScreen] = useState<Screen>('home');
   const [devicePlatform, setDevicePlatform] = useState<'ios' | 'android'>('ios');
   const [checked, setChecked] = useState(false);
@@ -22,7 +22,7 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
     <section id="mobile-app" className="section">
       <div className="container">
         <div style={{ textAlign: 'center', maxWidth: '780px', margin: '0 auto 36px' }}>
-          <div className="glass-pill" style={{ marginBottom: '16px' }}><Smartphone size={15} color="#D4AF37" />iOS & Android · Coming soon</div>
+          <div className="glass-pill" style={{ marginBottom: '16px' }}><Smartphone size={15} color="#D4AF37" />Android · Available now</div>
           <h2 style={{ fontSize: 'clamp(2rem, 4.4vw, 3.4rem)', marginBottom: '18px' }}>Your Records, on Your Phone.<br /><span className="text-gradient-gold">A Preview of the Family Vault.</span></h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>Explore example records, personal messages and check-in tools. This website illustration uses sample data and does not authenticate you, save vault items, send reminders or release content to family.</p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '24px' }}>
@@ -78,10 +78,13 @@ export default function MobileAppShowcase({ onOpenWaitlist }: MobileAppShowcaseP
             {[
               ['Account & document details', 'Record references and upload supported documents so you can find them in one place.'],
               ['Personal messages', 'Store text and supported media without promising future milestone delivery.'],
-              ['Trusted people & check-ins', 'Save intended contacts and record activity. Saving a contact does not grant access.'],
+              ['Trusted people & check-ins', 'Invite your trusted people and confirm you’re active. Adding someone never gives them access on its own.'],
             ].map(([title, detail]) => <div key={title} style={{ marginBottom: '26px' }}><h4 style={{ color: 'var(--gold-light)', marginBottom: '8px' }}>{title}</h4><p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>{detail}</p></div>)}
-            <div className="glass-card" style={{ padding: '22px', marginBottom: '26px' }}><p style={{ color: 'var(--sage)', lineHeight: 1.7 }}>Verified family handover, recipient invitations and access are planned. Keep a separate estate and emergency plan while these features are unavailable.</p></div>
-            <button type="button" onClick={onOpenWaitlist} className="btn btn-gold"><Smartphone size={18} />Join for launch updates<ArrowRight size={17} /></button>
+            <div className="glass-card" style={{ padding: '22px', marginBottom: '26px' }}><p style={{ color: 'var(--sage)', lineHeight: 1.7 }}>If you stop checking in, Virasat reminds you for months, then reviews the case before your trusted people can open only the items you assigned them. Checking in at any time cancels it.</p></div>
+            <a
+ href={PLAY_STORE_URL}
+ target="_blank"
+ rel="noopener noreferrer" className="btn btn-gold"><Smartphone size={18} />Download on Google Play<ArrowRight size={17} /></a>
           </div>
         </div>
       </div>

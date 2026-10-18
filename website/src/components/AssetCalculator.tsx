@@ -2,12 +2,9 @@
 
 import React, { useState } from 'react';
 import { Calculator, ShieldAlert, CheckCircle, ArrowRight, Sparkles, Clock, FileCheck } from 'lucide-react';
+import { PLAY_STORE_URL } from '@/lib/links';
 
-interface AssetCalculatorProps {
-  onOpenWaitlist: () => void;
-}
-
-export default function AssetCalculator({ onOpenWaitlist }: AssetCalculatorProps) {
+export default function AssetCalculator() {
   const [netWorthIndex, setNetWorthIndex] = useState(2); // Default ₹1 Crore
   const [numAccounts, setNumAccounts] = useState(7); // Default 7 accounts
   const [numBeneficiaries, setNumBeneficiaries] = useState(2); // Default 2
@@ -307,15 +304,17 @@ export default function AssetCalculator({ onOpenWaitlist }: AssetCalculatorProps
               </div>
 
               {/* Call to action */}
-              <button
-                onClick={onOpenWaitlist}
+              <a
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn btn-gold"
                 style={{ width: '100%', justifyContent: 'center', padding: '14px 20px' }}
               >
                 <Sparkles size={18} />
-                <span>Join Waitlist to Protect Your Accounts</span>
+                <span>Download on Google Play</span>
                 <ArrowRight size={16} />
-              </button>
+              </a>
             </div>
           </div>
         </div>

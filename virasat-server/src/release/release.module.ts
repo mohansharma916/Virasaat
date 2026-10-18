@@ -31,12 +31,14 @@ import { AdminReleaseController } from './admin-release.controller';
     AuditModule,
     SubscriptionsModule,
     UsersModule,
+    NotificationsModule,
+    LegacyItemsModule,
   ],
 
-  controllers: [ReleaseController],
+  controllers: [ReleaseController, SharedController, AdminReleaseController],
 
-  providers: [ReleaseService],
+  providers: [ReleaseService, ReleaseFlowService],
 
-  exports: [ReleaseService],
+  exports: [ReleaseService, ReleaseFlowService],
 })
 export class ReleaseModule {}

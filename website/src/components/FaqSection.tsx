@@ -3,12 +3,9 @@
 import React, { useState } from 'react';
 import { HelpCircle, ChevronDown, Sparkles, ArrowRight } from 'lucide-react';
 import { faqsData } from '@/data/faqs';
+import { PLAY_STORE_URL } from '@/lib/links';
 
-interface FaqSectionProps {
-  onOpenWaitlist: () => void;
-}
-
-export default function FaqSection({ onOpenWaitlist }: FaqSectionProps) {
+export default function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggleFaq = (index: number) => {
@@ -135,15 +132,17 @@ export default function FaqSection({ onOpenWaitlist }: FaqSectionProps) {
           <p style={{ fontSize: '0.95rem', color: 'var(--sage)', marginBottom: '12px' }}>
             Ready to secure your family&apos;s accounts and memories?
           </p>
-          <button
-            onClick={onOpenWaitlist}
+          <a
+            href={PLAY_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn btn-gold"
             style={{ padding: '12px 24px', fontSize: '0.9rem' }}
           >
             <Sparkles size={16} />
-            <span>Join the Waitlist (Free Early Access)</span>
+            <span>Download on Google Play</span>
             <ArrowRight size={14} />
-          </button>
+          </a>
         </div>
       </div>
     </section>

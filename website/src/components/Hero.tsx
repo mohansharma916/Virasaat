@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import type { WaitlistRegistration } from '@/lib/waitlist';
 import {
   ShieldCheck,
   Sparkles,
@@ -15,27 +14,12 @@ import {
   CheckCircle2,
   Play,
   Smartphone,
-  Mail,
-  Check,
 } from 'lucide-react';
+import { PLAY_STORE_URL } from '@/lib/links';
 
-interface HeroProps {
-  onOpenWaitlist: (email?: string) => void;
-  registration?: WaitlistRegistration | null;
-}
-
-export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
+export default function Hero() {
   const [activeTab, setActiveTab] = useState<'financial' | 'memories' | 'documents' | 'heartbeat'>('financial');
   const [isPlayingVideoModal, setIsPlayingVideoModal] = useState(false);
-
-  // Quick waitlist state
-  const [emailInput, setEmailInput] = useState('');
-  const submittedQueue = registration?.queueNumber ?? null;
-
-  const handleHeroSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onOpenWaitlist(emailInput.trim());
-  };
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (href.startsWith('#')) {
@@ -101,9 +85,9 @@ export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
                 display: 'inline-block',
               }}
             />
-            <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>COMING SOON ON iOS & ANDROID</span>
+            <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>NOW ON ANDROID</span>
             <span style={{ opacity: 0.5 }}>|</span>
-            <span style={{ color: 'var(--sage)' }}>Join the Free Waitlist for Launch Updates</span>
+            <span style={{ color: 'var(--sage)' }}>Free to start on Google Play · iOS coming later</span>
           </div>
         </div>
 
@@ -132,110 +116,22 @@ export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
               fontWeight: 400,
             }}
           >
-            <strong style={{ color: '#FFF' }}>Virasat</strong> helps you organize financial references, important documents and personal messages in one place. Descriptions and files use server-managed encryption. Family handover is planned and currently unavailable; keep an independent estate and emergency plan.
+            <strong style={{ color: '#FFF' }}>Virasat</strong> helps you organize financial references, important documents and personal messages in one place. Descriptions and files use server-managed encryption. If you stop checking in, Virasat reviews the case before releasing only what you chose to the people you chose. Keep an independent estate plan too.
           </p>
 
-          {/* INLINE COMING SOON WAITLIST BOX */}
-          <div
-            style={{
-              maxWidth: '560px',
-              margin: '0 auto 28px',
-              background: 'rgba(6, 40, 33, 0.75)',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              borderRadius: '20px',
-              padding: '10px 10px 10px 18px',
-              boxShadow: '0 15px 40px rgba(0, 0, 0, 0.45)',
-            }}
-          >
-            {!submittedQueue ? (
-              <form
-                onSubmit={handleHeroSubmit}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1 1 240px' }}>
-                  <Mail size={18} color="#ECC862" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="Enter your email to join waitlist..."
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#FFF',
-                      fontSize: '0.96rem',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn btn-gold"
-                  style={{
-                    padding: '12px 24px',
-                    fontSize: '0.96rem',
-                    borderRadius: '14px',
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Sparkles size={16} />
-                  <span>Join Waitlist</span>
-                  <ArrowRight size={15} />
-                </button>
-              </form>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  padding: '6px 10px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: 'rgba(53, 184, 107, 0.25)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Check size={18} color="#35B86B" />
-                  </div>
-                  <div style={{ textAlign: 'left', lineHeight: 1.3 }}>
-                    <div style={{ color: '#35B86B', fontWeight: 700, fontSize: '0.92rem' }}>
-                      Spot #{submittedQueue} Secured! Signup confirmed.
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--sage)' }}>
-                      Launch updates will go to {registration?.email}.
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => onOpenWaitlist()}
-                  className="btn btn-secondary"
-                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '10px' }}
-                >
-                  View My Pass
-                </button>
-              </div>
-            )}
+          {/* Download */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-gold"
+              style={{ padding: '14px 28px', fontSize: '1rem', borderRadius: '14px' }}
+            >
+              <Smartphone size={18} />
+              <span>Download on Google Play</span>
+              <ArrowRight size={15} />
+            </a>
           </div>
 
           {/* Quick secondary action */}
@@ -306,11 +202,11 @@ export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ShieldCheck size={15} color="#ECC862" />
-              <span>Family Handover Is Planned</span>
+              <span>Reviewed Family Handover</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Sparkles size={15} color="#35B86B" />
-              <span>Free Waitlist Signup</span>
+              <span>Free Starter Plan</span>
             </div>
           </div>
         </div>
@@ -966,8 +862,10 @@ export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
               <div>
                 <span>Chosen Family Contact: <strong>Ananya Sharma</strong> (Spouse)</span>
               </div>
-              <button
-                onClick={() => onOpenWaitlist()}
+              <a
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -979,9 +877,9 @@ export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
                   gap: '4px',
                 }}
               >
-                <span>Join for Launch Updates</span>
+                <span>Download on Google Play</span>
                 <ArrowRight size={14} />
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -1070,16 +968,14 @@ export default function Hero({ onOpenWaitlist, registration }: HeroProps) {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setIsPlayingVideoModal(false);
-                onOpenWaitlist();
-              }}
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsPlayingVideoModal(false)}
               className="btn btn-gold"
               style={{ width: '100%', padding: '12px' }}
-            >
-              Join the Waitlist to Save Your Own Videos
-            </button>
+            >Download on Google Play</a>
           </div>
         </div>
       )}

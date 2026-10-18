@@ -11,6 +11,8 @@ import { Skeleton, SkeletonGroup } from '@/src/components/Skeleton';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { confirmCheckIn } from '@/src/api/check-in.api';
+import { getLiveReleaseCase, type LiveReleaseCase } from '@/src/api/release.api';
+import { getSharedOverview } from '@/src/api/shared.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { haptics } from '@/src/utils/haptics';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
@@ -40,10 +42,20 @@ export default function HomeScreen() {
   const [checkInError, setCheckInError] = useState('');
   const [confirmingCheckIn, setConfirmingCheckIn] = useState(false);
   const checkInBusy = useRef(false);
+  const [liveCase, setLiveCase] = useState<LiveReleaseCase | null>(null);
+  const [sharedNeedsYou, setSharedNeedsYou] = useState(0);
+  // Refreshed with the overview, so the check-in window stays current.
+  const [now, setNow] = useState(() => Date.now());
 
   const loadOverview = useCallback(async () => {
     setRefreshError('');
+    setNow(Date.now());
     try {
+      // Optional extras never block the overview.
+      void getLiveReleaseCase().then(setLiveCase).catch(() => undefined);
+      void getSharedOverview()
+        .then((shared) => setSharedNeedsYou(shared.invitations.length + shared.cases.filter((c) => !c.statementSubmittedAt).length))
+        .catch(() => undefined);
       await Promise.all([
         dispatch(hydrateSession()).unwrap(),
         dispatch(refreshVaultData()).unwrap(),
@@ -78,6 +90,13 @@ export default function HomeScreen() {
   const trustedPerson = recipients.find((person) => person.status !== 'REVOKED') ?? null;
   const pendingCheckIn = checkInStatus?.currentEvent?.status === 'PENDING';
   const checkInDate = checkInStatus?.currentEvent?.dueAt ?? checkInStatus?.policy.nextCheckInAt ?? null;
+  // Check-in opens 2 days before it is due and stays open until done.
+  const opensAt = checkInStatus?.opensAt ? new Date(checkInStatus.opensAt) : null;
+  const checkInOpen = pendingCheckIn && (!opensAt || opensAt.getTime() <= now);
+  const overdueDays = checkInOpen && checkInDate
+    ? Math.floor((now - new Date(checkInDate).getTime()) / 86_400_000)
+    : 0;
+  const deadlineAt = checkInStatus?.deadlineAt ?? null;
   const totalItems = items.length;
   const firstUnassigned = items.find((item) => !item.assignment);
   const hasAssignment = items.some((item) => !!item.assignment);
@@ -170,14 +189,51 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => void onPullRefresh()} tintColor={colors.primary.forest} colors={[colors.primary.forest]} />
         }
       >
-        {pendingCheckIn ? (
-          <View style={styles.checkInBanner} accessibilityRole="alert">
+        {liveCase ? (
+          <View style={[styles.checkInBanner, styles.reviewBanner]} accessibilityRole="alert">
+            <View style={styles.bannerRow}>
+              <AppIcon name="warning" size={24} color={colors.neutral.white} />
+              <View style={styles.bannerBody}>
+                <Text style={styles.bannerTitle}>
+                  {liveCase.status === 'APPROVED' ? 'Your items were released' : 'A release review has started'}
+                </Text>
+                <Text style={[styles.bannerText, styles.reviewBannerText]}>
+                  {liveCase.status === 'APPROVED'
+                    ? 'You didn’t check in for a long time, so Virasat released your assigned items. Check in now to end their access immediately.'
+                    : 'You didn’t check in for a long time, so we contacted your trusted people. Check in now to cancel the review.'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {sharedNeedsYou > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/(auth)/shared' as never)}
+            style={({ pressed }) => [styles.sharedCard, pressed && styles.pressed]}
+          >
+            <AppIcon name="heart" size={22} color={colors.primary.deepForest} />
+            <View style={styles.bannerBody}>
+              <Text style={styles.sharedTitle}>Someone needs you as their trusted person</Text>
+              <Text style={styles.sharedText}>Open to respond.</Text>
+            </View>
+            <AppIcon name="chevronRight" size={20} color={colors.neutral.textMuted} />
+          </Pressable>
+        ) : null}
+
+        {checkInOpen ? (
+          <View style={[styles.checkInBanner, overdueDays > 0 && styles.overdueBanner]} accessibilityRole="alert">
             <View style={styles.bannerRow}>
               <AppIcon name="bell" size={24} color={colors.neutral.white} />
               <View style={styles.bannerBody}>
-                <Text style={styles.bannerTitle}>Your check-in is due</Text>
+                <Text style={styles.bannerTitle}>
+                  {overdueDays > 0 ? `Your check-in is ${overdueDays} ${overdueDays === 1 ? 'day' : 'days'} overdue` : 'Your check-in is open'}
+                </Text>
                 <Text style={styles.bannerText}>
-                  {checkInDate ? `Confirm by ${formatDate(checkInDate)} so we know you’re active.` : 'Confirm so we know you’re active.'}
+                  {overdueDays > 0 && deadlineAt
+                    ? `Check in before ${formatDate(deadlineAt)}, or a release review will start.`
+                    : checkInDate ? `Due ${formatDate(checkInDate)}. Confirm so we know you’re active.` : 'Confirm so we know you’re active.'}
                 </Text>
               </View>
             </View>
@@ -335,13 +391,13 @@ export default function HomeScreen() {
               </View>
               <View style={styles.statusBody}>
                 <Text style={styles.statusTitle}>
-                  {!checkInStatus ? 'Check-ins not set up' : pendingCheckIn ? 'Check-in due' : 'You’re all set'}
+                  {!checkInStatus ? 'Check-ins not set up' : checkInOpen ? (overdueDays > 0 ? 'Check-in overdue' : 'Check-in open') : 'You’re all set'}
                 </Text>
                 <Text style={[styles.statusDetail, !checkInStatus && styles.statusDetailWarning]}>
                   {!checkInStatus
                     ? 'Choose how often we check you’re active'
                     : checkInDate
-                      ? `Next check-in: ${formatDate(checkInDate)}`
+                      ? `Next check-in: ${formatDate(checkInDate)}${!checkInOpen && opensAt ? ` · opens ${formatDate(opensAt.toISOString())}` : ''}`
                       : 'Schedule saved'}
                 </Text>
               </View>
@@ -398,6 +454,20 @@ const styles = StyleSheet.create({
 
   checkInBanner: { padding: 16, borderRadius: 16, backgroundColor: colors.primary.deepForest, marginBottom: 24, gap: 12 },
   bannerRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  overdueBanner: { backgroundColor: '#7A3B12' },
+  reviewBanner: { backgroundColor: colors.semantic.error },
+  reviewBannerText: { color: colors.neutral.white },
+  sharedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.brand.mint,
+    marginBottom: 24,
+  },
+  sharedTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.callout, color: colors.neutral.textPrimary },
+  sharedText: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, color: colors.neutral.textSecondary },
   bannerBody: { flex: 1, gap: 2 },
   bannerTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.body, lineHeight: 22, color: colors.neutral.white },
   bannerText: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, lineHeight: 18, color: colors.brand.mint },

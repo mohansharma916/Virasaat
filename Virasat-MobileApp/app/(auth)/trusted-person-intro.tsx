@@ -14,7 +14,7 @@ import { typography } from '@/src/theme/typography';
 const POINTS: { icon: IconName; title: string; body: string }[] = [
   { icon: 'clock', title: 'We check you’re active', body: 'You get a regular check-in from Virasat.' },
   { icon: 'bell', title: 'We try to reach you', body: 'If you don’t respond, we contact you again before anything else happens.' },
-  { icon: 'users', title: 'Then we contact your trusted person', body: 'Releasing items to them is coming soon. For now we save their details privately.' },
+  { icon: 'users', title: 'Then we contact your trusted person', body: 'After your chosen deadline, and after a Virasat review, they receive only the items you assigned to them.' },
 ];
 
 export default function TrustedPersonIntroScreen() {

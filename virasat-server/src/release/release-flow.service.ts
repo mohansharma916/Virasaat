@@ -60,7 +60,8 @@ export interface CaseStatement {
 }
 
 export interface CaseEvidence {
-  missedCheckIns?: number;
+  overdueDays?: number;
+  dueAt?: string;
   lastCheckInAt?: string | null;
   note?: string;
   statements: CaseStatement[];
@@ -270,7 +271,7 @@ export class ReleaseFlowService {
    */
   async openEscalationCase(
     ownerId: string,
-    evidence: { missedCheckIns: number; lastCheckInAt: Date | null },
+    evidence: { overdueDays: number; dueAt: Date; lastCheckInAt: Date | null },
   ) {
     const live = await this.caseRepository.findOne({
       where: { userId: ownerId, status: In(LIVE_CASE_STATUSES) },
@@ -293,7 +294,8 @@ export class ReleaseFlowService {
         status: ReleaseCaseStatus.OPEN,
         openedAt: new Date(),
         evidence: JSON.stringify({
-          missedCheckIns: evidence.missedCheckIns,
+          overdueDays: evidence.overdueDays,
+          dueAt: evidence.dueAt.toISOString(),
           lastCheckInAt: evidence.lastCheckInAt?.toISOString() ?? null,
           statements: [],
         } satisfies CaseEvidence),
@@ -306,7 +308,7 @@ export class ReleaseFlowService {
       targetId: releaseCase.id,
       result: AuditResult.SUCCESS,
       metadata: {
-        missedCheckIns: evidence.missedCheckIns,
+        overdueDays: evidence.overdueDays,
         recipients: recipients.length,
       },
     });
@@ -324,7 +326,7 @@ export class ReleaseFlowService {
             verifierName: person.name,
             ownerName: owner.name,
             caseId: releaseCase.id,
-            triggerReason: `${owner.name} has not responded to ${evidence.missedCheckIns} check-ins in a row.`,
+            triggerReason: `${owner.name} has not checked in for ${evidence.overdueDays} days, despite repeated reminders.`,
             openedAt: formatDate(new Date()),
             verificationUrl: getEmailAppLink('shared', {}, this.config),
             verificationDeadline: formatDate(deadline),
@@ -339,13 +341,13 @@ export class ReleaseFlowService {
     await this.sendSecurityNotice(
       owner,
       'We could not reach you',
-      `You have missed ${evidence.missedCheckIns} check-ins in a row, so we have started a release review and contacted your trusted people. Nothing is released until Virasat approves it. Open Virasat and check in to cancel the review.`,
+      `You have not checked in for ${evidence.overdueDays} days, so we have started a release review and contacted your trusted people. Nothing is released until Virasat approves it. Open Virasat and check in to cancel the review.`,
     );
     await this.notifyAdmins(
       'Release review needed',
       'A release case needs review',
       [
-        `An owner has missed ${evidence.missedCheckIns} check-ins in a row.`,
+        `An owner has not checked in for ${evidence.overdueDays} days.`,
         `Case ${releaseCase.id} was opened and ${recipients.length} trusted ${recipients.length === 1 ? 'person was' : 'people were'} contacted.`,
       ],
     );
@@ -771,7 +773,8 @@ export class ReleaseFlowService {
       closedAt: releaseCase.closedAt,
       reviewerNotes: releaseCase.reviewerNotes,
       owner: owner ? { name: owner.name, email: owner.email } : null,
-      missedCheckIns: evidence.missedCheckIns ?? null,
+      overdueDays: evidence.overdueDays ?? null,
+      dueAt: evidence.dueAt ?? null,
       lastCheckInAt: evidence.lastCheckInAt ?? null,
       note: evidence.note ?? null,
       recipients: people

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { downloadLegacyItemThumbnail, type LegacyItemType } from '@/src/api/vault.api';
+import { downloadReleasedThumbnail } from '@/src/api/shared.api';
 import { getAccessToken } from '@/src/storage/auth.storage';
 import { colors } from '@/src/theme/colors';
 import { AppIcon, type IconName } from './AppIcon';
@@ -29,6 +30,8 @@ type Props = {
   // A saved item whose preview is fetched from the vault.
   itemId?: string;
   hasThumbnail?: boolean;
+  // An item someone released to this user, read through /shared.
+  shared?: boolean;
   // Or a local file picked on this device (image or generated preview).
   localUri?: string | null;
   icon: IconName;
@@ -40,7 +43,7 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function ItemThumbnail({ itemId, hasThumbnail, localUri, icon, size = 44, fill, hideIcon, style }: Props) {
+export function ItemThumbnail({ itemId, hasThumbnail, shared, localUri, icon, size = 44, fill, hideIcon, style }: Props) {
   const [remoteUri, setRemoteUri] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,18 +53,19 @@ export function ItemThumbnail({ itemId, hasThumbnail, localUri, icon, size = 44,
     void (async () => {
       const token = await getAccessToken();
       if (!token || request.signal.aborted) return;
-      const key = `${token}:${itemId}`;
+      const key = `${token}:${shared ? 'shared' : 'vault'}:${itemId}`;
       const cached = cache.get(key);
       if (cached) { setRemoteUri(cached); return; }
       try {
-        const uri = toDataUri(await downloadLegacyItemThumbnail(itemId, request.signal));
+        const download = shared ? downloadReleasedThumbnail : downloadLegacyItemThumbnail;
+        const uri = toDataUri(await download(itemId, request.signal));
         if (cache.size >= MAX_CACHED) cache.delete(cache.keys().next().value!);
         cache.set(key, uri);
         if (!request.signal.aborted) setRemoteUri(uri);
       } catch { /* The type icon stays as the fallback. */ }
     })();
     return () => request.abort();
-  }, [itemId, hasThumbnail, localUri]);
+  }, [itemId, hasThumbnail, shared, localUri]);
 
   const uri = localUri ?? remoteUri;
   const box = fill ? StyleSheet.absoluteFill : { width: size, height: size, borderRadius: Math.round(size / 4) };

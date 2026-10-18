@@ -98,8 +98,10 @@ describe('check-in settings and confirmation', () => {
   });
 
   it('uses the actual account email/cadence and does not resend on replay', async () => {
-    const { service, policy, notifications } = fixture();
+    const { service, policy, event, notifications } = fixture();
     policy.cadence = CheckInCadence.WEEKLY;
+    // Due tomorrow: inside the two-day check-in window.
+    event.dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await service.confirmCheckIn('owner', 'event');
     await service.confirmCheckIn('owner', 'event');
     expect(notifications.sendTemplatedEmail).toHaveBeenCalledTimes(1);
@@ -110,6 +112,20 @@ describe('check-in settings and confirmation', () => {
         cadence: 'Weekly',
         dashboardUrl: 'virasat://home',
       },
+    });
+  });
+
+  it('refuses a check-in before its window opens, two days before it is due', async () => {
+    const { service, event, events } = fixture();
+    event.dueAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    await expect(service.confirmCheckIn('owner', 'event')).rejects.toThrow(
+      'This check-in opens on',
+    );
+    expect(events.save).not.toHaveBeenCalled();
+    // Long after it was due, check-in is still open.
+    event.dueAt = new Date(Date.now() - 80 * 24 * 60 * 60 * 1000);
+    await expect(service.confirmCheckIn('owner', 'event')).resolves.toMatchObject({
+      success: true,
     });
   });
 

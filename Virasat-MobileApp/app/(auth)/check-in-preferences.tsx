@@ -185,7 +185,7 @@ export default function CheckInPreferencesScreen() {
               <View style={styles.infoBody}>
                 <Text style={styles.infoTitle}>Reminders</Text>
                 <Text style={styles.infoText}>
-                  {selectedSchedule === 'WEEKLY' ? '3 days and 1 day before' : '7, 3 and 1 days before'} each check-in
+                  Check-in opens 2 days before it’s due and stays open. We email you when it opens, on the day, and keep reminding you if you miss it.
                 </Text>
               </View>
             </View>
@@ -194,8 +194,8 @@ export default function CheckInPreferencesScreen() {
 
         <InlineNotice
           tone="info"
-          title="Coming soon"
-          message="We save these preferences now. Automatic email reminders and releasing items aren’t available yet, so confirm check-ins in the app."
+          title="If you miss a check-in"
+          message="Nothing happens straight away. We remind you after 7, 15, 21, 30 and 45 days, then more often. Your release rules decide when a review starts."
           style={styles.notice}
         />
       </ScrollView>

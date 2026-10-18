@@ -138,7 +138,7 @@ export default function ItemSettingsScreen() {
         <View style={styles.heading}>
           <Text style={styles.title} accessibilityRole="header">Who receives this</Text>
           <Text style={styles.subtitle}>
-            Choose an item and the person who should receive it. Releasing items is coming soon.
+            Choose an item and the person who should receive it. They get it only if you stop checking in and Virasat approves a review.
           </Text>
         </View>
 

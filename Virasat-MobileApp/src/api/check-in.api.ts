@@ -25,6 +25,10 @@ export interface CheckInEvent {
 export interface CheckInStatus {
   policy: CheckInPolicy;
   currentEvent: CheckInEvent | null;
+  // Check-in opens 2 days before it is due; a release review starts at the deadline.
+  opensAt?: string | null;
+  deadlineAt?: string | null;
+  deadlineDays?: number;
 }
 
 export interface CheckInSettingsInput {

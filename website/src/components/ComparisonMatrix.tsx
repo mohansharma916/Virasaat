@@ -2,12 +2,9 @@
 
 import React from 'react';
 import { Check, X, Shield, Sparkles } from 'lucide-react';
+import { PLAY_STORE_URL } from '@/lib/links';
 
-interface ComparisonMatrixProps {
-  onOpenWaitlist: () => void;
-}
-
-export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixProps) {
+export default function ComparisonMatrix() {
   const comparisonData = [
     {
       feature: 'Automated Reminder & Family Workflow',
@@ -79,7 +76,7 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
       google: 'Free (Account only)',
       cloud: '$10 - $20 / month',
       pwManager: '$36 - $60 / year',
-      note: 'Joining the waitlist does not activate a subscription or lifetime entitlement.',
+      note: 'Starter is free on Google Play. Paid plans are not on sale yet.',
     },
   ];
 
@@ -245,21 +242,23 @@ export default function ComparisonMatrix({ onOpenWaitlist }: ComparisonMatrixPro
           >
             <div>
               <div style={{ color: 'var(--warm-ivory)', fontWeight: 700, fontSize: '1.02rem' }}>
-                Join the Founding Waitlist Today
+                Start Free on Google Play Today
               </div>
               <div style={{ color: 'var(--sage)', fontSize: '0.85rem' }}>
                 Join for launch updates. See the app for plan limits and purchase availability.
               </div>
             </div>
 
-            <button
-              onClick={onOpenWaitlist}
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn btn-gold"
               style={{ padding: '12px 26px', fontSize: '0.92rem' }}
             >
               <Sparkles size={16} />
-              <span>Join Waitlist (Free)</span>
-            </button>
+              <span>Download on Google Play</span>
+            </a>
           </div>
         </div>
       </div>

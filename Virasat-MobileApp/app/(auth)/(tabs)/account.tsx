@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { AppIcon, type IconName } from '@/src/components/AppIcon';
 import { InlineNotice } from '@/src/components/InlineNotice';
@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { clearSession } from '@/src/store/session.slice';
 import { clearVaultData } from '@/src/store/vault.slice';
 import { useSubscription } from '@/src/store/subscription.slice';
+import { isReleaseReviewer } from '@/src/api/admin.api';
 
 // Account tab: a settings list. Editing personal details lives on its own
 // screen (`profile?mode=edit`) so Save only appears where it applies.
@@ -22,6 +23,13 @@ export default function AccountScreen() {
   const { currentPlan } = useSubscription();
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
+  // The server decides who reviews releases; the row only appears for them.
+  const [reviewer, setReviewer] = useState(false);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void isReleaseReviewer().then((value) => { if (active) setReviewer(value); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []));
 
   const initials = (user?.name || '?')
     .split(' ')
@@ -91,7 +99,15 @@ export default function AccountScreen() {
           <SettingsRow icon="sparkles" title="Plan" subtitle={planSubtitle} onPress={() => router.push('/(auth)/my-plan' as never)} />
           <SettingsRow icon="fingerprint" title="Security and biometrics" subtitle="Unlock with fingerprint or face" onPress={() => router.push('/(auth)/security' as never)} />
           <SettingsRow icon="clock" title="Check-ins" subtitle="How often we check you’re active" onPress={() => router.push('/(auth)/check-in-preferences' as never)} />
-          <SettingsRow icon="shieldCheck" title="Release rules" subtitle="What happens if you miss check-ins" onPress={() => router.push('/(auth)/release-rules' as never)} last />
+          <SettingsRow icon="shieldCheck" title="Release rules" subtitle="What happens if you stop checking in" onPress={() => router.push('/(auth)/release-rules' as never)} last />
+        </View>
+
+        <Text style={styles.sectionTitle} accessibilityRole="header">Trusted person</Text>
+        <View style={styles.group}>
+          <SettingsRow icon="heart" title="Shared with you" subtitle="Invitations and anything left for you" onPress={() => router.push('/(auth)/shared' as never)} last={!reviewer} />
+          {reviewer ? (
+            <SettingsRow icon="verified" title="Release reviews" subtitle="Approve or reject release cases" onPress={() => router.push('/(auth)/admin-cases' as never)} last />
+          ) : null}
         </View>
 
         <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
@@ -100,7 +116,7 @@ export default function AccountScreen() {
           <SettingsRow icon="document" title="Terms of service" subtitle="Opens virasat.knowyourviews.com" external onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/terms/')} />
           <View style={styles.aboutNote}>
             <Text style={styles.aboutText}>
-              Your records stay private. Automatic reminders and releasing items to your people aren’t available yet.
+              Your records stay private. Nothing is released unless you stop checking in and Virasat approves a review.
             </Text>
           </View>
         </View>

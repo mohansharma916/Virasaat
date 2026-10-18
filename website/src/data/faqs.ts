@@ -33,7 +33,7 @@ export const faqsData: FaqItem[] = [
     answer: 'Vault content is associated with your account rather than a phone-held encryption key. Sign in using the supported account verification flow on your new phone. Keep independent copies; we do not guarantee permanent storage or recovery in every circumstance.',
   },
   {
-    question: 'Does joining the waitlist give me a paid plan?',
-    answer: 'No. Joining the waitlist is free and registers you for launch updates. It does not activate a subscription or a lifetime entitlement. Current app plans include Starter, Secure and Family; check the app for prices, limits and purchase availability.',
+    question: 'Where can I get Virasat?',
+    answer: 'Virasat is available free on Google Play for Android: https://play.google.com/store/apps/details?id=in.virasat.app. Starter is free; paid plans are not on sale yet. An iOS app is planned.',
   },
 ];

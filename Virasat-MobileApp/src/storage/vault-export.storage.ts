@@ -26,14 +26,15 @@ export function createTemporaryVaultExport(name: string): File {
 export async function downloadVaultFileToCache(
   itemId: string,
   name: string,
-  options?: { expectedBytes?: number | null; signal?: AbortSignal; onProgress?: (percent: number) => void },
+  options?: { expectedBytes?: number | null; shared?: boolean; signal?: AbortSignal; onProgress?: (percent: number) => void },
 ): Promise<File> {
   const token = await getAccessToken();
   if (!token) throw new Error('Your session has expired. Sign in again to continue.');
   const directory = exportDirectory();
   directory.create({ intermediates: true, idempotent: true });
   const destination = new File(directory, name);
-  const file = await File.downloadFileAsync(`${api.defaults.baseURL}/vault/items/${itemId}/file`, destination, {
+  const path = options?.shared ? `/shared/items/${itemId}/file` : `/vault/items/${itemId}/file`;
+  const file = await File.downloadFileAsync(`${api.defaults.baseURL}${path}`, destination, {
     headers: { Authorization: `Bearer ${token}` },
     idempotent: true,
     signal: options?.signal,

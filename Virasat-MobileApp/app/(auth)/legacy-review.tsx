@@ -68,7 +68,7 @@ export default function LegacyReviewScreen() {
         <StepProgress phase="Legacy" />
         <Text style={styles.title} accessibilityRole="header">Review your legacy</Text>
         <Text style={styles.subtitle}>
-          {completeCount} of {rows.length} categories have something saved. Reminders and release aren’t active yet.
+          {completeCount} of {rows.length} categories have something saved. Assign items to your trusted people so they reach the right person.
         </Text>
 
         <View style={styles.card}>

@@ -20,6 +20,13 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
 
+const DEADLINES = [
+  { days: 30, label: '1 month', description: 'For people who check in often and want a fast response.' },
+  { days: 60, label: '2 months', description: 'A shorter wait, with reminders throughout.' },
+  { days: 90, label: '3 months', description: 'Recommended. Plenty of time for travel or illness.' },
+  { days: 180, label: '6 months', description: 'The longest wait before anyone is contacted.' },
+];
+
 export default function ReleaseRulesScreen() {
   const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
   const inOnboarding = onboarding === 'true';
@@ -31,6 +38,7 @@ export default function ReleaseRulesScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [verificationRequired, setVerificationRequired] = useState(true);
+  const [deadlineDays, setDeadlineDays] = useState(90);
 
   useEffect(() => {
     let active = true;
@@ -41,6 +49,8 @@ export default function ReleaseRulesScreen() {
       if (!active) return;
       setInitialPolicy(policy);
       setVerificationRequired(policy?.verificationRequired ?? true);
+      const saved = Number((policy?.escalationConfig as { checkInDeadlineDays?: number } | undefined)?.checkInDeadlineDays);
+      if (DEADLINES.some((option) => option.days === saved)) setDeadlineDays(saved);
     }).catch((reason) => {
       if (!active) return;
       if (isAxiosError(reason) && reason.response?.status === 404) setInitialPolicy(null);
@@ -61,8 +71,9 @@ export default function ReleaseRulesScreen() {
         trigger: initialPolicy?.trigger ?? 'CHECK_IN_ESCALATION',
         verificationRequired,
         verificationLevel: initialPolicy?.verificationLevel ?? 'STANDARD',
-        escalationConfig: initialPolicy?.escalationConfig ?? {
-          missedCheckInsBeforeReview: 3,
+        escalationConfig: {
+          ...(initialPolicy?.escalationConfig ?? {}),
+          checkInDeadlineDays: deadlineDays,
           manualReviewRequired: true,
         },
         enabled: true,
@@ -80,14 +91,12 @@ export default function ReleaseRulesScreen() {
     }
   };
 
-  const missedBeforeReview = Number(
-    (initialPolicy?.escalationConfig as { missedCheckInsBeforeReview?: number } | undefined)?.missedCheckInsBeforeReview ?? 3,
-  );
+  const deadlineLabel = DEADLINES.find((option) => option.days === deadlineDays)?.label ?? '3 months';
 
   const steps: { icon: IconName; title: string; body: string }[] = [
-    { icon: 'clock', title: 'You miss a check-in', body: 'Nothing is released. We simply notice you haven’t responded.' },
-    { icon: 'bell', title: 'We remind you', body: `We keep trying to reach you. After ${missedBeforeReview} missed check-ins we move to the next step.` },
-    { icon: 'users', title: 'We contact your trusted person', body: 'Only if we still can’t reach you.' },
+    { icon: 'clock', title: 'You miss a check-in', body: 'Nothing is released. Check-in stays open, so you can still check in any time.' },
+    { icon: 'bell', title: 'We keep reminding you', body: `After 7, 15, 21, 30 and 45 days, then more often. Every day in the last two weeks before ${deadlineLabel}. After 2 months we try every way we have to reach you.` },
+    { icon: 'users', title: 'We contact your trusted person', body: `Only if you still haven’t checked in after ${deadlineLabel}. Checking in at any point cancels everything.` },
     {
       icon: 'verified',
       title: verificationRequired ? 'Identity check and review' : 'Review by Virasat',
@@ -105,7 +114,7 @@ export default function ReleaseRulesScreen() {
         {inOnboarding ? <StepProgress phase="Rules" /> : null}
         <Text style={[styles.title, inOnboarding && styles.titleOnboarding]} accessibilityRole="header">Release rules</Text>
         <Text style={styles.subtitle}>
-          What happens if you stop responding. Missing one check-in never releases anything.
+          What happens if you stop checking in. Nothing is ever released without a Virasat review.
         </Text>
 
         {loading ? (
@@ -136,6 +145,21 @@ export default function ReleaseRulesScreen() {
               })}
             </View>
 
+            <Text style={styles.sectionTitle} accessibilityRole="header">Start a review after</Text>
+            <View style={styles.options} accessibilityRole="radiogroup">
+              {DEADLINES.map((option) => (
+                <SelectionRow
+                  key={option.days}
+                  kind="radio"
+                  selected={deadlineDays === option.days}
+                  onPress={() => setDeadlineDays(option.days)}
+                  title={option.label}
+                  description={option.description}
+                />
+              ))}
+            </View>
+            <Text style={styles.hint}>Counted from the day a check-in was due.</Text>
+
             <Text style={styles.sectionTitle} accessibilityRole="header">Identity check for your people</Text>
             <View style={styles.options} accessibilityRole="radiogroup">
               <SelectionRow
@@ -143,7 +167,7 @@ export default function ReleaseRulesScreen() {
                 selected={verificationRequired}
                 onPress={() => setVerificationRequired(true)}
                 title="Require an ID check"
-                description="Recommended. They verify their identity before opening anything."
+                description="Recommended. They must send a statement that Virasat checks before anything opens."
               />
               <SelectionRow
                 kind="radio"
@@ -158,9 +182,9 @@ export default function ReleaseRulesScreen() {
         )}
 
         <InlineNotice
-          tone="info"
-          title="Coming soon"
-          message="We save these rules now. Automatic reminders, contacting your people and releasing items aren’t active yet."
+          tone="brand"
+          title="You stay in control"
+          message="Checking in at any time cancels a review and immediately ends access to anything already released."
           style={styles.notice}
         />
       </ScrollView>

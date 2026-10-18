@@ -2,12 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shield, Sparkles, Menu, X, Lock, Smartphone } from 'lucide-react';
+import { PLAY_STORE_URL } from '@/lib/links';
 
-interface NavbarProps {
-  onOpenWaitlist: () => void;
-}
-
-export default function Navbar({ onOpenWaitlist }: NavbarProps) {
+export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -214,9 +211,11 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
               />
             </a>
 
-            {/* Waitlist Button */}
-            <button
-              onClick={onOpenWaitlist}
+            {/* Download Button */}
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn btn-gold"
               style={{
                 padding: '10px 20px',
@@ -224,9 +223,9 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
                 borderRadius: '10px',
               }}
             >
-              <Sparkles size={16} />
-              <span>Join Waitlist</span>
-            </button>
+              <Smartphone size={16} />
+              <span>Get the App</span>
+            </a>
 
             {/* Mobile Menu Toggle Button */}
             <button
@@ -288,17 +287,17 @@ export default function Navbar({ onOpenWaitlist }: NavbarProps) {
           </div>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenWaitlist();
-              }}
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMobileMenuOpen(false)}
               className="btn btn-gold"
               style={{ width: '100%', justifyContent: 'center' }}
             >
               <Sparkles size={18} />
-              <span>Join Waitlist (Free)</span>
-            </button>
+              <span>Download on Google Play</span>
+            </a>
             <div
               style={{
                 fontSize: '0.8rem',

@@ -469,7 +469,7 @@ export default function LegacyVideoMessageScreen() {
         <InlineNotice
           tone="brand"
           title="Private by design"
-          message="Your saved video is encrypted in your vault. Releasing it to your people is coming soon."
+          message="Your saved video is encrypted in your vault. Assign it to a trusted person to decide who receives it."
           style={styles.notice}
         />
       </ScrollView>
