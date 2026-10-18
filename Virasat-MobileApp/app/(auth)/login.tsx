@@ -1,15 +1,6 @@
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { AppIcon } from '@/src/components/AppIcon';
@@ -217,9 +208,9 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.keyboard}>
         <ScreenHeader onBack={router.canGoBack() ? 'default' : undefined} />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title} accessibilityRole="header">Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to manage what you’ve chosen to preserve.</Text>
 
@@ -320,8 +311,8 @@ export default function LoginScreen() {
             <TextLink title="Terms" tone="muted" onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/terms/')} />
             <TextLink title="Privacy Policy" tone="muted" onPress={() => void Linking.openURL('https://www.virasat.knowyourviews.com/privacy/')} />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </FormScrollView>
+      </View>
     </SafeAreaView>
   );
 }

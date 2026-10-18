@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -174,9 +175,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.keyboard}>
         <ScreenHeader onBack="default" />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {!editing ? <StepProgress phase="Account" /> : null}
 
           <View style={[styles.heading, !editing && styles.headingOnboarding]}>
@@ -225,7 +226,7 @@ export default function ProfileScreen() {
             title="Why we ask"
             message="We use this to verify your identity and to contact you in your language."
           />
-        </ScrollView>
+        </FormScrollView>
 
         <ActionBar>
           {submitError ? <InlineNotice tone="danger" message={submitError} style={styles.error} /> : null}
@@ -236,7 +237,7 @@ export default function ProfileScreen() {
             disabled={editing && !dirty}
           />
         </ActionBar>
-      </KeyboardAvoidingView>
+      </View>
 
       <SearchablePickerModal
         visible={countryModalVisible}

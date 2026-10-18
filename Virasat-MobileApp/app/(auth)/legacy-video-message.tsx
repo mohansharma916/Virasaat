@@ -51,6 +51,12 @@ type SelectedVideo = {
   mimeType?: string | null;
 };
 
+function formatDuration(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
 function deleteRecording(uri: string | null) {
   if (!uri) return;
   try { const file = new File(uri); if (file.exists) file.delete(); } catch { /* Device cache may already be cleared. */ }
@@ -99,6 +105,7 @@ export default function LegacyVideoMessageScreen() {
   };
 
   const [recording, setRecording] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [video, setVideo] = useState<SelectedVideo | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -122,6 +129,17 @@ export default function LegacyVideoMessageScreen() {
       deleteRecording(cachedRecording.current);
     };
   }, []);
+
+  // Counts from the start time, so a slow tick never drifts the shown duration.
+  useEffect(() => {
+    if (!recording) return;
+    const startedAt = Date.now();
+    setElapsedSeconds(0);
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.min(MAX_DURATION_SECONDS, Math.floor((Date.now() - startedAt) / 1000)));
+    }, 250);
+    return () => clearInterval(timer);
+  }, [recording]);
 
   const videoLimit = getLimit(PlanLimit.VIDEO_MESSAGES);
   const currentVideoCount = items.filter((item) => item.type === 'VIDEO').length;
@@ -313,10 +331,14 @@ export default function LegacyVideoMessageScreen() {
 
         <View style={styles.cameraOverlay}>
           {recording ? (
-            <View style={styles.recordingBadge}>
+            <View
+              style={styles.recordingBadge}
+              accessible
+              accessibilityLabel={`Recording, ${elapsedSeconds} seconds of ${MAX_DURATION_SECONDS / 60} minutes`}
+            >
               <View style={styles.recordingDot} />
               <Text style={styles.recordingText}>
-                Recording
+                Recording · {formatDuration(elapsedSeconds)} / {formatDuration(MAX_DURATION_SECONDS)}
               </Text>
             </View>
           ) : (
@@ -392,7 +414,7 @@ export default function LegacyVideoMessageScreen() {
 
                   <Text style={styles.controlHint}>
                     {recording
-                      ? 'Tap the button to stop recording'
+                      ? `${elapsedSeconds} ${elapsedSeconds === 1 ? 'second' : 'seconds'} recorded · tap to stop`
                       : 'Tap the button to start recording'}
                   </Text>
                 </>
@@ -423,7 +445,7 @@ export default function LegacyVideoMessageScreen() {
             </View>
 
             <Text style={styles.previewTitle}>
-              {video.source === 'recorded' ? 'Video recorded' : 'Video selected'}
+              {video.source === 'recorded' ? `Video recorded · ${formatDuration(elapsedSeconds)}` : 'Video selected'}
             </Text>
 
             <Text style={styles.previewText}>
@@ -609,6 +631,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.inter.semiBold,
     fontSize: 12,
     color: colors.neutral.white,
+    // Digits keep the same width, so the badge does not jitter each second.
+    fontVariant: ['tabular-nums'],
   },
   readyBadge: {
     paddingHorizontal: 10,

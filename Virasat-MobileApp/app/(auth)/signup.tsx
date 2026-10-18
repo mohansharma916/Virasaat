@@ -1,14 +1,6 @@
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -150,9 +142,9 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.keyboard}>
         <ScreenHeader onBack="default" />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title} accessibilityRole="header">Create your account</Text>
           <Text style={styles.subtitle}>Start securing your digital legacy today.</Text>
 
@@ -240,13 +232,13 @@ export default function SignupScreen() {
             <Text style={styles.loginText}>Already have an account?</Text>
             <TextLink title="Sign in" onPress={() => router.replace('/(auth)/login')} />
           </View>
-        </ScrollView>
+        </FormScrollView>
 
         <ActionBar>
           {submitError ? <InlineNotice tone="danger" message={submitError} style={styles.submitError} /> : null}
           <Button title="Create account" onPress={() => void handleCreateAccount()} loading={loading} disabled={googleLoading} />
         </ActionBar>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

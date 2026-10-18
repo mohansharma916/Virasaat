@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
@@ -104,9 +105,9 @@ export default function LegacyMessageScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.keyboard}>
         <ScreenHeader onBack="default" />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.category}>Personal message</Text>
           <Text style={styles.title} accessibilityRole="header">Say what matters</Text>
           <Text style={styles.subtitle}>Write something you’d want someone important to receive when the time comes.</Text>
@@ -162,13 +163,13 @@ export default function LegacyMessageScreen() {
           />
 
           <InlineNotice tone="brand" title="Private until release" message="Your message is encrypted and stays private until your release rules are met." />
-        </ScrollView>
+        </FormScrollView>
 
         <ActionBar>
           {submitError ? <InlineNotice tone="danger" message={submitError} style={styles.error} /> : null}
           <Button title="Save message" onPress={() => void handleSave()} loading={saving} />
         </ActionBar>
-      </KeyboardAvoidingView>
+      </View>
 
       <UpgradeModal
         visible={upgradeModalVisible}

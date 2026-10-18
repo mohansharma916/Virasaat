@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { File } from 'expo-file-system';
@@ -172,14 +173,14 @@ export default function SavedItemScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.flex}>
         <ScreenHeader
           onBack={editing ? cancelEdit : 'default'}
           backLabel={editing ? 'Cancel editing' : 'Back to vault'}
           title={editing ? 'Edit item' : undefined}
           trailing={item && !editing ? <TextLink title="Edit" onPress={() => setEditing(true)} disabled={busy} /> : null}
         />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {!item && !error ? (
             <SkeletonGroup label="Loading item">
               <Skeleton height={34} width="70%" />
@@ -304,7 +305,7 @@ export default function SavedItemScreen() {
               ) : null}
             </>
           ) : null}
-        </ScrollView>
+        </FormScrollView>
 
         {item && editing ? (
           <ActionBar>
@@ -321,7 +322,7 @@ export default function SavedItemScreen() {
             />
           </ActionBar>
         ) : null}
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

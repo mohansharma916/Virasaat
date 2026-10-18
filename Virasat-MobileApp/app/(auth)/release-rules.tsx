@@ -67,7 +67,9 @@ export default function ReleaseRulesScreen() {
         },
         enabled: true,
       });
-      await dispatch(refreshVaultData()).unwrap();
+      // The rules are saved at this point. Refresh the vault in the background:
+      // a failed refresh must not be reported as a failed save.
+      void dispatch(refreshVaultData());
       haptics.success();
       if (!inOnboarding && router.canGoBack()) router.back();
       else router.replace('/(auth)/(tabs)/home');

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
@@ -90,9 +91,9 @@ export default function DeleteAccountScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.flex}>
         <ScreenHeader onBack={deleting ? undefined : goBack} />
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <FormScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Text style={styles.title} accessibilityRole="header">Delete your account</Text>
           <Text style={styles.subtitle}>This permanently deletes your Virasat account and everything in your vault.</Text>
 
@@ -141,7 +142,7 @@ export default function DeleteAccountScreen() {
           />
 
           {error ? <InlineNotice tone="danger" title="Account not deleted" message={error} /> : null}
-        </ScrollView>
+        </FormScrollView>
 
         <ActionBar>
           <Button title="Keep my account" onPress={goBack} disabled={deleting} />
@@ -153,7 +154,7 @@ export default function DeleteAccountScreen() {
             loading={deleting}
           />
         </ActionBar>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

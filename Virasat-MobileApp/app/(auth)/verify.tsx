@@ -1,16 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 
-import {
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Linking, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -235,9 +227,9 @@ export default function VerifyScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.keyboard}>
         <ScreenHeader onBack="default" />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={styles.iconCircle}>
             <AppIcon name="mailCheck" size={28} color={colors.primary.deepForest} />
           </View>
@@ -292,12 +284,12 @@ export default function VerifyScreen() {
               onPress={() => void handleResend()}
             />
           </View>
-        </ScrollView>
+        </FormScrollView>
 
         <ActionBar>
           <Button title="Verify email" onPress={() => void handleVerify()} loading={loading} />
         </ActionBar>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -130,7 +131,7 @@ export default function ItemSettingsScreen() {
         }}
       />
 
-      <ScrollView
+      <FormScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -302,7 +303,7 @@ export default function ItemSettingsScreen() {
             ) : null}
           </>
         )}
-      </ScrollView>
+      </FormScrollView>
 
       <ActionBar>
         <Button title="Save assignment" onPress={() => void save()} loading={saving} disabled={!canSave && !saving} />

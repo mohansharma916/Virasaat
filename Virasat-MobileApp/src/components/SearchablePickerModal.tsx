@@ -2,9 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Dimensions,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/src/components/AppIcon';
@@ -155,15 +154,14 @@ export function SearchablePickerModal({
       animationType="slide"
       onRequestClose={handleClose}
       statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.backdrop}>
         {/* Backdrop tap to dismiss */}
         <Pressable accessibilityRole="button" style={styles.dismissOverlay} onPress={handleClose} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboardAvoid}
-        >
+        {/* Lifts the sheet above the keyboard on both platforms. */}
+        <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid}>
           <View
             style={[
               styles.sheetContainer,

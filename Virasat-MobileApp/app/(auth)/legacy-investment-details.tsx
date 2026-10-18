@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
@@ -80,9 +81,9 @@ export default function LegacyInvestmentDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.keyboard}>
         <ScreenHeader onBack="default" />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title} accessibilityRole="header">Add a financial asset</Text>
           <Text style={styles.subtitle}>Just enough for your family to find it and contact the provider.</Text>
 
@@ -169,13 +170,13 @@ export default function LegacyInvestmentDetailsScreen() {
             title="Keep secrets out"
             message="Never enter passwords, PINs, OTPs, card CVVs or banking logins."
           />
-        </ScrollView>
+        </FormScrollView>
 
         <ActionBar>
           {submitError ? <InlineNotice tone="danger" message={submitError} style={styles.error} /> : null}
           <Button title="Save asset" onPress={() => void handleSave()} loading={saving} />
         </ActionBar>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

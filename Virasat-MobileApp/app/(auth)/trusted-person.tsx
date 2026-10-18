@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { FormScrollView } from '@/src/components/FormScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Contact, ContactField, requestPermissionsAsync } from 'expo-contacts';
 
@@ -132,9 +133,9 @@ export default function TrustedPersonScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.flex}>
         <ScreenHeader onBack="default" />
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <FormScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {fromOnboarding ? <StepProgress phase="Account" /> : null}
 
           <Text style={[styles.title, fromOnboarding && styles.titleOnboarding]} accessibilityRole="header">
@@ -213,12 +214,12 @@ export default function TrustedPersonScreen() {
             title="They won’t get access yet"
             message="Adding someone doesn’t give them access to your vault or notify them."
           />
-        </ScrollView>
+        </FormScrollView>
 
         <ActionBar>
           <Button title="Review details" onPress={handleContinue} />
         </ActionBar>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

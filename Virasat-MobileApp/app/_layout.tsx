@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { fonts } from '@/src/theme/fonts';
 import { store } from '@/src/store/store';
@@ -35,11 +36,13 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        />
+        <KeyboardProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+            }}
+          />
+        </KeyboardProvider>
       </SafeAreaProvider>
     </Provider>
   );
