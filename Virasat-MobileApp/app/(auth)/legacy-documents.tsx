@@ -21,6 +21,8 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
 import { runWithSystemUi } from '@/src/components/SessionGate';
+import { ItemThumbnail } from '@/src/components/ItemThumbnail';
+import { createUploadThumbnail, deleteThumbnail } from '@/src/utils/thumbnails';
 
 type DocumentItem = {
   id: string;
@@ -29,6 +31,7 @@ type DocumentItem = {
   uri: string;
   mimeType?: string | null;
   file?: any;
+  thumbnailUri?: string | null;
 };
 
 export default function LegacyDocumentsScreen() {
@@ -47,7 +50,12 @@ export default function LegacyDocumentsScreen() {
   const [failed, setFailed] = useState(false);
   const [pickError, setPickError] = useState('');
   const transfer = useRef<AbortController | null>(null);
-  useEffect(() => () => transfer.current?.abort(), []);
+  // Generated previews are temporary files; remove any left when leaving.
+  const thumbnails = useRef(new Set<string>());
+  useEffect(() => () => {
+    transfer.current?.abort();
+    thumbnails.current.forEach(deleteThumbnail);
+  }, []);
 
   const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_DOCUMENT_BYTES;
   const maxLabel = isVideo ? MAX_VIDEO_LABEL : MAX_DOCUMENT_LABEL;
@@ -59,10 +67,16 @@ export default function LegacyDocumentsScreen() {
       return;
     }
     setPickError('');
+    const id = createItemRequestKey();
     setDocuments((current) => [
       ...current,
-      { id: createItemRequestKey(), name: file.name, size: file.size ?? 0, uri: file.uri, mimeType: file.mimeType, file: file.file },
+      { id, name: file.name, size: file.size ?? 0, uri: file.uri, mimeType: file.mimeType, file: file.file },
     ]);
+    void createUploadThumbnail(file.uri, file.mimeType).then((thumbnailUri) => {
+      if (!thumbnailUri) return;
+      thumbnails.current.add(thumbnailUri);
+      setDocuments((current) => current.map((entry) => (entry.id === id ? { ...entry, thumbnailUri } : entry)));
+    });
   };
 
   // Camera capture is the fastest way to add a paper document.
@@ -123,6 +137,7 @@ export default function LegacyDocumentsScreen() {
 
   const removeDocument = (id: string) => {
     if (transfer.current) return;
+    deleteThumbnail(documents.find((document) => document.id === id)?.thumbnailUri);
     setDocuments((current) =>
       current.filter(
         (document) => document.id !== id,
@@ -150,8 +165,10 @@ export default function LegacyDocumentsScreen() {
           type: category === 'VIDEOS' ? 'VIDEO' : category === 'OTHER' ? 'OTHER' : document.mimeType?.startsWith('image/') ? 'IMAGE' : 'DOCUMENT',
           category, title: isVideo ? 'Video message' : 'Protected document', description: `File size: ${document.size} bytes`,
           file: { uri: document.uri, name: document.name, mimeType: document.mimeType, file: document.file },
+          thumbnailUri: document.thumbnailUri,
         }, { signal: transfer.current.signal, onProgress: setProgress });
         dispatch(addLegacyItem(item));
+        deleteThumbnail(document.thumbnailUri);
         setDocuments((current) => current.filter((entry) => entry.id !== document.id));
       }
       if (transfer.current.signal.aborted) { setUploadStatus('Upload stopped. Check your vault before retrying.'); return; }
@@ -231,9 +248,11 @@ export default function LegacyDocumentsScreen() {
             </Text>
             {documents.map((document) => (
               <View key={document.id} style={styles.documentCard}>
-                <View style={styles.fileIcon}>
-                  <AppIcon name={document.mimeType?.startsWith('image/') ? 'image' : isVideo ? 'video' : 'document'} size={20} color={colors.primary.deepForest} />
-                </View>
+                <ItemThumbnail
+                  localUri={document.thumbnailUri}
+                  icon={document.mimeType?.startsWith('image/') ? 'image' : document.mimeType?.startsWith('video/') || isVideo ? 'video' : 'document'}
+                  size={56}
+                />
                 <View style={styles.documentInfo}>
                   <Text numberOfLines={1} style={styles.documentName}>{document.name}</Text>
                   <Text style={styles.documentSize}>{formatFileSize(document.size)}</Text>
@@ -372,14 +391,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral.white,
     borderWidth: 1,
     borderColor: colors.neutral.border,
-  },
-  fileIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.brand.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   documentInfo: { flex: 1, gap: 2 },
   documentName: { fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.callout, color: colors.neutral.textPrimary },

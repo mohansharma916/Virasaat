@@ -13,6 +13,7 @@ import { typography } from '@/src/theme/typography';
 import type { LegacyItemType } from '@/src/api/vault.api';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
+import { ItemThumbnail } from '@/src/components/ItemThumbnail';
 import { LEGACY_CATEGORY_KEYS, parseLegacyCategories, type LegacyCategory } from '@/src/utils/legacy-flow';
 
 const CATEGORY_LABEL: Record<LegacyCategory, string> = {
@@ -183,9 +184,7 @@ export default function SavedItemsScreen() {
                 onPress={() => router.push({ pathname: '/(auth)/saved-item', params: { id: item.id } } as never)}
                 style={({ pressed }) => [styles.row, pressed && styles.pressed]}
               >
-                <View style={styles.rowIcon}>
-                  <AppIcon name={meta.icon} size={22} color={colors.primary.deepForest} />
-                </View>
+                <ItemThumbnail itemId={item.id} hasThumbnail={item.hasThumbnail} icon={meta.icon} size={52} />
                 <View style={styles.rowBody}>
                   <Text style={styles.rowTitle} numberOfLines={1}>{item.title}</Text>
                   <Text style={styles.rowMeta} numberOfLines={1}>{meta.label} · Updated {updated}</Text>
@@ -268,14 +267,6 @@ const styles = StyleSheet.create({
     borderColor: colors.neutral.border,
   },
   pressed: { backgroundColor: colors.brand.mint },
-  rowIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.brand.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.body, lineHeight: 22, color: colors.neutral.textPrimary },
   rowMeta: { fontFamily: typography.fonts.inter.regular, fontSize: typography.sizes.caption, lineHeight: 18, color: colors.neutral.textSecondary },

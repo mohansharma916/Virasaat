@@ -45,3 +45,6 @@ services:
 
 volumes:
   postgres_data:
+    # A fixed name keeps the same database whatever folder or project name
+    # compose runs under. Set POSTGRES_VOLUME in .env to reuse an existing one.
+    name: ${POSTGRES_VOLUME:-virasat-server_postgres_data}

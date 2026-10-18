@@ -11,6 +11,7 @@
     "db:migrate:auth-security": "node scripts/migrate-auth-security.cjs",
     "db:migrate:vault-check-in": "node scripts/migrate-vault-check-in.cjs",
     "db:migrate:security-review": "node scripts/migrate-security-review.cjs",
+    "db:migrate:thumbnails": "node scripts/migrate-thumbnails.cjs",
     "db:migrate:encrypt-titles": "node scripts/encrypt-item-titles.cjs",
     "email:previews": "npm run build && node scripts/generate-email-previews.cjs",
     "email:test": "node scripts/test-email.cjs",

@@ -17,6 +17,7 @@ import { typography } from '@/src/theme/typography';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { signInWithGoogle } from '@/src/utils/google-auth';
 import { runWithSystemUi } from '@/src/components/SessionGate';
+import { ItemThumbnail, itemTypeIcon } from '@/src/components/ItemThumbnail';
 
 export default function ItemSettingsScreen() {
   const params = useLocalSearchParams<{ itemId?: string }>();
@@ -195,6 +196,7 @@ export default function ItemSettingsScreen() {
                     >
                       {isSelected ? <View style={styles.radioDot} /> : null}
                     </View>
+                    <ItemThumbnail itemId={item.id} hasThumbnail={item.hasThumbnail} icon={itemTypeIcon(item.type)} size={40} style={styles.selectThumb} />
                     <View style={styles.selectInfo}>
                       <Text style={styles.itemTitle}>{item.title}</Text>
                       <Text style={styles.itemMeta}>
@@ -425,6 +427,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: colors.primary.forest,
   },
+  selectThumb: { marginLeft: 12 },
   selectInfo: {
     flex: 1,
   },

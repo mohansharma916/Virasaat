@@ -21,6 +21,7 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { createTemporaryVaultExport, downloadVaultFileToCache } from '@/src/storage/vault-export.storage';
 import { runWithSystemUi } from '@/src/components/SessionGate';
+import { ItemThumbnail } from '@/src/components/ItemThumbnail';
 
 function SavedVideoPlayer({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri, (instance) => {
@@ -233,6 +234,7 @@ export default function SavedItemScreen() {
                   disabled={busy}
                   style={({ pressed }) => [styles.videoFrame, styles.videoPoster, pressed && styles.videoPressed]}
                 >
+                  <ItemThumbnail itemId={item.id} hasThumbnail={item.hasThumbnail} icon="video" fill hideIcon style={styles.posterImage} />
                   {videoProgress !== null ? (
                     <>
                       <ActivityIndicator color={colors.neutral.white} />
@@ -249,11 +251,20 @@ export default function SavedItemScreen() {
                 </Pressable>
               ) : null}
 
+              {!isVideo && item.hasThumbnail ? (
+                <View style={styles.imageFrame}>
+                  <ItemThumbnail itemId={item.id} hasThumbnail icon="image" fill hideIcon />
+                </View>
+              ) : null}
+
               {item.hasFile ? (
                 <View style={styles.fileCard}>
-                  <View style={styles.fileIcon}>
-                    <AppIcon name={isVideo ? 'video' : 'document'} size={24} color={colors.primary.deepForest} />
-                  </View>
+                  <ItemThumbnail
+                    itemId={item.id}
+                    hasThumbnail={item.hasThumbnail}
+                    icon={isVideo ? 'video' : item.mimeType?.startsWith('image/') ? 'image' : 'document'}
+                    size={44}
+                  />
                   <View style={styles.fileBody}>
                     <Text style={styles.fileName} numberOfLines={2}>{item.fileName ?? item.title}</Text>
                     {item.sizeBytes ? <Text style={styles.fileSize}>{(item.sizeBytes / 1024 / 1024).toFixed(1)} MB · encrypted</Text> : null}
@@ -342,6 +353,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.deepForest,
   },
   video: { width: '100%', height: '100%' },
+  posterImage: { opacity: 0.55 },
+  imageFrame: {
+    marginTop: 20,
+    height: 240,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: colors.brand.mint,
+  },
   videoPressed: { opacity: 0.85 },
   videoPoster: { alignItems: 'center', justifyContent: 'center', gap: 12 },
   playButton: {

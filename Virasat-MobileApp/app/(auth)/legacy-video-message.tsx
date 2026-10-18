@@ -31,6 +31,7 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
 import { MAX_VIDEO_BYTES, MAX_VIDEO_LABEL } from '@/src/utils/upload-limits';
+import { createUploadThumbnail, deleteThumbnail } from '@/src/utils/thumbnails';
 import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
@@ -210,6 +211,7 @@ export default function LegacyVideoMessageScreen() {
     setError('');
     const controller = new AbortController();
     uploadController.current = controller;
+    let thumbnailUri: string | null = null;
 
     try {
       const videoFile = new File(video.uri);
@@ -219,6 +221,7 @@ export default function LegacyVideoMessageScreen() {
       const isQuickTime = video.mimeType === 'video/quicktime'
         || (video.name ?? video.uri).split('?')[0].toLowerCase().endsWith('.mov');
       const extension = isQuickTime ? 'mov' : 'mp4';
+      thumbnailUri = await createUploadThumbnail(video.uri, 'video/mp4');
       const item = await uploadLegacyItem({
         requestKey: requestKey.current,
         type: 'VIDEO',
@@ -232,6 +235,7 @@ export default function LegacyVideoMessageScreen() {
           name: `virasat-video-${Date.now()}.${extension}`,
           mimeType: isQuickTime ? 'video/quicktime' : 'video/mp4',
         },
+        thumbnailUri,
       }, { signal: controller.signal, onProgress: setProgress });
       if (!alive.current) return;
       dispatch(addLegacyItem(item));
@@ -255,6 +259,7 @@ export default function LegacyVideoMessageScreen() {
       haptics.error();
       setError(getApiErrorMessage(requestError, 'We couldn’t save your video. It’s still here. Try again.'));
     } finally {
+      deleteThumbnail(thumbnailUri);
       busy.current = false;
       if (alive.current) setSaving(false);
     }

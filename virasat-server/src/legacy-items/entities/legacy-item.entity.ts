@@ -78,6 +78,13 @@ export class LegacyItem {
   @Column({ type: 'text', nullable: true, select: false })
   payloadStorageType!: 'INLINE_DB' | 'S3' | 'LOCAL' | null;
 
+  // Small device-made JPEG preview, encrypted like the file it represents.
+  @Column({ type: 'text', nullable: true, select: false })
+  thumbnail!: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  hasThumbnail!: boolean;
+
   @Column({
     type: 'enum',
     enum: LegacyItemStatus,

@@ -242,6 +242,30 @@ describe('owner vault recovery', () => {
     );
   });
 
+  it('stores device previews encrypted and ignores anything that is not a small JPEG', async () => {
+    const { service, rows } = fixture();
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+    const upload = (thumbnail?: Buffer) =>
+      service.createEncryptedUpload(
+        'owner',
+        { type: LegacyItemType.IMAGE, category: 'DOCUMENTS', title: 'Photo' },
+        { buffer: Buffer.from([1, 2, 3]), mimetype: 'image/png' },
+        thumbnail,
+      );
+    const withPreview = await upload(jpeg);
+    const stored = rows.get(withPreview.id)!;
+    expect(stored.hasThumbnail).toBe(true);
+    expect(stored.thumbnail).not.toContain(jpeg.toString('base64'));
+    expect((await service.findOne('owner', withPreview.id)).hasThumbnail).toBe(true);
+    expect(await service.getThumbnail('owner', withPreview.id)).toEqual(jpeg);
+    await expect(service.getThumbnail('intruder', withPreview.id)).rejects.toThrow();
+
+    for (const invalid of [Buffer.from('<svg/>'), Buffer.concat([jpeg, Buffer.alloc(256 * 1024)])]) {
+      const item = await upload(invalid);
+      expect(rows.get(item.id)).toMatchObject({ hasThumbnail: false, thumbnail: null });
+    }
+  });
+
   it('backs up inline records with a complete recoverable envelope', async () => {
     const { service, storage, encryption } = fixture();
     const created = await service.create('owner', {

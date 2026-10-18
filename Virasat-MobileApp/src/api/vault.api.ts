@@ -23,6 +23,7 @@ export interface LegacyItem {
   status: 'DRAFT' | 'ACTIVE' | 'UPDATED' | 'ARCHIVED';
   createdAt: string;
   updatedAt: string;
+  hasThumbnail?: boolean;
 }
 
 export interface Vault {
@@ -61,6 +62,8 @@ export interface UploadLegacyItemRequest extends CreateLegacyItemRequest {
     mimeType?: string | null;
     file?: any;
   };
+  // Local JPEG preview made on the device; the server stores it encrypted.
+  thumbnailUri?: string | null;
 }
 
 export async function getVault(): Promise<Vault> {
@@ -86,6 +89,13 @@ export async function updateLegacyItem(id: string, data: { title?: string; descr
 export async function downloadLegacyItem(id: string, signal?: AbortSignal): Promise<ArrayBuffer> {
   const response = await api.get<ArrayBuffer>(`/vault/items/${id}/file`, {
     responseType: 'arraybuffer', timeout: 120_000, signal,
+  });
+  return response.data;
+}
+
+export async function downloadLegacyItemThumbnail(id: string, signal?: AbortSignal): Promise<ArrayBuffer> {
+  const response = await api.get<ArrayBuffer>(`/vault/items/${id}/thumbnail`, {
+    responseType: 'arraybuffer', timeout: 30_000, signal,
   });
   return response.data;
 }
@@ -134,6 +144,9 @@ export async function uploadLegacyItem(
       name: data.file.name,
       type: data.file.mimeType ?? 'application/octet-stream',
     } as unknown as Blob);
+    if (data.thumbnailUri) {
+      formData.append('thumbnail', { uri: data.thumbnailUri, name: 'thumbnail.jpg', type: 'image/jpeg' } as unknown as Blob);
+    }
   }
 
   const response = await api.post<LegacyItem>(

@@ -170,6 +170,7 @@ jobs:
               docker compose run --rm api npm run db:migrate:auth-security
               docker compose run --rm api npm run db:migrate:vault-check-in
               docker compose run --rm api npm run db:migrate:security-review
+              docker compose run --rm api npm run db:migrate:thumbnails
               docker compose run --rm api npm run db:migrate:encrypt-titles
 
               echo "Deploying API..."

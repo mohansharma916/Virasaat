@@ -36,7 +36,11 @@ import { PlanEntitlementService } from '../subscriptions/plan-entitlement.servic
 import { PlanLimit } from '../subscriptions/subscription.constants';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
 import { ReauthService } from '../users/reauth.service';
-import { MAX_DOCUMENT_BYTES, MAX_VIDEO_BYTES } from './upload-limits';
+import {
+  MAX_DOCUMENT_BYTES,
+  MAX_THUMBNAIL_BYTES,
+  MAX_VIDEO_BYTES,
+} from './upload-limits';
 
 type PayloadStorageType = 'INLINE_DB' | 'S3' | 'LOCAL';
 
@@ -206,6 +210,7 @@ export class LegacyItemsService {
       mimetype: string;
       originalname?: string;
     },
+    thumbnail?: Buffer,
   ) {
     const fileBuffer = Buffer.isBuffer(file?.buffer)
       ? file.buffer
@@ -228,6 +233,17 @@ export class LegacyItemsService {
           : 'Files must be 25 MB or smaller.',
       );
     }
+
+    // Previews are optional; anything that is not a small JPEG is ignored.
+    const validThumbnail =
+      thumbnail &&
+      thumbnail.length > 3 &&
+      thumbnail.length <= MAX_THUMBNAIL_BYTES &&
+      thumbnail[0] === 0xff &&
+      thumbnail[1] === 0xd8 &&
+      thumbnail[2] === 0xff
+        ? thumbnail
+        : null;
 
     const vault = await this.vaultService.getUserVault(userId);
 
@@ -285,6 +301,10 @@ export class LegacyItemsService {
       }),
       encryptionKeyVersion: encryptedFile.keyVersion,
       payloadStorageType: savedStorage.storageType,
+      thumbnail: validThumbnail
+        ? JSON.stringify(this.encryptBinary(validThumbnail, vault.id, 'thumbnail'))
+        : null,
+      hasThumbnail: Boolean(validThumbnail),
       status: LegacyItemStatus.ACTIVE,
     });
 
@@ -556,6 +576,29 @@ export class LegacyItemsService {
     return items.map((item) => this.withPlainTitle(item));
   }
 
+  async getThumbnail(userId: string, itemId: string) {
+    const vault = await this.vaultService.getUserVault(userId);
+    const item = await this.itemRepository
+      .createQueryBuilder('item')
+      .addSelect(['item.thumbnail', 'item.encryptionKeyVersion'])
+      .where(
+        'item.id = :itemId AND item.vaultId = :vaultId AND item.status = :status',
+        { itemId, vaultId: vault.id, status: LegacyItemStatus.ACTIVE },
+      )
+      .getOne();
+    if (!item?.thumbnail) throw new NotFoundException('No preview for this item.');
+    const envelope = JSON.parse(item.thumbnail) as StoredEnvelope;
+    if (typeof envelope.ciphertext !== 'string')
+      throw new NotFoundException('No preview for this item.');
+    return this.decryptEnvelope(
+      envelope,
+      Buffer.from(envelope.ciphertext, 'base64'),
+      item.encryptionKeyVersion,
+      item.vaultId,
+      'thumbnail',
+    );
+  }
+
   async findOne(userId: string, itemId: string) {
     const item = await this.loadOwnedItem(userId, itemId);
     return this.ownerDetail(item);
@@ -629,8 +672,16 @@ export class LegacyItemsService {
     vaultId: string,
     purpose: string,
   ): StoredEnvelope {
+    return this.encryptBinary(Buffer.from(value, 'utf8'), vaultId, purpose);
+  }
+
+  private encryptBinary(
+    value: Buffer,
+    vaultId: string,
+    purpose: string,
+  ): StoredEnvelope {
     const encrypted = this.encryptionService.encrypt(
-      Buffer.from(value, 'utf8'),
+      value,
       encryptionContext(vaultId, purpose),
     );
     return {
@@ -755,6 +806,7 @@ export class LegacyItemsService {
       updatedAt: item.updatedAt,
       assignment: item.assignment,
       hasFile,
+      hasThumbnail: Boolean(item.hasThumbnail),
       fileName,
       mimeType: hasFile ? this.safeMimeType(keyRef.mimeType) : null,
       sizeBytes: hasFile ? (keyRef.sizeBytes ?? null) : null,

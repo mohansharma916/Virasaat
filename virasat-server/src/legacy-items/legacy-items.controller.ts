@@ -10,14 +10,14 @@ import {
   Post,
   Req,
   Res,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
 
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 
 import { LegacyItemsService } from './legacy-items.service';
@@ -45,24 +45,29 @@ export class LegacyItemsController {
   @Post('upload')
   @UseInterceptors(
     UploadSlotInterceptor,
-    FileInterceptor('file', {
-      storage: memoryStorage(),
-      limits: {
-        // Per-type limits (documents are smaller) are enforced in the service.
-        fileSize: MAX_VIDEO_BYTES,
-        files: 1,
-        fields: 10,
+    FileFieldsInterceptor(
+      [
+        { name: 'file', maxCount: 1 },
+        { name: 'thumbnail', maxCount: 1 },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: {
+          // Per-type limits (documents are smaller) are enforced in the service.
+          fileSize: MAX_VIDEO_BYTES,
+          files: 2,
+          fields: 10,
+        },
       },
-    }),
+    ),
   )
   async upload(
     @Req() req: any,
-    @UploadedFile()
-    file:
+    @UploadedFiles()
+    files:
       | {
-          buffer: Buffer;
-          mimetype: string;
-          originalname?: string;
+          file?: { buffer: Buffer; mimetype: string; originalname?: string }[];
+          thumbnail?: { buffer: Buffer }[];
         }
       | undefined,
     @Body(
@@ -76,6 +81,7 @@ export class LegacyItemsController {
   ) {
     // Only multipart files are accepted. Body-encoded files would bypass the
     // multipart size limit and let the client choose the stored MIME type.
+    const file = files?.file?.[0];
     const resolvedFile = file?.buffer?.length ? file : undefined;
     if (resolvedFile && !resolvedFile.originalname && dto.fileName) {
       resolvedFile.originalname = dto.fileName;
@@ -86,6 +92,7 @@ export class LegacyItemsController {
         req.user.id,
         dto,
         resolvedFile,
+        files?.thumbnail?.[0]?.buffer,
       ),
     );
   }
@@ -112,6 +119,7 @@ export class LegacyItemsController {
       createdAt,
       updatedAt,
       assignment,
+      hasThumbnail,
     } = item;
     return {
       id,
@@ -124,6 +132,7 @@ export class LegacyItemsController {
       createdAt,
       updatedAt,
       assignment,
+      hasThumbnail: Boolean(hasThumbnail),
     };
   }
 
@@ -177,6 +186,23 @@ export class LegacyItemsController {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store');
     res.end(fileResult.buffer);
+  }
+
+  /**
+   * Decrypted JPEG preview made on the owner's device at upload time.
+   */
+  @Get(':id/thumbnail')
+  async thumbnail(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res() res: Response,
+  ) {
+    const image = await this.legacyItemsService.getThumbnail(req.user.id, id);
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Length', image.length);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(image);
   }
 
   /**
