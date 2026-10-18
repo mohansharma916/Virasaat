@@ -1,3 +1,4 @@
+jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));

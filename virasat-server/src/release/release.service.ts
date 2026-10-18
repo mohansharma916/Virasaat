@@ -27,8 +27,6 @@ import {
 } from './entities/release-authorization.entity';
 
 import { CreateReleaseCaseDto } from './dto/create-release-case.dto';
-import { ReviewReleaseCaseDto } from './dto/review-release-case.dto';
-import { AuthorizeReleaseDto } from './dto/authorize-release.dto';
 
 import {
   Recipient,
@@ -156,64 +154,6 @@ export class ReleaseService {
     }
 
     return releaseCase;
-  }
-
-  // -----------------------------
-  // REVIEW CASE
-  // -----------------------------
-
-  async reviewCase(
-    reviewerId: string,
-    caseId: string,
-    dto: ReviewReleaseCaseDto,
-  ) {
-    return this.denyRelease(reviewerId, caseId, 'release_review_denied', {
-      requestedStatus: dto.status,
-    });
-  }
-
-  // -----------------------------
-  // AUTHORIZE RELEASE
-  // -----------------------------
-
-  async authorizeRelease(
-    approverId: string,
-    caseId: string,
-    dto: AuthorizeReleaseDto,
-  ) {
-    return this.denyRelease(
-      approverId,
-      caseId,
-      'release_authorization_denied',
-      { recipientId: dto.recipientId },
-    );
-  }
-
-  // -----------------------------
-  // VERIFY AUTHORIZATION
-  // -----------------------------
-
-  async verifyAuthorization(recipientId: string) {
-    return this.denyRelease(null, recipientId, 'release_access_denied');
-  }
-
-  private async denyRelease(
-    actorId: string | null,
-    targetId: string,
-    action: string,
-    metadata: Record<string, unknown> = {},
-  ) {
-    await this.auditService.log({
-      actorId,
-      action,
-      targetType: 'release',
-      targetId,
-      result: AuditResult.DENIED,
-      metadata,
-    });
-    throw new ForbiddenException(
-      'Release is unavailable until reviewer permissions, policy evaluation and item-scoped access are configured.',
-    );
   }
 
   // -----------------------------

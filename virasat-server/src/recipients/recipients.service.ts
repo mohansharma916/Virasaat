@@ -20,6 +20,7 @@ import { CreateRecipientDto } from './dto/create-recipient.dto';
 import { UpdateRecipientDto } from './dto/update-recipient.dto';
 import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
 import { PlanLimit } from '../subscriptions/subscription.constants';
+import { ReleaseFlowService } from '../release/release-flow.service';
 
 @Injectable()
 export class RecipientsService {
@@ -28,9 +29,33 @@ export class RecipientsService {
     private readonly recipientRepository: Repository<Recipient>,
     @Optional()
     private readonly planEntitlementService?: PlanEntitlementService,
+    @Optional()
+    private readonly releaseFlow?: ReleaseFlowService,
   ) {}
 
+  /**
+   * "Inform now" people hear from Virasat as soon as they are saved. The
+   * person stays saved even if the email fails; the owner can resend.
+   */
+  private async informNow(userId: string, recipient: Recipient) {
+    if (
+      !this.releaseFlow ||
+      recipient.notificationMode !== RecipientNotificationMode.INFORM_NOW ||
+      recipient.status !== RecipientStatus.PRIVATE
+    )
+      return recipient;
+    try {
+      return await this.releaseFlow.inviteRecipient(userId, recipient.id);
+    } catch {
+      return recipient;
+    }
+  }
+
   async create(userId: string, dto: CreateRecipientDto) {
+    return this.informNow(userId, await this.createRecord(userId, dto));
+  }
+
+  private async createRecord(userId: string, dto: CreateRecipientDto) {
     const email = this.normalizeEmail(dto.email);
     const matches = (saved: Recipient) =>
       saved.email === email &&
@@ -101,11 +126,12 @@ export class RecipientsService {
 
   async invite(userId: string, recipientId: string) {
     await this.findOne(userId, recipientId);
-    // BACKEND GAP: no real notification transport or invitation acceptance flow.
-    // Never mark an invitation sent or disclose a private relationship via a stub.
-    throw new ServiceUnavailableException(
-      'Invitation delivery is not available yet. The person remains saved; no invitation was sent.',
-    );
+    // Never mark an invitation sent when no delivery service is wired in.
+    if (!this.releaseFlow)
+      throw new ServiceUnavailableException(
+        'Invitation delivery is not available. The person remains saved; no invitation was sent.',
+      );
+    return this.releaseFlow.inviteRecipient(userId, recipientId);
   }
 
   async findAll(userId: string) {
@@ -136,6 +162,17 @@ export class RecipientsService {
   }
 
   async update(userId: string, recipientId: string, dto: UpdateRecipientDto) {
+    return this.informNow(
+      userId,
+      await this.updateRecord(userId, recipientId, dto),
+    );
+  }
+
+  private async updateRecord(
+    userId: string,
+    recipientId: string,
+    dto: UpdateRecipientDto,
+  ) {
     return this.recipientRepository.manager.transaction(async (manager) => {
       await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
         `recipients:${userId}`,

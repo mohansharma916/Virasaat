@@ -7,9 +7,14 @@ import { RecipientsController } from './recipients.controller';
 import { RecipientsService } from './recipients.service';
 
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { ReleaseModule } from '../release/release.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Recipient]), SubscriptionsModule],
+  imports: [
+    TypeOrmModule.forFeature([Recipient]),
+    SubscriptionsModule,
+    ReleaseModule,
+  ],
 
   controllers: [RecipientsController],
 

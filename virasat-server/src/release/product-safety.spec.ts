@@ -15,7 +15,7 @@ import {
   Recipient,
   RecipientStatus,
 } from '../recipients/entities/recipient.entity';
-import { ReleaseService } from './release.service';
+import { ReleaseFlowService } from './release-flow.service';
 import {
   ReleasePolicy,
   ReleaseTrigger,
@@ -80,30 +80,72 @@ describe('PRD 2.1 safety boundaries', () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
-  it('cannot self-authorize, replay an authorization, or access another recipient through legacy release services', async () => {
-    const repository = { save: jest.fn() };
-    const service = new ReleaseService(
+  it('only a verified Virasat reviewer can approve a release, never for their own vault', async () => {
+    const users: Record<string, object> = {
+      owner: {
+        id: 'owner',
+        email: 'owner@example.test',
+        emailVerified: true,
+        status: 'ACTIVE',
+      },
+      recipient: {
+        id: 'recipient',
+        email: 'person@example.test',
+        emailVerified: true,
+        status: 'ACTIVE',
+      },
+      unverified: {
+        id: 'unverified',
+        email: 'admin@example.test',
+        emailVerified: false,
+        status: 'ACTIVE',
+      },
+      admin: {
+        id: 'admin',
+        email: 'admin@example.test',
+        emailVerified: true,
+        status: 'ACTIVE',
+      },
+    };
+    const save = jest.fn();
+    const releaseCase = {
+      id: 'case',
+      userId: 'admin',
+      status: 'OPEN',
+      evidence: null,
+    };
+    const repository = {
+      findOne: jest.fn().mockResolvedValue(releaseCase),
+      find: jest.fn().mockResolvedValue([]),
+      save,
+      create: (v: unknown) => v,
+    };
+    const service = new ReleaseFlowService(
       repository as never,
       repository as never,
       repository as never,
       repository as never,
+      {
+        findById: jest.fn((id: string) => Promise.resolve(users[id] ?? null)),
+      } as never,
       { log: jest.fn().mockResolvedValue({}) } as never,
+      {} as never,
+      {} as never,
+      {
+        countAssignedToRecipients: jest.fn().mockResolvedValue(new Map()),
+      } as never,
+      { get: () => 'Admin@Example.test' } as never,
     );
-    await expect(
-      service.reviewCase('recipient', 'case', { status: 'APPROVED' } as never),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (const actor of ['owner', 'recipient', 'unverified']) {
       await expect(
-        service.authorizeRelease('recipient', 'case', {
-          recipientId: 'person',
-          expiresInDays: 1,
-        }),
+        service.approveCase(actor, 'case', ''),
       ).rejects.toBeInstanceOf(ForbiddenException);
     }
+    // The reviewer's own vault cannot be released by them.
     await expect(
-      service.verifyAuthorization('another-person'),
+      service.approveCase('admin', 'case', ''),
     ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(repository.save).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
   });
 
   const assignmentFixture = (verificationRequired: boolean) => {

@@ -302,7 +302,9 @@ export class LegacyItemsService {
       encryptionKeyVersion: encryptedFile.keyVersion,
       payloadStorageType: savedStorage.storageType,
       thumbnail: validThumbnail
-        ? JSON.stringify(this.encryptBinary(validThumbnail, vault.id, 'thumbnail'))
+        ? JSON.stringify(
+            this.encryptBinary(validThumbnail, vault.id, 'thumbnail'),
+          )
         : null,
       hasThumbnail: Boolean(validThumbnail),
       status: LegacyItemStatus.ACTIVE,
@@ -586,7 +588,13 @@ export class LegacyItemsService {
         { itemId, vaultId: vault.id, status: LegacyItemStatus.ACTIVE },
       )
       .getOne();
-    if (!item?.thumbnail) throw new NotFoundException('No preview for this item.');
+    if (!item) throw new NotFoundException('No preview for this item.');
+    return this.thumbnailOf(item);
+  }
+
+  private thumbnailOf(item: LegacyItem) {
+    if (!item.thumbnail)
+      throw new NotFoundException('No preview for this item.');
     const envelope = JSON.parse(item.thumbnail) as StoredEnvelope;
     if (typeof envelope.ciphertext !== 'string')
       throw new NotFoundException('No preview for this item.');
@@ -596,6 +604,93 @@ export class LegacyItemsService {
       item.encryptionKeyVersion,
       item.vaultId,
       'thumbnail',
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // Released items. Callers MUST first verify an active release
+  // authorization for these recipient ids; these methods only enforce
+  // that an item was assigned to one of them by its owner.
+  // ---------------------------------------------------------------
+
+  private assignedQuery(recipientIds: string[]) {
+    return this.itemRepository
+      .createQueryBuilder('item')
+      .addSelect([
+        'item.ciphertextRef',
+        'item.encryptionKeyRef',
+        'item.encryptionKeyVersion',
+        'item.payloadStorageType',
+      ])
+      .where(
+        "item.status = :status AND item.assignment ->> 'recipientId' IN (:...recipientIds)",
+        { status: LegacyItemStatus.ACTIVE, recipientIds },
+      );
+  }
+
+  async listAssignedToRecipients(recipientIds: string[]) {
+    if (!recipientIds.length) return [];
+    const items = await this.assignedQuery(recipientIds)
+      .orderBy('item.updatedAt', 'DESC')
+      .getMany();
+    // Lists never carry decrypted notes; the detail endpoint does.
+    return items.map((item) => ({
+      ...this.ownerDetail(item),
+      description: null,
+    }));
+  }
+
+  async countAssignedToRecipients(recipientIds: string[]) {
+    const counts = new Map<string, number>();
+    if (!recipientIds.length) return counts;
+    const rows: { recipientId: string; count: string }[] =
+      await this.itemRepository
+        .createQueryBuilder('item')
+        .select("item.assignment ->> 'recipientId'", 'recipientId')
+        .addSelect('COUNT(*)', 'count')
+        .where(
+          "item.status = :status AND item.assignment ->> 'recipientId' IN (:...recipientIds)",
+          { status: LegacyItemStatus.ACTIVE, recipientIds },
+        )
+        .groupBy("item.assignment ->> 'recipientId'")
+        .getRawMany();
+    for (const row of rows) counts.set(row.recipientId, Number(row.count));
+    return counts;
+  }
+
+  private async loadAssignedItem(
+    itemId: string,
+    recipientIds: string[],
+    withThumbnail = false,
+  ) {
+    if (!recipientIds.length)
+      throw new NotFoundException('Legacy item not found');
+    const query = this.assignedQuery(recipientIds).andWhere(
+      'item.id = :itemId',
+      {
+        itemId,
+      },
+    );
+    if (withThumbnail) query.addSelect('item.thumbnail');
+    const item = await query.getOne();
+    if (!item) throw new NotFoundException('Legacy item not found');
+    return item;
+  }
+
+  async releasedDetail(itemId: string, recipientIds: string[]) {
+    const item = await this.loadAssignedItem(itemId, recipientIds);
+    const { assignment: _assignment, ...detail } = this.ownerDetail(item);
+    void _assignment;
+    return { ...detail, recipientId: item.assignment!.recipientId };
+  }
+
+  async releasedFile(itemId: string, recipientIds: string[]) {
+    return this.fileOf(await this.loadAssignedItem(itemId, recipientIds));
+  }
+
+  async releasedThumbnail(itemId: string, recipientIds: string[]) {
+    return this.thumbnailOf(
+      await this.loadAssignedItem(itemId, recipientIds, true),
     );
   }
 
@@ -861,7 +956,10 @@ export class LegacyItemsService {
    * Verified by AES-256-GCM authTag and SHA-256 checksum.
    */
   async downloadFile(userId: string, itemId: string) {
-    const item = await this.loadOwnedItem(userId, itemId);
+    return this.fileOf(await this.loadOwnedItem(userId, itemId));
+  }
+
+  private async fileOf(item: LegacyItem) {
     const keyRef = this.keyRef(item);
     const storageType = this.storageType(item, keyRef);
     if (

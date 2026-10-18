@@ -27,6 +27,7 @@ import { EmailTemplateType } from '../notification/email/email-template.types';
 import { UsersService } from '../users/users.service';
 import { getEmailAppLink } from '../notification/email/email-links';
 import { nextCheckInAt } from './check-in-time';
+import { ReleaseFlowService } from '../release/release-flow.service';
 
 @Injectable()
 export class CheckInService {
@@ -45,6 +46,8 @@ export class CheckInService {
     private readonly notificationsService?: NotificationsService,
     @Optional()
     private readonly usersService?: UsersService,
+    @Optional()
+    private readonly releaseFlow?: ReleaseFlowService,
   ) {}
 
   /**
@@ -226,6 +229,17 @@ export class CheckInService {
         };
       },
     );
+
+    // The owner is active: stop any release review and revoke released access.
+    if (result.newlyCompleted && this.releaseFlow) {
+      await this.releaseFlow
+        .onOwnerCheckedIn(userId)
+        .catch((error: Error) =>
+          this.logger.error(
+            `Check-in saved, but release cancellation failed: ${error.message}`,
+          ),
+        );
+    }
 
     if (
       result.newlyCompleted &&
