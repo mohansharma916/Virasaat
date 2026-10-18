@@ -17,16 +17,20 @@ import {
   useMicrophonePermissions,
 } from 'expo-camera';
 import { File } from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { ActionBar } from '@/src/components/ActionBar';
 import { AppIcon } from '@/src/components/AppIcon';
 import { Button } from '@/src/components/Button';
 import { InlineNotice } from '@/src/components/InlineNotice';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
+import { runWithSystemUi } from '@/src/components/SessionGate';
 import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
+import { MAX_VIDEO_BYTES, MAX_VIDEO_LABEL } from '@/src/utils/upload-limits';
 import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
@@ -36,12 +40,32 @@ import { PlanLimit } from '@/src/types/subscription.types';
 import { UpgradeModal } from '@/src/components/UpgradeModal';
 
 const MAX_DURATION_SECONDS = 5 * 60;
-const MAX_RECORDING_BYTES = 24 * 1024 * 1024;
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+// Leave headroom under the upload limit for the container's final metadata.
+const MAX_RECORDING_BYTES = MAX_VIDEO_BYTES - 2 * 1024 * 1024;
+
+type SelectedVideo = {
+  uri: string;
+  source: 'recorded' | 'picked';
+  name?: string | null;
+  mimeType?: string | null;
+};
 
 function deleteRecording(uri: string | null) {
   if (!uri) return;
   try { const file = new File(uri); if (file.exists) file.delete(); } catch { /* Device cache may already be cleared. */ }
+}
+
+function VideoPreview({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (instance) => { instance.loop = false; });
+  return (
+    <VideoView
+      player={player}
+      style={styles.previewVideo}
+      nativeControls
+      contentFit="contain"
+      accessibilityLabel="Preview of your video message"
+    />
+  );
 }
 
 export default function LegacyVideoMessageScreen() {
@@ -74,7 +98,7 @@ export default function LegacyVideoMessageScreen() {
   };
 
   const [recording, setRecording] = useState(false);
-  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [video, setVideo] = useState<SelectedVideo | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
@@ -102,6 +126,13 @@ export default function LegacyVideoMessageScreen() {
   const currentVideoCount = items.filter((item) => item.type === 'VIDEO').length;
   const reachedLimit = isAtLimit(PlanLimit.VIDEO_MESSAGES, currentVideoCount);
 
+  // Only recordings live in our cache; picked videos belong to the user's library.
+  const clearVideo = () => {
+    deleteRecording(cachedRecording.current);
+    cachedRecording.current = null;
+    setVideo(null);
+  };
+
   const startRecording = async () => {
     if (reachedLimit) {
       setUpgradeModalVisible(true);
@@ -112,9 +143,7 @@ export default function LegacyVideoMessageScreen() {
     }
 
     setError('');
-    deleteRecording(cachedRecording.current);
-    cachedRecording.current = null;
-    setRecordedUri(null);
+    clearVideo();
     setRecording(true);
 
     try {
@@ -126,7 +155,7 @@ export default function LegacyVideoMessageScreen() {
       if (result?.uri) {
         if (!alive.current) { deleteRecording(result.uri); return; }
         cachedRecording.current = result.uri;
-        setRecordedUri(result.uri);
+        setVideo({ uri: result.uri, source: 'recorded' });
       }
     } catch {
       if (alive.current) setError('We could not record the video. Please try again.');
@@ -139,8 +168,35 @@ export default function LegacyVideoMessageScreen() {
     cameraRef.current?.stopRecording();
   };
 
+  const pickVideo = async () => {
+    if (reachedLimit) {
+      setUpgradeModalVisible(true);
+      return;
+    }
+    if (recording || busy.current) return;
+    setError('');
+    try {
+      const result = await runWithSystemUi(() =>
+        ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], allowsMultipleSelection: false }),
+      );
+      if (result.canceled || !alive.current) return;
+      const asset = result.assets[0];
+      const size = asset.fileSize ?? (() => { try { return new File(asset.uri).size; } catch { return 0; } })();
+      if (size > MAX_VIDEO_BYTES) {
+        haptics.warning();
+        setError(`That video is larger than ${MAX_VIDEO_LABEL}. Choose a shorter video.`);
+        return;
+      }
+      clearVideo();
+      requestKey.current = createItemRequestKey();
+      setVideo({ uri: asset.uri, source: 'picked', name: asset.fileName, mimeType: asset.mimeType });
+    } catch {
+      if (alive.current) setError('We couldn’t open your videos. Please try again.');
+    }
+  };
+
   const handleSave = async () => {
-    if (!recordedUri || busy.current) {
+    if (!video || busy.current) {
       return;
     }
 
@@ -156,20 +212,24 @@ export default function LegacyVideoMessageScreen() {
     uploadController.current = controller;
 
     try {
-      const recordingFile = new File(recordedUri);
-      if (!recordingFile.exists || !recordingFile.size || recordingFile.size > MAX_UPLOAD_BYTES) {
-        throw new Error('Videos must be no larger than 25 MB. Please record a shorter message.');
+      const videoFile = new File(video.uri);
+      if (!videoFile.exists || !videoFile.size || videoFile.size > MAX_VIDEO_BYTES) {
+        throw new Error(`Videos must be no larger than ${MAX_VIDEO_LABEL}. Please choose or record a shorter message.`);
       }
-      const isQuickTime = recordedUri.split('?')[0].toLowerCase().endsWith('.mov');
+      const isQuickTime = video.mimeType === 'video/quicktime'
+        || (video.name ?? video.uri).split('?')[0].toLowerCase().endsWith('.mov');
+      const extension = isQuickTime ? 'mov' : 'mp4';
       const item = await uploadLegacyItem({
         requestKey: requestKey.current,
         type: 'VIDEO',
         category: 'VIDEOS',
         title: 'Video message',
-        description: 'A video message was recorded on the owner’s device.',
+        description: video.source === 'recorded'
+          ? 'A video message was recorded on the owner’s device.'
+          : 'A video message was uploaded from the owner’s device.',
         file: {
-          uri: recordedUri,
-          name: `virasat-video-${Date.now()}.${isQuickTime ? 'mov' : 'mp4'}`,
+          uri: video.uri,
+          name: `virasat-video-${Date.now()}.${extension}`,
           mimeType: isQuickTime ? 'video/quicktime' : 'video/mp4',
         },
       }, { signal: controller.signal, onProgress: setProgress });
@@ -204,48 +264,67 @@ export default function LegacyVideoMessageScreen() {
     if (busy.current) return;
     requestKey.current = createItemRequestKey();
     setError('');
-    deleteRecording(cachedRecording.current);
-    cachedRecording.current = null;
-    setRecordedUri(null);
+    clearVideo();
   };
 
-  if (permissionsLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.center} accessible accessibilityRole="progressbar" accessibilityLabel="Checking camera and microphone access">
-          <ActivityIndicator color={colors.primary.forest} />
-          <Text style={styles.loadingText}>Checking camera and microphone access…</Text>
+  const renderCamera = () => {
+    if (permissionsLoading) {
+      return (
+        <View style={styles.cameraPlaceholder} accessible accessibilityRole="progressbar" accessibilityLabel="Checking camera and microphone access">
+          <ActivityIndicator color={colors.neutral.white} />
+          <Text style={styles.placeholderText}>Checking camera and microphone access…</Text>
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!permissionsGranted) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <ScreenHeader onBack="default" />
-        <ScrollView contentContainerStyle={styles.permissionContent}>
+      );
+    }
+    if (!permissionsGranted) {
+      return (
+        <View style={styles.cameraPlaceholder}>
           <View style={styles.permissionIcon}>
             <AppIcon name="camera" size={28} color={colors.primary.deepForest} />
           </View>
-          <Text style={styles.permissionTitle} accessibilityRole="header">Allow camera and microphone</Text>
-          <Text style={styles.permissionText}>
+          <Text style={styles.placeholderTitle}>Allow camera and microphone</Text>
+          <Text style={styles.placeholderText}>
             {blocked
               ? 'Access is turned off for Virasat. Open your phone’s settings, allow Camera and Microphone, then come back.'
-              : 'Virasat needs your camera and microphone to record a private video message. The recording stays on your phone until you save it.'}
+              : 'To record here, Virasat needs your camera and microphone. The recording stays on your phone until you save it.'}
           </Text>
-        </ScrollView>
-        <ActionBar>
           {blocked ? (
-            <Button title="Open settings" onPress={() => void Linking.openSettings()} />
+            <Button title="Open settings" size="md" onPress={() => void Linking.openSettings()} style={styles.placeholderButton} />
           ) : (
-            <Button title="Allow access" onPress={() => void requestAllPermissions()} />
+            <Button title="Allow access" size="md" onPress={() => void requestAllPermissions()} style={styles.placeholderButton} />
           )}
-          <Button title="Not now" variant="tertiary" onPress={() => router.back()} />
-        </ActionBar>
-      </SafeAreaView>
+        </View>
+      );
+    }
+    return (
+      <>
+        <CameraView
+          videoQuality="480p"
+          ref={cameraRef}
+          style={styles.camera}
+          facing="front"
+          mode="video"
+        />
+
+        <View style={styles.cameraOverlay}>
+          {recording ? (
+            <View style={styles.recordingBadge}>
+              <View style={styles.recordingDot} />
+              <Text style={styles.recordingText}>
+                Recording
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.readyBadge}>
+              <Text style={styles.readyText}>
+                Ready to record
+              </Text>
+            </View>
+          )}
+        </View>
+      </>
     );
-  }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -266,100 +345,97 @@ export default function LegacyVideoMessageScreen() {
           </Text>
 
           <Text style={styles.subtitle}>
-            Say what you want your loved ones to hear.
-            You can record a message of up to 5 minutes.
+            Record a message of up to 5 minutes, or upload a video
+            from your phone (up to {MAX_VIDEO_LABEL}).
           </Text>
         </View>
 
-        {!recordedUri ? (
-          <View style={styles.cameraCard}>
-            <View style={styles.cameraFrame}>
-              <CameraView
-                videoQuality="480p"
-                ref={cameraRef}
-                style={styles.camera}
-                facing="front"
-                mode="video"
-              />
-
-              <View style={styles.cameraOverlay}>
-                {recording ? (
-                  <View style={styles.recordingBadge}>
-                    <View style={styles.recordingDot} />
-                    <Text style={styles.recordingText}>
-                      Recording
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.readyBadge}>
-                    <Text style={styles.readyText}>
-                      Ready to record
-                    </Text>
-                  </View>
-                )}
+        {!video ? (
+          <>
+            <View style={styles.cameraCard}>
+              <View style={styles.cameraFrame}>
+                {renderCamera()}
               </View>
+
+              {permissionsGranted ? (
+                <>
+                  <View style={styles.cameraControls}>
+                    {recording ? (
+                      <Pressable accessibilityRole="button"
+                        accessibilityLabel="Stop recording"
+                        onPress={stopRecording}
+                        style={({ pressed }) => [
+                          styles.stopButton,
+                          pressed && styles.buttonPressed,
+                        ]}
+                      >
+                        <View style={styles.stopInner} />
+                      </Pressable>
+                    ) : (
+                      <Pressable accessibilityRole="button"
+                        accessibilityLabel="Start recording"
+                        onPress={startRecording}
+                        style={({ pressed }) => [
+                          styles.recordButton,
+                          pressed && styles.buttonPressed,
+                        ]}
+                      >
+                        <View style={styles.recordInner} />
+                      </Pressable>
+                    )}
+                  </View>
+
+                  <Text style={styles.controlHint}>
+                    {recording
+                      ? 'Tap the button to stop recording'
+                      : 'Tap the button to start recording'}
+                  </Text>
+                </>
+              ) : null}
             </View>
 
-            <View style={styles.cameraControls}>
-              {recording ? (
-                <Pressable accessibilityRole="button"
-                  accessibilityLabel="Stop recording"
-                  onPress={stopRecording}
-                  style={({ pressed }) => [
-                    styles.stopButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <View style={styles.stopInner} />
-                </Pressable>
-              ) : (
-                <Pressable accessibilityRole="button"
-                  accessibilityLabel="Start recording"
-                  onPress={startRecording}
-                  style={({ pressed }) => [
-                    styles.recordButton,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <View style={styles.recordInner} />
-                </Pressable>
-              )}
-            </View>
-
-            <Text style={styles.controlHint}>
-              {recording
-                ? 'Tap the button to stop recording'
-                : 'Tap the button to start recording'}
-            </Text>
-          </View>
+            {!recording ? (
+              <>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+                <Button
+                  title="Upload a video from your phone"
+                  variant="secondary"
+                  icon={<AppIcon name="upload" size={20} color={colors.primary.forest} />}
+                  onPress={() => void pickVideo()}
+                  accessibilityHint={`Choose an MP4 or MOV video up to ${MAX_VIDEO_LABEL}`}
+                />
+              </>
+            ) : null}
+          </>
         ) : (
           <View style={styles.previewCard}>
-            <View style={styles.previewIcon}>
-              <AppIcon name="check" style={styles.previewSymbol} />
+            <View style={styles.previewFrame}>
+              <VideoPreview key={video.uri} uri={video.uri} />
             </View>
 
             <Text style={styles.previewTitle}>
-              Video recorded
+              {video.source === 'recorded' ? 'Video recorded' : 'Video selected'}
             </Text>
 
             <Text style={styles.previewText}>
-              Your message is ready to save. Recording stops after five minutes or about 24 MB, whichever comes first.
+              Play it back to check it, then save it to your vault.
             </Text>
 
-            <View style={styles.fileCard}>
-              <AppIcon name="video" style={styles.fileIcon} />
-
-              <View style={styles.fileContent}>
-                <Text style={styles.fileTitle}>
-                  Personal video message
-                </Text>
-                <Text style={styles.fileSubtitle}>
-                  Ready to save securely
-                </Text>
-              </View>
-            </View>
-
-            <Button title="Record again" variant="secondary" size="md" onPress={handleRetake} disabled={saving} style={styles.retake} />
+            <Button
+              title={video.source === 'recorded' ? 'Record again' : 'Choose a different video'}
+              variant="secondary"
+              size="md"
+              onPress={video.source === 'recorded' ? handleRetake : () => void pickVideo()}
+              disabled={saving}
+              style={styles.retake}
+            />
+            {video.source === 'picked' ? (
+              <Button title="Record instead" variant="tertiary" size="md" onPress={handleRetake} disabled={saving} />
+            ) : null}
           </View>
         )}
 
@@ -379,9 +455,9 @@ export default function LegacyVideoMessageScreen() {
         ) : null}
         {error ? <InlineNotice tone="danger" message={error} style={styles.errorNotice} /> : null}
         <Button
-          title={recordedUri ? 'Save video message' : 'Record a video to save it'}
+          title={video ? 'Save video message' : 'Record or upload a video to save it'}
           onPress={() => void handleSave()}
-          disabled={!recordedUri}
+          disabled={!video}
           loading={saving}
         />
       </ActionBar>
@@ -399,7 +475,48 @@ export default function LegacyVideoMessageScreen() {
 }
 
 const styles = StyleSheet.create({
-  permissionContent: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 32 },
+  cameraPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  placeholderTitle: {
+    marginTop: 16,
+    textAlign: 'center',
+    fontFamily: typography.fonts.playfair.semiBold,
+    fontSize: typography.sizes.title2,
+    color: colors.neutral.white,
+  },
+  placeholderText: {
+    marginTop: 8,
+    textAlign: 'center',
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(255,255,255,0.86)',
+  },
+  placeholderButton: { marginTop: 18, alignSelf: 'stretch' },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.neutral.border },
+  dividerText: {
+    marginHorizontal: 12,
+    fontFamily: typography.fonts.inter.medium,
+    fontSize: 13,
+    color: colors.neutral.textSecondary,
+  },
+  previewFrame: {
+    width: '100%',
+    height: 320,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: colors.primary.deepForest,
+  },
+  previewVideo: { width: '100%', height: '100%' },
   permissionIcon: {
     width: 56,
     height: 56,
@@ -407,20 +524,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.sage,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  permissionTitle: {
-    marginTop: 20,
-    fontFamily: typography.fonts.playfair.semiBold,
-    fontSize: typography.sizes.title1,
-    lineHeight: typography.lineHeights.title1,
-    color: colors.primary.deepForest,
-  },
-  permissionText: {
-    marginTop: 8,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: typography.sizes.body,
-    lineHeight: typography.lineHeights.body,
-    color: colors.neutral.textSecondary,
   },
   retake: { marginTop: 16, alignSelf: 'stretch' },
   notice: { marginTop: 16 },
@@ -440,18 +543,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 10,
     paddingBottom: 35,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 14,
-    color: colors.neutral.textSecondary,
   },
   heading: {
     marginTop: 18,
@@ -579,18 +670,6 @@ const styles = StyleSheet.create({
     borderColor: colors.neutral.border,
     alignItems: 'center',
   },
-  previewIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: colors.brand.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewSymbol: {
-    fontSize: 24,
-    color: colors.primary.forest,
-  },
   previewTitle: {
     marginTop: 14,
     fontFamily: typography.fonts.playfair.semiBold,
@@ -603,42 +682,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.inter.regular,
     fontSize: 13,
     lineHeight: 18,
-    color: colors.neutral.textSecondary,
-  },
-  fileCard: {
-    width: '100%',
-    marginTop: 18,
-    padding: 13,
-    borderRadius: 14,
-    backgroundColor: colors.brand.mint,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  fileIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    backgroundColor: colors.brand.sage,
-    overflow: 'hidden',
-    fontSize: 16,
-    color: colors.primary.forest,
-    paddingTop: 10,
-  },
-  fileContent: {
-    flex: 1,
-    marginLeft: 11,
-  },
-  fileTitle: {
-    fontFamily: typography.fonts.inter.semiBold,
-    fontSize: 13,
-    color: colors.neutral.textPrimary,
-  },
-  fileSubtitle: {
-    marginTop: 3,
-    fontFamily: typography.fonts.inter.regular,
-    fontSize: 13,
     color: colors.neutral.textSecondary,
   },
   buttonPressed: {

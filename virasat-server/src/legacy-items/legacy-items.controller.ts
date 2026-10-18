@@ -22,6 +22,7 @@ import { memoryStorage } from 'multer';
 
 import { LegacyItemsService } from './legacy-items.service';
 import { UploadSlotInterceptor } from './upload-slot.interceptor';
+import { MAX_VIDEO_BYTES } from './upload-limits';
 
 import { CreateLegacyItemDto } from './dto/create-legacy-item.dto';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
@@ -47,7 +48,8 @@ export class LegacyItemsController {
     FileInterceptor('file', {
       storage: memoryStorage(),
       limits: {
-        fileSize: 25 * 1024 * 1024,
+        // Per-type limits (documents are smaller) are enforced in the service.
+        fileSize: MAX_VIDEO_BYTES,
         files: 1,
         fields: 10,
       },

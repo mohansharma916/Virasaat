@@ -96,7 +96,7 @@ export function getApiErrorMessage(
 
     // Payload too large
     if (error.response?.status === 413) {
-      return 'The file is too large to upload. Please select a file up to 25 MB.';
+      return 'The file is too large to upload. Documents can be up to 25 MB and videos up to 100 MB.';
     }
 
     // Bad Gateway / Service Unavailable (cloud storage or backend reboot)

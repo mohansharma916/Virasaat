@@ -150,6 +150,14 @@ jobs:
 
               cd virasat-server
 
+              echo "Freeing disk space..."
+              # Build cache and unused images are never removed otherwise and
+              # fill the disk over repeated deploys. Volumes are never pruned:
+              # postgres_data holds the database.
+              docker builder prune -af
+              docker image prune -af
+              df -h /
+
               echo "Building containers..."
               docker compose build
 
@@ -167,8 +175,9 @@ jobs:
               echo "Deploying API..."
               docker compose up -d
 
-              echo "Cleaning old Docker images..."
-              docker image prune -f
+              echo "Cleaning old Docker images and build cache..."
+              docker image prune -af
+              docker builder prune -af
 
               echo "Checking health..."
               sleep 5

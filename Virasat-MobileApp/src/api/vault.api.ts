@@ -141,7 +141,8 @@ export async function uploadLegacyItem(
     formData,
     {
       signal: options?.signal,
-      timeout: 120_000,
+      // Videos can be up to 100 MB, which takes minutes on a slow mobile link.
+      timeout: data.type === 'VIDEO' ? 900_000 : 120_000,
       onUploadProgress: (event) => {
         if (event.total) {
           options?.onProgress?.(Math.round((event.loaded / event.total) * 100));

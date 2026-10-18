@@ -24,7 +24,7 @@ const CATEGORY_ROUTES: Record<LegacyCategory, string> = {
   DOCUMENTS: '/(auth)/legacy-documents',
   INVESTMENTS: '/(auth)/legacy-investments',
   MESSAGES: '/(auth)/legacy-message',
-  VIDEOS: '/(auth)/legacy-documents',
+  VIDEOS: '/(auth)/legacy-video-message',
   OTHER: '/(auth)/legacy-documents',
 };
 

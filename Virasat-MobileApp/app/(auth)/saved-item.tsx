@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { downloadLegacyItem, getLegacyItem, updateLegacyItem, type LegacyItemDetail } from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
@@ -18,8 +19,24 @@ import { Skeleton, SkeletonGroup } from '@/src/components/Skeleton';
 import { TextLink } from '@/src/components/TextLink';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
-import { createTemporaryVaultExport } from '@/src/storage/vault-export.storage';
+import { createTemporaryVaultExport, downloadVaultFileToCache } from '@/src/storage/vault-export.storage';
 import { runWithSystemUi } from '@/src/components/SessionGate';
+
+function SavedVideoPlayer({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (instance) => {
+    instance.loop = false;
+    instance.play();
+  });
+  return (
+    <VideoView
+      player={player}
+      style={styles.video}
+      nativeControls
+      contentFit="contain"
+      accessibilityLabel="Your saved video message"
+    />
+  );
+}
 
 export default function SavedItemScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -32,6 +49,16 @@ export default function SavedItemScreen() {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const controller = useRef<AbortController | null>(null);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
+  const videoFile = useRef<File | null>(null);
+
+  // The decrypted copy exists only while this screen shows it.
+  const removeVideoCopy = () => {
+    try { if (videoFile.current?.exists) videoFile.current.delete(); } catch { /* Cleared at next start. */ }
+    videoFile.current = null;
+  };
+  useEffect(() => () => removeVideoCopy(), [id]);
 
   useEffect(() => {
     const request = new AbortController();
@@ -39,6 +66,8 @@ export default function SavedItemScreen() {
     setItem(null);
     setError('');
     setEditing(false);
+    setVideoUri(null);
+    setVideoProgress(null);
     if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
       setError('This saved item link is invalid.');
       return () => request.abort();
@@ -105,6 +134,32 @@ export default function SavedItemScreen() {
     }
   };
 
+  const isVideo = Boolean(item?.hasFile && (item.type === 'VIDEO' || item.mimeType?.startsWith('video/')));
+
+  const playVideo = async () => {
+    if (!item || !isVideo || busy || Platform.OS === 'web') return;
+    const signal = controller.current?.signal;
+    setBusy(true);
+    setError('');
+    setVideoProgress(0);
+    try {
+      removeVideoCopy();
+      const extension = item.mimeType === 'video/quicktime' ? 'mov' : 'mp4';
+      const file = await downloadVaultFileToCache(item.id, `${item.id}-play.${extension}`, {
+        expectedBytes: item.sizeBytes,
+        signal,
+        onProgress: setVideoProgress,
+      });
+      if (signal?.aborted) { try { file.delete(); } catch { /* Cleared at next start. */ } return; }
+      videoFile.current = file;
+      setVideoUri(file.uri);
+    } catch (reason) {
+      if (!signal?.aborted) setError(getApiErrorMessage(reason, 'We couldn’t load this video. Check your connection and try again.'));
+    } finally {
+      if (!signal?.aborted) { setBusy(false); setVideoProgress(null); }
+    }
+  };
+
   const cancelEdit = () => {
     if (!item) return;
     setEditing(false);
@@ -163,10 +218,41 @@ export default function SavedItemScreen() {
               <Text style={styles.title} accessibilityRole="header">{item.title}</Text>
               <Text style={styles.meta}>{typeLabel} · Updated {new Date(item.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
 
+              {isVideo && videoUri ? (
+                <View style={styles.videoFrame}>
+                  <SavedVideoPlayer uri={videoUri} />
+                </View>
+              ) : null}
+
+              {isVideo && !videoUri && Platform.OS !== 'web' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Play video"
+                  accessibilityState={{ busy: videoProgress !== null, disabled: busy }}
+                  onPress={() => void playVideo()}
+                  disabled={busy}
+                  style={({ pressed }) => [styles.videoFrame, styles.videoPoster, pressed && styles.videoPressed]}
+                >
+                  {videoProgress !== null ? (
+                    <>
+                      <ActivityIndicator color={colors.neutral.white} />
+                      <Text style={styles.videoPosterText} accessibilityLiveRegion="polite">Loading video · {videoProgress}%</Text>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.playButton}>
+                        <AppIcon name="play" size={28} color={colors.primary.deepForest} />
+                      </View>
+                      <Text style={styles.videoPosterText}>Play video</Text>
+                    </>
+                  )}
+                </Pressable>
+              ) : null}
+
               {item.hasFile ? (
                 <View style={styles.fileCard}>
                   <View style={styles.fileIcon}>
-                    <AppIcon name="document" size={24} color={colors.primary.deepForest} />
+                    <AppIcon name={isVideo ? 'video' : 'document'} size={24} color={colors.primary.deepForest} />
                   </View>
                   <View style={styles.fileBody}>
                     <Text style={styles.fileName} numberOfLines={2}>{item.fileName ?? item.title}</Text>
@@ -247,6 +333,29 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.caption,
     lineHeight: typography.lineHeights.caption,
     color: colors.neutral.textSecondary,
+  },
+  videoFrame: {
+    marginTop: 20,
+    height: 260,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: colors.primary.deepForest,
+  },
+  video: { width: '100%', height: '100%' },
+  videoPressed: { opacity: 0.85 },
+  videoPoster: { alignItems: 'center', justifyContent: 'center', gap: 12 },
+  playButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.neutral.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPosterText: {
+    fontFamily: typography.fonts.inter.semiBold,
+    fontSize: typography.sizes.callout,
+    color: colors.neutral.white,
   },
   fileCard: {
     marginTop: 20,

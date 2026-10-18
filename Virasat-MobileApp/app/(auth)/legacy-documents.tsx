@@ -16,6 +16,7 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
 import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
+import { MAX_DOCUMENT_BYTES, MAX_DOCUMENT_LABEL, MAX_VIDEO_BYTES, MAX_VIDEO_LABEL } from '@/src/utils/upload-limits';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
@@ -48,11 +49,12 @@ export default function LegacyDocumentsScreen() {
   const transfer = useRef<AbortController | null>(null);
   useEffect(() => () => transfer.current?.abort(), []);
 
-  const MAX_FILE_SIZE = 25 * 1024 * 1024;
+  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_DOCUMENT_BYTES;
+  const maxLabel = isVideo ? MAX_VIDEO_LABEL : MAX_DOCUMENT_LABEL;
 
   const addFile = (file: { name: string; size?: number | null; uri: string; mimeType?: string | null; file?: unknown }) => {
-    if (file.size && file.size > MAX_FILE_SIZE) {
-      setPickError('That file is larger than 25 MB. Choose a smaller file.');
+    if (file.size && file.size > maxBytes) {
+      setPickError(`That file is larger than ${maxLabel}. Choose a smaller file.`);
       haptics.warning();
       return;
     }
@@ -176,12 +178,12 @@ export default function LegacyDocumentsScreen() {
   const sources: { key: string; icon: IconName; title: string; detail: string; onPress: () => void }[] = isVideo
     ? [
         { key: 'record', icon: 'camera', title: 'Record a video message', detail: 'Use your camera now', onPress: () => router.push('/(auth)/legacy-video-message' as never) },
-        { key: 'file', icon: 'folder', title: 'Choose a video file', detail: 'MP4 or QuickTime, up to 25 MB', onPress: () => void pickDocument() },
+        { key: 'file', icon: 'folder', title: 'Choose a video file', detail: `MP4 or QuickTime, up to ${MAX_VIDEO_LABEL}`, onPress: () => void pickDocument() },
       ]
     : [
         { key: 'camera', icon: 'camera', title: 'Take a photo', detail: 'Photograph a paper document', onPress: () => void capturePhoto('camera') },
         { key: 'library', icon: 'image', title: 'Choose a photo', detail: 'From your photo library', onPress: () => void capturePhoto('library') },
-        { key: 'file', icon: 'folder', title: 'Choose a file', detail: 'PDF, Word or image, up to 25 MB', onPress: () => void pickDocument() },
+        { key: 'file', icon: 'folder', title: 'Choose a file', detail: `PDF, Word or image, up to ${MAX_DOCUMENT_LABEL}`, onPress: () => void pickDocument() },
       ];
 
   return (
@@ -252,7 +254,7 @@ export default function LegacyDocumentsScreen() {
         <InlineNotice
           tone="brand"
           title="Encrypted before it’s stored"
-          message="Each file is encrypted with AES-256 before it leaves for your vault. Maximum 25 MB per file."
+          message={`Each file is encrypted with AES-256 before it leaves for your vault. Maximum ${maxLabel} per file.`}
           style={styles.notice}
         />
       </ScrollView>

@@ -8,7 +8,9 @@ import {
 } from '@nestjs/common';
 import { Observable, defer, finalize } from 'rxjs';
 
-const MAX_ACTIVE_UPLOADS = 8;
+// Videos may be 100 MB and are held twice (plaintext + ciphertext), so four
+// uploads can use about 800 MB at peak.
+const MAX_ACTIVE_UPLOADS = 4;
 const MAX_ACTIVE_UPLOADS_PER_USER = 2;
 
 /**

@@ -36,6 +36,7 @@ import { PlanEntitlementService } from '../subscriptions/plan-entitlement.servic
 import { PlanLimit } from '../subscriptions/subscription.constants';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
 import { ReauthService } from '../users/reauth.service';
+import { MAX_DOCUMENT_BYTES, MAX_VIDEO_BYTES } from './upload-limits';
 
 type PayloadStorageType = 'INLINE_DB' | 'S3' | 'LOCAL';
 
@@ -215,17 +216,20 @@ export class LegacyItemsService {
     if (!fileBuffer || !fileBuffer.length) {
       throw new BadRequestException('A file is required.');
     }
-    if (fileBuffer.length > 25 * 1024 * 1024) {
-      throw new BadRequestException('Files must be 25 MB or smaller.');
-    }
-
     const mimeType = this.safeMimeType(file?.mimetype);
-    const vault = await this.vaultService.getUserVault(userId);
-
     const isVideo =
       data.type === LegacyItemType.VIDEO ||
       mimeType.startsWith('video/') ||
       this.looksLikeVideo(fileBuffer);
+    if (fileBuffer.length > (isVideo ? MAX_VIDEO_BYTES : MAX_DOCUMENT_BYTES)) {
+      throw new BadRequestException(
+        isVideo
+          ? 'Videos must be 100 MB or smaller.'
+          : 'Files must be 25 MB or smaller.',
+      );
+    }
+
+    const vault = await this.vaultService.getUserVault(userId);
 
     const encryptedFile = this.encryptionService.encrypt(
       fileBuffer,
