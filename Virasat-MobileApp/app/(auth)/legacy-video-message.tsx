@@ -493,7 +493,7 @@ export default function LegacyVideoMessageScreen() {
         visible={upgradeModalVisible}
         onClose={() => setUpgradeModalVisible(false)}
         title="You’ve reached your video limit"
-        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes ${videoLimit ?? 1} video message. Secure will include 10 and Family 50.`}
+        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes ${videoLimit ?? 1} video message. Secure includes 10 and Family 50.`}
         benefits={['Up to 10 videos on Secure', 'Up to 50 videos on Family', 'Encrypted and private until release']}
         onCtaPress={() => router.push('/(auth)/plans' as never)}
       />

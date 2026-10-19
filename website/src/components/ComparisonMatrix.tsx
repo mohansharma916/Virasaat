@@ -71,12 +71,12 @@ export default function ComparisonMatrix() {
     },
     {
       feature: 'Cost',
-      virasat: 'Free signup; app plans vary',
+      virasat: 'Free; paid from ₹999/yr',
       lawyer: '₹25,000 - ₹50,000+',
       google: 'Free (Account only)',
       cloud: '$10 - $20 / month',
       pwManager: '$36 - $60 / year',
-      note: 'Starter is free on Google Play. Paid plans are not on sale yet.',
+      note: 'Starter is free. Secure ₹999/year and Family ₹2,499/year, bought in the app through Google Play.',
     },
   ];
 

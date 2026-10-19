@@ -10,7 +10,7 @@ import { InlineNotice } from '@/src/components/InlineNotice';
 import { Input } from '@/src/components/Input';
 import { ScreenHeader } from '@/src/components/ScreenHeader';
 import { Skeleton, SkeletonGroup } from '@/src/components/Skeleton';
-import { decideReviewCase, getReviewCase, REVIEW_STATUS_LABEL as STATUS_LABEL, type ReviewCaseDetail } from '@/src/api/admin.api';
+import { decideReviewCase, getReviewCase, recordReviewVisit, REVIEW_STATUS_LABEL as STATUS_LABEL, type ReviewCaseDetail } from '@/src/api/admin.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { haptics } from '@/src/utils/haptics';
 import { colors } from '@/src/theme/colors';
@@ -26,6 +26,23 @@ export default function AdminCaseScreen() {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [visitNotes, setVisitNotes] = useState('');
+
+  const saveVisit = async () => {
+    if (!detail || busy || !visitNotes.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      setDetail(await recordReviewVisit(detail.id, visitNotes));
+      setVisitNotes('');
+      haptics.success();
+    } catch (reason) {
+      haptics.error();
+      setError(getApiErrorMessage(reason, 'We couldn’t save the visit.'));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -89,8 +106,43 @@ export default function AdminCaseScreen() {
               <Fact label="Check-in was due" value={formatDate(detail.dueAt)} />
               <Fact label="Last check-in" value={formatDate(detail.lastCheckInAt)} />
               <Fact label="Case opened" value={formatDate(detail.openedAt)} />
+              {detail.owner?.phone ? <Fact label="Owner phone" value={detail.owner.phone} /> : null}
               {detail.note ? <Fact label="Note" value={detail.note} /> : null}
             </View>
+
+            {detail.inPersonVisit?.required ? (
+              <>
+                <Text style={styles.sectionTitle}>In-person visit (Family plan)</Text>
+                <View style={styles.card}>
+                  {detail.inPersonVisit.completedAt ? (
+                    <>
+                      <Fact label="Visited" value={formatDate(detail.inPersonVisit.completedAt)} />
+                      <Text selectable style={styles.statementText}>{detail.inPersonVisit.notes}</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.personMeta}>
+                        Visit the owner{detail.owner?.phone ? ` (phone ${detail.owner.phone})` : ''} or their family before approving. Approval stays locked until the visit is recorded.
+                      </Text>
+                      {open ? (
+                        <>
+                          <Input
+                            label="What you found"
+                            multiline
+                            maxLength={2000}
+                            value={visitNotes}
+                            onChangeText={setVisitNotes}
+                            placeholder="Date, address, who you met, what you saw…"
+                            style={styles.notes}
+                          />
+                          <Button title="Record visit" size="md" variant="secondary" onPress={() => void saveVisit()} loading={busy} disabled={!visitNotes.trim()} />
+                        </>
+                      ) : null}
+                    </>
+                  )}
+                </View>
+              </>
+            ) : null}
 
             <Text style={styles.sectionTitle}>Trusted people</Text>
             {detail.recipients.map((person) => (

@@ -88,7 +88,9 @@
         }
       ],
       "./plugins/with-release-signing",
-      "./plugins/with-r8-optimization"
+      "./plugins/with-r8-optimization",
+      "expo-iap",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

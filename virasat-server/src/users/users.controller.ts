@@ -54,7 +54,11 @@ export class UsersController {
 
   @Patch('me')
   async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
-    await this.usersService.update(req.user.id, dto);
+    const { phone, ...rest } = dto;
+    await this.usersService.update(req.user.id, {
+      ...rest,
+      ...(phone !== undefined ? { phone: phone.trim() || null } : {}),
+    });
     return this.usersService.getProfile(req.user.id);
   }
 }

@@ -51,3 +51,4 @@ credentials.json
 *.apk
 *.aab
 /release-dist/
+google-services.json

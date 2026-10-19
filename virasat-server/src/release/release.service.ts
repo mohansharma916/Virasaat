@@ -24,6 +24,10 @@ import { AuditService } from '../audit/audit.service';
 import { Optional } from '@nestjs/common';
 import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
 import { Feature } from '../subscriptions/subscription.constants';
+import {
+  DEFAULT_DEADLINE_DAYS,
+  deadlineDays,
+} from '../check-in/check-in-schedule';
 
 @Injectable()
 export class ReleaseService {
@@ -67,6 +71,17 @@ export class ReleaseService {
         await this.planEntitlementService.assertFeature(
           userId,
           Feature.ADVANCED_RELEASE_POLICY,
+        );
+      }
+      // Starter keeps the 3-month review deadline.
+      const requested = data.escalationConfig?.checkInDeadlineDays;
+      if (
+        requested !== undefined &&
+        deadlineDays(requested) !== DEFAULT_DEADLINE_DAYS
+      ) {
+        await this.planEntitlementService.assertFeature(
+          userId,
+          Feature.CUSTOM_GRACE_PERIOD,
         );
       }
     }

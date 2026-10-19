@@ -28,7 +28,7 @@ import {
   getPopularLanguages,
 } from '@/src/utils/geo-data';
 
-type Snapshot = { name: string; country: string; language: string };
+type Snapshot = { name: string; phone: string; country: string; language: string };
 
 // Onboarding "Complete your profile" and, with mode=edit, "Personal details"
 // (opened from the Account tab).
@@ -37,6 +37,7 @@ export default function ProfileScreen() {
   const editing = mode === 'edit';
   const dispatch = useAppDispatch();
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('');
   const [language, setLanguage] = useState('');
   const [initial, setInitial] = useState<Snapshot | null>(null);
@@ -44,7 +45,7 @@ export default function ProfileScreen() {
   const [submitError, setSubmitError] = useState('');
   const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; country?: string; language?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; country?: string; language?: string }>({});
 
   const countryPickerItems = useMemo<PickerItem[]>(
     () =>
@@ -114,10 +115,12 @@ export default function ProfileScreen() {
         if (!active) return;
         const snapshot = {
           name: profile.name ?? '',
+          phone: profile.phone ?? '',
           country: profile.country ?? '',
           language: profile.preferredLanguage ?? '',
         };
         setName(snapshot.name);
+        setPhone(snapshot.phone);
         setCountry(snapshot.country);
         setLanguage(snapshot.language);
         setInitial(snapshot);
@@ -131,11 +134,12 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  const dirty = !initial || initial.name !== name || initial.country !== country || initial.language !== language;
+  const dirty = !initial || initial.name !== name || initial.phone !== phone || initial.country !== country || initial.language !== language;
 
   const validate = () => {
     const newErrors: typeof errors = {};
     if (!name.trim()) newErrors.name = 'Enter your full name.';
+    if (phone.trim() && !/^\+?[\d\s-]{10,18}$/.test(phone.trim())) newErrors.phone = 'Enter a phone number with country code, for example +91 98765 43210.';
     if (!country) newErrors.country = 'Choose your country.';
     if (!language) newErrors.language = 'Choose your preferred language.';
     setErrors(newErrors);
@@ -153,6 +157,7 @@ export default function ProfileScreen() {
       setSubmitError('');
       const profile = await updateProfile({
         name: name.trim(),
+        phone: phone.trim(),
         country,
         preferredLanguage: language,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
@@ -203,6 +208,23 @@ export default function ProfileScreen() {
             textContentType="name"
             returnKeyType="done"
           />
+
+          <Input
+            label="Mobile number"
+            required={false}
+            placeholder="+91 98765 43210"
+            value={phone}
+            onChangeText={(value) => {
+              setPhone(value);
+              if (errors.phone) setErrors((previous) => ({ ...previous, phone: undefined }));
+            }}
+            error={errors.phone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            maxLength={20}
+          />
+          <Text style={styles.fieldHint}>For SMS and phone-call reminders on Secure and Family, if you miss check-ins.</Text>
 
           <SelectInput
             label="Country"
@@ -274,6 +296,14 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  fieldHint: {
+    marginTop: -8,
+    marginBottom: 16,
+    fontFamily: typography.fonts.inter.regular,
+    fontSize: typography.sizes.caption,
+    lineHeight: 18,
+    color: colors.neutral.textSecondary,
+  },
   safeArea: { flex: 1, backgroundColor: colors.brand.ivory },
   keyboard: { flex: 1 },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },

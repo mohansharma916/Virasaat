@@ -1,3 +1,4 @@
+import { GooglePlayVerifier } from './google-play.verifier';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Plan } from './entities/plan.entity';
@@ -17,7 +18,7 @@ import { SubscriptionsController } from './subscriptions.controller';
     ]),
   ],
   controllers: [SubscriptionsController],
-  providers: [PlanEntitlementService],
-  exports: [PlanEntitlementService],
+  providers: [PlanEntitlementService, GooglePlayVerifier],
+  exports: [PlanEntitlementService, GooglePlayVerifier],
 })
 export class SubscriptionsModule {}

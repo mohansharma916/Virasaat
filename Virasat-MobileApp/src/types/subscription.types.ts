@@ -9,6 +9,8 @@ export enum Feature {
   FULL_ACTIVITY_HISTORY = 'FULL_ACTIVITY_HISTORY',
   PRIORITY_SUPPORT = 'PRIORITY_SUPPORT',
   FAMILY_EMERGENCY_INSTRUCTIONS = 'FAMILY_EMERGENCY_INSTRUCTIONS',
+  SMS_CALL_REMINDERS = 'SMS_CALL_REMINDERS',
+  IN_PERSON_VISIT = 'IN_PERSON_VISIT',
 }
 
 export enum PlanLimit {
@@ -56,6 +58,9 @@ export interface SubscriptionInfo {
 export interface EntitlementsPayload {
   effectivePlanCode: PlanCode;
   billingAvailable: boolean;
+  /** Passed to Google Play so a purchase can only be redeemed by this account. */
+  playAccountRef?: string;
+  playProductIds?: Partial<Record<PlanCode, string>>;
   purchaseVerification: 'NOT_REQUIRED' | 'UNVERIFIED' | 'VERIFIED';
   plan: PlanInfo;
   subscription: SubscriptionInfo;

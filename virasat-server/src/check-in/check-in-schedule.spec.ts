@@ -1,6 +1,7 @@
 import {
   channelsForOffset,
   deadlineDays,
+  effectiveDeadlineDays,
   reminderOffsets,
 } from './check-in-schedule';
 
@@ -22,8 +23,14 @@ describe('check-in reminder schedule', () => {
     expect(deadlineDays(undefined)).toBe(90);
   });
 
-  it('uses every channel from two months overdue', () => {
-    expect(channelsForOffset(45)).toEqual(['EMAIL']);
-    expect(channelsForOffset(60)).toEqual(['EMAIL', 'PUSH', 'SMS', 'CALL']);
+  it('adds app notifications from two months overdue, and SMS and calls on paid plans', () => {
+    expect(channelsForOffset(45, true)).toEqual(['EMAIL']);
+    expect(channelsForOffset(60)).toEqual(['EMAIL', 'PUSH']);
+    expect(channelsForOffset(60, true)).toEqual(['EMAIL', 'PUSH', 'SMS', 'CALL']);
+  });
+
+  it('keeps Starter on the 3-month deadline', () => {
+    expect(effectiveDeadlineDays(30, false)).toBe(90);
+    expect(effectiveDeadlineDays(30, true)).toBe(30);
   });
 });

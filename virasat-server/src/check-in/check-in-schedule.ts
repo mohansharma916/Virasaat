@@ -6,7 +6,8 @@
  * - Overdue: 7, 15, 21, 30 and 45 days after, then every 15 days, and every
  *   day during the last 2 weeks before the deadline.
  * - Deadline (default 3 months, owner-configurable): a release review opens.
- * - From 2 months overdue, reminders go out on every channel.
+ * - From 2 months overdue, reminders also go out as app notifications, and
+ *   on paid plans by SMS and phone call too.
  */
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const CHECK_IN_OPENS_DAYS_BEFORE = 2;
@@ -46,8 +47,17 @@ export function reminderOffsets(deadline: number): number[] {
   ].sort((a, b) => a - b);
 }
 
-export function channelsForOffset(offsetDays: number): ReminderChannel[] {
-  return offsetDays >= ALL_CHANNELS_AFTER_DAYS ? ALL_CHANNELS : ['EMAIL'];
+export function channelsForOffset(
+  offsetDays: number,
+  smsAndCalls = false,
+): ReminderChannel[] {
+  if (offsetDays < ALL_CHANNELS_AFTER_DAYS) return ['EMAIL'];
+  return smsAndCalls ? ALL_CHANNELS : ['EMAIL', 'PUSH'];
+}
+
+/** Starter keeps the default; a custom deadline needs a paid plan. */
+export function effectiveDeadlineDays(value: unknown, customAllowed: boolean) {
+  return customAllowed ? deadlineDays(value) : DEFAULT_DEADLINE_DAYS;
 }
 
 export function checkInOpensAt(dueAt: Date) {

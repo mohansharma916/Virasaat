@@ -206,7 +206,7 @@ export default function PeopleScreen() {
         visible={upgradeModalVisible}
         onClose={() => setUpgradeModalVisible(false)}
         title="You’ve reached your plan’s limit"
-        message={`Your ${planName} plan includes ${limitText}. Secure will include up to 3, and Family up to 8.`}
+        message={`Your ${planName} plan includes ${limitText}. Secure includes up to 3, and Family up to 8.`}
         benefits={[
           'Up to 3 trusted people on Secure',
           'Up to 8 trusted people on Family',

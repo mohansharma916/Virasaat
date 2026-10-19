@@ -52,6 +52,15 @@ export class AdminReleaseController {
     return this.releaseFlow.approveCase(req.user.id, id, dto.notes ?? '');
   }
 
+  @Post('release-cases/:id/visit')
+  visit(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewDecisionDto,
+  ) {
+    return this.releaseFlow.recordVisit(req.user.id, id, dto.notes ?? '');
+  }
+
   @Post('release-cases/:id/reject')
   reject(
     @Req() req: any,

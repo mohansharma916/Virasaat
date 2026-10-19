@@ -13,6 +13,7 @@ import { typography } from '@/src/theme/typography';
 import { confirmCheckIn } from '@/src/api/check-in.api';
 import { getLiveReleaseCase, type LiveReleaseCase } from '@/src/api/release.api';
 import { getSharedOverview } from '@/src/api/shared.api';
+import { registerForReminders } from '@/src/services/push.service';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { haptics } from '@/src/utils/haptics';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
@@ -52,6 +53,7 @@ export default function HomeScreen() {
     setNow(Date.now());
     try {
       // Optional extras never block the overview.
+      void registerForReminders();
       void getLiveReleaseCase().then(setLiveCase).catch(() => undefined);
       void getSharedOverview()
         .then((shared) => setSharedNeedsYou(shared.invitations.length + shared.cases.filter((c) => !c.statementSubmittedAt).length))

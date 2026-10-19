@@ -32,7 +32,7 @@ import { ReleasePolicy } from '../release/entities/release-policy.entity';
 import {
   checkInDeadline,
   checkInOpensAt,
-  deadlineDays,
+  effectiveDeadlineDays,
 } from './check-in-schedule';
 
 @Injectable()
@@ -339,8 +339,14 @@ export class CheckInService {
     const releasePolicy = await this.policyRepository.manager
       .getRepository(ReleasePolicy)
       .findOne({ where: { userId } });
-    const deadline = deadlineDays(
+    const deadline = effectiveDeadlineDays(
       releasePolicy?.escalationConfig?.checkInDeadlineDays,
+      Boolean(
+        await this.planEntitlementService?.canUseFeature(
+          userId,
+          Feature.CUSTOM_GRACE_PERIOD,
+        ),
+      ),
     );
     const open = latestEvent?.status === CheckInEventStatus.PENDING;
     return {

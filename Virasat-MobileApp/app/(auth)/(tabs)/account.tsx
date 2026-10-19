@@ -14,6 +14,7 @@ import { clearSession } from '@/src/store/session.slice';
 import { clearVaultData } from '@/src/store/vault.slice';
 import { useSubscription } from '@/src/store/subscription.slice';
 import { isReleaseReviewer } from '@/src/api/admin.api';
+import { unregisterFromReminders } from '@/src/services/push.service';
 
 // Account tab: a settings list. Editing personal details lives on its own
 // screen (`profile?mode=edit`) so Save only appears where it applies.
@@ -46,6 +47,8 @@ export default function AccountScreen() {
     try {
       setSigningOut(true);
       setError('');
+      // While still signed in, so the server knows whose device to drop.
+      await unregisterFromReminders();
       try {
         await logout();
       } catch {

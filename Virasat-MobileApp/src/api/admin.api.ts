@@ -30,7 +30,9 @@ export interface ReviewCaseDetail {
   reviewedAt: string | null;
   closedAt: string | null;
   reviewerNotes: string | null;
-  owner: { name: string; email: string } | null;
+  owner: { name: string; email: string; phone: string | null } | null;
+  /** Family plan: a team member must visit before approval. */
+  inPersonVisit: { required: boolean; completedAt: string | null; notes: string | null } | null;
   overdueDays: number | null;
   dueAt: string | null;
   lastCheckInAt: string | null;
@@ -67,6 +69,11 @@ export async function listReviewCases(status?: ReviewCaseStatus): Promise<Review
 
 export async function getReviewCase(id: string): Promise<ReviewCaseDetail> {
   const response = await api.get<ReviewCaseDetail>(`/admin/release-cases/${id}`);
+  return response.data;
+}
+
+export async function recordReviewVisit(id: string, notes: string): Promise<ReviewCaseDetail> {
+  const response = await api.post<ReviewCaseDetail>(`/admin/release-cases/${id}/visit`, { notes });
   return response.data;
 }
 

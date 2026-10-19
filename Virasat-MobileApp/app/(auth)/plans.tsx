@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,32 +11,118 @@ import { typography } from '@/src/theme/typography';
 import { PlanCode } from '@/src/types/subscription.types';
 import { useSubscription } from '@/src/store/subscription.slice';
 import { getApiErrorMessage } from '@/src/utils/api-error';
+import { haptics } from '@/src/utils/haptics';
+import { PurchaseError, PurchaseService } from '@/src/services/purchase.service';
+
+type PlanCard = {
+  code: PlanCode;
+  name: string;
+  subtitle: string;
+  price: string;
+  period: string;
+  recommended?: string;
+  features: { text: string; highlight?: boolean }[];
+};
+
+// Only what each plan really includes today.
+const PLANS: PlanCard[] = [
+  {
+    code: PlanCode.STARTER,
+    name: 'Starter',
+    subtitle: 'Start building your digital legacy',
+    price: '0',
+    period: '/ forever',
+    features: [
+      { text: '1 trusted person' },
+      { text: 'Monthly check-ins with email reminders' },
+      { text: 'App notifications when a check-in is long overdue' },
+      { text: 'Release review after 3 months without a check-in' },
+      { text: 'Up to 3 written messages and 1 video message' },
+    ],
+  },
+  {
+    code: PlanCode.SECURE,
+    name: 'Secure',
+    subtitle: 'Decide exactly who receives what, and when',
+    price: '999',
+    period: '/ year',
+    recommended: 'Recommended for individuals',
+    features: [
+      { text: 'Up to 3 trusted people', highlight: true },
+      { text: 'Weekly or monthly check-ins', highlight: true },
+      { text: 'Choose your review deadline: 1, 2, 3 or 6 months', highlight: true },
+      { text: 'SMS and phone-call reminders when you’re overdue', highlight: true },
+      { text: 'Unlimited written messages' },
+      { text: 'Up to 10 video messages' },
+    ],
+  },
+  {
+    code: PlanCode.FAMILY,
+    name: 'Family',
+    subtitle: 'The most careful protection for your family',
+    price: '2,499',
+    period: '/ year',
+    features: [
+      { text: 'Everything in Secure' },
+      { text: 'Up to 8 trusted people', highlight: true },
+      { text: 'A Virasat team member visits before any release', highlight: true },
+      { text: 'Up to 50 video messages', highlight: true },
+    ],
+  },
+];
+
+const RANK: Record<PlanCode, number> = { STARTER: 0, SECURE: 1, FAMILY: 2 };
 
 export default function PlansScreen() {
   const insets = useSafeAreaInsets();
-  const { effectivePlanCode, restorePurchases, refreshSubscription } =
-    useSubscription();
-  const [restoring, setRestoring] = useState(false);
-  const [restoreResult, setRestoreResult] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null);
+  const { effectivePlanCode, restorePurchases, refreshSubscription, purchasePlan } = useSubscription();
+  const [busy, setBusy] = useState<PlanCode | 'restore' | null>(null);
+  const [result, setResult] = useState<{ tone: 'success' | 'danger' | 'info'; message: string } | null>(null);
+  const [prices, setPrices] = useState<Partial<Record<PlanCode, string>>>({});
 
+  useEffect(() => {
+    // Google Play's localized price, when the store is reachable.
+    void PurchaseService.getProducts()
+      .then((products) => setPrices(Object.fromEntries(products.map((p) => [p.planCode, p.priceText]))))
+      .catch(() => undefined);
+  }, []);
 
-  const handleRestore = async () => {
+  const buy = async (planCode: PlanCode) => {
+    if (busy) return;
+    setBusy(planCode);
+    setResult(null);
     try {
-      setRestoring(true);
-      setRestoreResult(null);
-      await restorePurchases();
+      await purchasePlan(planCode);
       await refreshSubscription();
-      setRestoreResult({ tone: 'success', message: 'Your plan is up to date.' });
+      haptics.success();
+      setResult({ tone: 'success', message: `You’re on ${planCode === PlanCode.FAMILY ? 'Family' : 'Secure'}. Thank you!` });
     } catch (error) {
-      setRestoreResult({ tone: 'danger', message: getApiErrorMessage(error, 'We couldn’t refresh your plan. Try again.') });
+      const cancelled = error instanceof PurchaseError && error.cancelled;
+      if (!cancelled) haptics.error();
+      setResult(
+        cancelled
+          ? null
+          : { tone: 'danger', message: error instanceof Error && error.message ? error.message : getApiErrorMessage(error, 'The purchase didn’t complete. You weren’t charged twice; try again.') },
+      );
     } finally {
-      setRestoring(false);
+      setBusy(null);
     }
   };
 
-  const isStarter = effectivePlanCode === PlanCode.STARTER;
-  const isSecure = effectivePlanCode === PlanCode.SECURE;
-  const isFamily = effectivePlanCode === PlanCode.FAMILY;
+  const handleRestore = async () => {
+    if (busy) return;
+    setBusy('restore');
+    setResult(null);
+    try {
+      await restorePurchases();
+      await refreshSubscription();
+      setResult({ tone: 'success', message: 'Your plan is up to date with Google Play.' });
+    } catch (error) {
+      setResult({ tone: 'danger', message: error instanceof Error && error.message ? error.message : getApiErrorMessage(error, 'We couldn’t restore your purchases. Try again.') });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -49,135 +135,76 @@ export default function PlansScreen() {
         <View style={styles.heading}>
           <Text style={styles.title} accessibilityRole="header">Plans</Text>
           <Text style={styles.subtitle}>
-            Starter is free and available now. Secure and Family are coming soon. Their features below are planned.
+            Start free. Upgrade any time through Google Play; cancel whenever you like and keep everything you saved.
           </Text>
         </View>
 
-        {/* 1. STARTER PLAN */}
-        <View style={[styles.planCard, isStarter && styles.currentPlanBorder]}>
-          <View style={styles.planHeader}>
-            <View>
-              <Text style={styles.planName}>Starter</Text>
-              <Text style={styles.planSubtitle}>Start building your digital legacy</Text>
-            </View>
-            {isStarter && (
-              <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>Current plan</Text>
+        {result ? <InlineNotice tone={result.tone} message={result.message} style={styles.resultNotice} /> : null}
+
+        {PLANS.map((plan) => {
+          const current = effectivePlanCode === plan.code;
+          const lower = RANK[plan.code] < RANK[effectivePlanCode];
+          return (
+            <View key={plan.code} style={[styles.planCard, plan.recommended && styles.popularCard, current && styles.currentPlanBorder]}>
+              {plan.recommended ? (
+                <View style={styles.recommendTag}>
+                  <Text style={styles.recommendTagText}>{plan.recommended}</Text>
+                </View>
+              ) : null}
+              <View style={styles.planHeader}>
+                <View style={styles.planHeaderText}>
+                  <Text style={styles.planName}>{plan.name}</Text>
+                  <Text style={styles.planSubtitle}>{plan.subtitle}</Text>
+                </View>
+                {current ? (
+                  <View style={styles.currentBadge}>
+                    <Text style={styles.currentBadgeText}>Current plan</Text>
+                  </View>
+                ) : null}
               </View>
-            )}
-          </View>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.priceCurrency}>₹</Text>
-            <Text style={styles.priceAmount}>0</Text>
-            <Text style={styles.pricePeriod}>/ forever</Text>
-          </View>
-
-          <View style={styles.featureList}>
-            <FeatureItem text="1 trusted person" />
-            <FeatureItem text="Standard monthly check-in" />
-            <FeatureItem text="Standard release policy" />
-            <FeatureItem text="Up to 3 written messages and 1 video message" />
-            <FeatureItem text="Basic activity history" />
-          </View>
-
-          {isStarter ? (
-            <View style={styles.statusChip}>
-              <AppIcon name="checkCircle" size={16} color={colors.semantic.success} />
-              <Text style={styles.statusChipText}>Your current plan</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* 2. SECURE PLAN */}
-        <View style={[styles.planCard, styles.popularCard, isSecure && styles.currentPlanBorder]}>
-          <View style={styles.recommendTag}>
-            <Text style={styles.recommendTagText}>Recommended for individuals</Text>
-          </View>
-
-          <View style={styles.planHeader}>
-            <View>
-              <Text style={styles.planName}>Secure</Text>
-              <Text style={styles.planSubtitle}>
-                Secure your legacy and decide exactly who receives what
-              </Text>
-            </View>
-            {isSecure && (
-              <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>Current plan</Text>
+              <View style={styles.priceRow}>
+                {prices[plan.code] && plan.code !== PlanCode.STARTER ? (
+                  <Text style={styles.priceAmount}>{prices[plan.code]}</Text>
+                ) : (
+                  <>
+                    <Text style={styles.priceCurrency}>₹</Text>
+                    <Text style={styles.priceAmount}>{plan.price}</Text>
+                    <Text style={styles.pricePeriod}>{plan.period}</Text>
+                  </>
+                )}
               </View>
-            )}
-          </View>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.priceCurrency}>₹</Text>
-            <Text style={styles.priceAmount}>999</Text>
-            <Text style={styles.pricePeriod}>/ year</Text>
-          </View>
-
-          <View style={styles.featureList}>
-            <FeatureItem text="Up to 3 trusted people" highlight />
-            <FeatureItem text="Custom check-in frequency and schedules" highlight />
-            <FeatureItem text="Customizable grace period" highlight />
-            <FeatureItem text="Recipient verification options" highlight />
-            <FeatureItem text="Item-level recipient assignment" highlight />
-            <FeatureItem text="Unlimited written personal messages" />
-            <FeatureItem text="Up to 10 personal video messages" />
-            <FeatureItem text="Full activity history" />
-          </View>
-
-          <View style={[styles.statusChip, styles.statusChipSoon]} accessible accessibilityLabel="Coming soon. Not available to buy yet">
-            <AppIcon name="hourglass" size={16} color={colors.semantic.warning} />
-            <Text style={[styles.statusChipText, styles.statusChipTextSoon]}>Coming soon</Text>
-          </View>
-        </View>
-
-        {/* 3. FAMILY PLAN */}
-        <View style={[styles.planCard, isFamily && styles.currentPlanBorder]}>
-          <View style={styles.planHeader}>
-            <View>
-              <Text style={styles.planName}>Family</Text>
-              <Text style={styles.planSubtitle}>
-                Advanced protection and continuity for your entire family
-              </Text>
-            </View>
-            {isFamily && (
-              <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>Current plan</Text>
+              <View style={styles.featureList}>
+                {plan.features.map((feature) => (
+                  <FeatureItem key={feature.text} text={feature.text} highlight={feature.highlight} />
+                ))}
               </View>
-            )}
-          </View>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.priceCurrency}>₹</Text>
-            <Text style={styles.priceAmount}>2,499</Text>
-            <Text style={styles.pricePeriod}>/ year</Text>
-          </View>
+              {current ? (
+                <View style={styles.statusChip}>
+                  <AppIcon name="checkCircle" size={16} color={colors.semantic.success} />
+                  <Text style={styles.statusChipText}>Your current plan</Text>
+                </View>
+              ) : plan.code !== PlanCode.STARTER && !lower ? (
+                <Button
+                  title={effectivePlanCode === PlanCode.STARTER ? `Get ${plan.name}` : `Upgrade to ${plan.name}`}
+                  onPress={() => void buy(plan.code)}
+                  loading={busy === plan.code}
+                  disabled={busy !== null && busy !== plan.code}
+                />
+              ) : null}
+            </View>
+          );
+        })}
 
-          <View style={styles.featureList}>
-            <FeatureItem text="Up to 8 trusted people" highlight />
-            <FeatureItem text="Advanced release policies" highlight />
-            <FeatureItem text="Multiple independent verifiers" highlight />
-            <FeatureItem text="Multi-person verification workflow" highlight />
-            <FeatureItem text="Advanced escalation rules" highlight />
-            <FeatureItem text="Family and emergency instructions" highlight />
-            <FeatureItem text="Up to 50 personal video messages" />
-            <FeatureItem text="Priority support" />
-          </View>
-
-          <View style={[styles.statusChip, styles.statusChipSoon]} accessible accessibilityLabel="Coming soon. Not available to buy yet">
-            <AppIcon name="hourglass" size={16} color={colors.semantic.warning} />
-            <Text style={[styles.statusChipText, styles.statusChipTextSoon]}>Coming soon</Text>
-          </View>
-        </View>
-
-        {/* Restore purchases & calm notice */}
         <View style={styles.footer}>
-          {restoreResult ? <InlineNotice tone={restoreResult.tone} message={restoreResult.message} /> : null}
-          <Button title="Refresh my plan" variant="secondary" size="md" onPress={() => void handleRestore()} loading={restoring} />
-
+          <Button title="Restore purchases" variant="secondary" size="md" onPress={() => void handleRestore()} loading={busy === 'restore'} disabled={busy !== null && busy !== 'restore'} />
+          {effectivePlanCode !== PlanCode.STARTER ? (
+            <Button title="Manage in Google Play" variant="tertiary" size="md" onPress={() => void PurchaseService.openSubscriptionManagement()} />
+          ) : null}
           <Text style={styles.disclaimerText}>
-            Paid plans can’t be bought yet, so there’s nothing to restore from the store. If your plan’s limits change, everything you saved is kept.
+            Billed yearly through Google Play and renewed automatically until you cancel. If a paid plan ends, everything you saved is kept; only new items follow Starter’s limits.
           </Text>
         </View>
       </ScrollView>
@@ -205,6 +232,8 @@ function FeatureItem({
 }
 
 const styles = StyleSheet.create({
+  resultNotice: { marginBottom: 16 },
+  planHeaderText: { flex: 1, paddingRight: 8 },
   statusChip: {
     marginTop: 16,
     alignSelf: 'flex-start',
@@ -216,9 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.semantic.successSoft,
   },
-  statusChipSoon: { backgroundColor: colors.semantic.warningSoft },
   statusChipText: { fontFamily: typography.fonts.inter.semiBold, fontSize: typography.sizes.label, color: colors.semantic.success },
-  statusChipTextSoon: { color: colors.semantic.warning },
   safeArea: {
     flex: 1,
     backgroundColor: colors.brand.ivory,

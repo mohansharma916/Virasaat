@@ -1,4 +1,6 @@
 require('@expo/env').load(__dirname, { silent: true });
+const { existsSync } = require('node:fs');
+const { join } = require('node:path');
 
 // Reject invalid production endpoints before a release bundle is generated.
 module.exports = ({ config }) => {
@@ -15,6 +17,12 @@ module.exports = ({ config }) => {
     if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID) {
       throw new Error('Release builds require EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.');
     }
+  }
+  // Firebase config for app notifications. Optional: without it the app
+  // builds normally and reminders arrive by email only.
+  const googleServices = join(__dirname, 'google-services.json');
+  if (existsSync(googleServices)) {
+    config.android = { ...config.android, googleServicesFile: './google-services.json' };
   }
   return config;
 };

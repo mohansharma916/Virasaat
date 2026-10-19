@@ -19,6 +19,7 @@ import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
 import { useSubscription } from '@/src/store/subscription.slice';
+import { getProfile } from '@/src/api/users.api';
 import { Feature } from '@/src/types/subscription.types';
 import { UpgradeModal } from '@/src/components/UpgradeModal';
 
@@ -29,6 +30,15 @@ export default function CheckInPreferencesScreen() {
   const email = useAppSelector((state) => state.session.user?.email);
   const { canUseFeature } = useSubscription();
   const hasCustomCheckIn = canUseFeature(Feature.CUSTOM_CHECK_IN);
+  const smsAndCalls = canUseFeature(Feature.SMS_CALL_REMINDERS);
+  // SMS and call reminders need a saved mobile number.
+  const [missingPhone, setMissingPhone] = useState(false);
+  useEffect(() => {
+    if (!smsAndCalls) return;
+    let active = true;
+    void getProfile().then((profile) => { if (active) setMissingPhone(!profile.phone); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [smsAndCalls]);
   const [initialPolicy, setInitialPolicy] = useState<CheckInPolicy | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -195,9 +205,19 @@ export default function CheckInPreferencesScreen() {
         <InlineNotice
           tone="info"
           title="If you miss a check-in"
-          message="Nothing happens straight away. We remind you after 7, 15, 21, 30 and 45 days, then more often. Your release rules decide when a review starts."
+          message={`Nothing happens straight away. We remind you after 7, 15, 21, 30 and 45 days, then more often. After 2 months we also send app notifications${smsAndCalls ? ', SMS and a phone call' : ''}. Your release rules decide when a review starts.`}
           style={styles.notice}
         />
+        {missingPhone ? (
+          <InlineNotice
+            tone="warning"
+            title="Add your mobile number"
+            message="Your plan includes SMS and phone-call reminders, but we don’t have a number for you yet."
+            actionLabel="Add number"
+            onAction={() => router.push({ pathname: '/(auth)/profile', params: { mode: 'edit' } } as never)}
+            style={styles.notice}
+          />
+        ) : null}
       </ScrollView>
 
       <ActionBar>
@@ -222,8 +242,8 @@ export default function CheckInPreferencesScreen() {
         visible={customModalVisible}
         onClose={() => setCustomModalVisible(false)}
         title="Weekly check-ins"
-        message="Weekly check-ins will be part of Virasat Secure."
-        benefits={['Choose a weekly schedule', 'More reminder options', 'A closer watch on your account']}
+        message="Weekly check-ins are part of Secure and Family."
+        benefits={['Weekly or monthly check-ins', 'Choose your review deadline', 'SMS and phone-call reminders when overdue']}
         onCtaPress={() => router.push('/(auth)/plans' as never)}
       />
     </SafeAreaView>

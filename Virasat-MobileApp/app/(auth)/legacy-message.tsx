@@ -175,7 +175,7 @@ export default function LegacyMessageScreen() {
         visible={upgradeModalVisible}
         onClose={() => setUpgradeModalVisible(false)}
         title="You’ve reached your message limit"
-        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes up to ${messageLimit ?? 3} written messages. Secure and Family will include unlimited messages.`}
+        message={`Your ${currentPlan?.name ?? 'Starter'} plan includes up to ${messageLimit ?? 3} written messages. Secure and Family include unlimited messages.`}
         benefits={['Unlimited written messages', 'Link messages to specific people', 'Kept private until release']}
         onCtaPress={() => router.push('/(auth)/plans' as never)}
       />

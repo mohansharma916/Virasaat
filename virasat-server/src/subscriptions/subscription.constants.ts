@@ -9,6 +9,10 @@ export enum Feature {
   FULL_ACTIVITY_HISTORY = 'FULL_ACTIVITY_HISTORY',
   PRIORITY_SUPPORT = 'PRIORITY_SUPPORT',
   FAMILY_EMERGENCY_INSTRUCTIONS = 'FAMILY_EMERGENCY_INSTRUCTIONS',
+  // Overdue reminders also by SMS and automated phone call.
+  SMS_CALL_REMINDERS = 'SMS_CALL_REMINDERS',
+  // A Virasat team member visits before any release is approved.
+  IN_PERSON_VISIT = 'IN_PERSON_VISIT',
 }
 
 export enum PlanLimit {
@@ -44,6 +48,8 @@ export interface PlanFeatureConfig {
   [Feature.FULL_ACTIVITY_HISTORY]: boolean;
   [Feature.PRIORITY_SUPPORT]: boolean;
   [Feature.FAMILY_EMERGENCY_INSTRUCTIONS]: boolean;
+  [Feature.SMS_CALL_REMINDERS]: boolean;
+  [Feature.IN_PERSON_VISIT]: boolean;
 }
 
 export interface PlanLimitConfig {
@@ -87,6 +93,8 @@ export const DEFAULT_PLANS: PlanSeedDefinition[] = [
       [Feature.FULL_ACTIVITY_HISTORY]: false,
       [Feature.PRIORITY_SUPPORT]: false,
       [Feature.FAMILY_EMERGENCY_INSTRUCTIONS]: false,
+      [Feature.SMS_CALL_REMINDERS]: false,
+      [Feature.IN_PERSON_VISIT]: false,
     },
     limits: {
       [PlanLimit.TRUSTED_PERSONS]: 1,
@@ -115,6 +123,8 @@ export const DEFAULT_PLANS: PlanSeedDefinition[] = [
       [Feature.FULL_ACTIVITY_HISTORY]: true,
       [Feature.PRIORITY_SUPPORT]: false,
       [Feature.FAMILY_EMERGENCY_INSTRUCTIONS]: false,
+      [Feature.SMS_CALL_REMINDERS]: true,
+      [Feature.IN_PERSON_VISIT]: false,
     },
     limits: {
       [PlanLimit.TRUSTED_PERSONS]: 3,
@@ -143,6 +153,8 @@ export const DEFAULT_PLANS: PlanSeedDefinition[] = [
       [Feature.FULL_ACTIVITY_HISTORY]: true,
       [Feature.PRIORITY_SUPPORT]: true,
       [Feature.FAMILY_EMERGENCY_INSTRUCTIONS]: true,
+      [Feature.SMS_CALL_REMINDERS]: true,
+      [Feature.IN_PERSON_VISIT]: true,
     },
     limits: {
       [PlanLimit.TRUSTED_PERSONS]: 8,

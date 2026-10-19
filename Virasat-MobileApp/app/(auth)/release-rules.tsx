@@ -19,6 +19,9 @@ import { getReleasePolicy, updateReleasePolicy, type ReleasePolicy } from '@/src
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
 import { refreshVaultData } from '@/src/store/vault.slice';
+import { useSubscription } from '@/src/store/subscription.slice';
+import { Feature } from '@/src/types/subscription.types';
+import { UpgradeModal } from '@/src/components/UpgradeModal';
 
 const DEADLINES = [
   { days: 30, label: '1 month', description: 'For people who check in often and want a fast response.' },
@@ -39,6 +42,10 @@ export default function ReleaseRulesScreen() {
   const [error, setError] = useState('');
   const [verificationRequired, setVerificationRequired] = useState(true);
   const [deadlineDays, setDeadlineDays] = useState(90);
+  const { canUseFeature } = useSubscription();
+  // Starter keeps the 3-month deadline; the server enforces this too.
+  const customDeadline = canUseFeature(Feature.CUSTOM_GRACE_PERIOD);
+  const [upgradeVisible, setUpgradeVisible] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -51,6 +58,7 @@ export default function ReleaseRulesScreen() {
       setVerificationRequired(policy?.verificationRequired ?? true);
       const saved = Number((policy?.escalationConfig as { checkInDeadlineDays?: number } | undefined)?.checkInDeadlineDays);
       if (DEADLINES.some((option) => option.days === saved)) setDeadlineDays(saved);
+      else setDeadlineDays(90);
     }).catch((reason) => {
       if (!active) return;
       if (isAxiosError(reason) && reason.response?.status === 404) setInitialPolicy(null);
@@ -73,7 +81,7 @@ export default function ReleaseRulesScreen() {
         verificationLevel: initialPolicy?.verificationLevel ?? 'STANDARD',
         escalationConfig: {
           ...(initialPolicy?.escalationConfig ?? {}),
-          checkInDeadlineDays: deadlineDays,
+          checkInDeadlineDays: customDeadline ? deadlineDays : 90,
           manualReviewRequired: true,
         },
         enabled: true,
@@ -91,7 +99,8 @@ export default function ReleaseRulesScreen() {
     }
   };
 
-  const deadlineLabel = DEADLINES.find((option) => option.days === deadlineDays)?.label ?? '3 months';
+  const effectiveDeadline = customDeadline ? deadlineDays : 90;
+  const deadlineLabel = DEADLINES.find((option) => option.days === effectiveDeadline)?.label ?? '3 months';
 
   const steps: { icon: IconName; title: string; body: string }[] = [
     { icon: 'clock', title: 'You miss a check-in', body: 'Nothing is released. Check-in stays open, so you can still check in any time.' },
@@ -151,10 +160,10 @@ export default function ReleaseRulesScreen() {
                 <SelectionRow
                   key={option.days}
                   kind="radio"
-                  selected={deadlineDays === option.days}
-                  onPress={() => setDeadlineDays(option.days)}
+                  selected={effectiveDeadline === option.days}
+                  onPress={() => (customDeadline || option.days === 90 ? setDeadlineDays(option.days) : setUpgradeVisible(true))}
                   title={option.label}
-                  description={option.description}
+                  description={customDeadline || option.days === 90 ? option.description : `${option.description} Secure and Family.`}
                 />
               ))}
             </View>
@@ -206,6 +215,15 @@ export default function ReleaseRulesScreen() {
           disabled={loading || loadFailed}
         />
       </ActionBar>
+
+      <UpgradeModal
+        visible={upgradeVisible}
+        onClose={() => setUpgradeVisible(false)}
+        title="Choose your own deadline"
+        message="Starter starts a review after 3 months. Secure and Family let you choose 1, 2, 3 or 6 months."
+        benefits={['Choose your review deadline', 'SMS and phone-call reminders when overdue', 'Weekly check-ins']}
+        onCtaPress={() => router.push('/(auth)/plans' as never)}
+      />
     </SafeAreaView>
   );
 }

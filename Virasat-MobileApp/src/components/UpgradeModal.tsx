@@ -71,10 +71,6 @@ export function UpgradeModal({
             </View>
           ) : null}
 
-          <View style={styles.soonRow}>
-            <AppIcon name="hourglass" size={16} color={colors.semantic.warning} />
-            <Text style={styles.soonText}>Paid plans are coming soon. You can’t buy them yet.</Text>
-          </View>
 
           <View style={styles.actions}>
             <Button
@@ -138,7 +134,5 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeights.callout,
     color: colors.neutral.textPrimary,
   },
-  soonRow: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  soonText: { flex: 1, fontFamily: typography.fonts.inter.medium, fontSize: typography.sizes.caption, color: colors.semantic.warning },
   actions: { marginTop: 16, gap: 4 },
 });

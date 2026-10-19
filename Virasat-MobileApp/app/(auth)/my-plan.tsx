@@ -28,7 +28,7 @@ export default function MyPlanScreen() {
     try {
       await PurchaseService.openSubscriptionManagement();
     } catch {
-      setNotice({ tone: 'info', message: 'Open Google Play or the App Store on your phone to manage your subscription.' });
+      setNotice({ tone: 'info', message: 'Open Google Play on your phone, then Payments & subscriptions, to manage your plan.' });
     }
   };
 
@@ -40,7 +40,7 @@ export default function MyPlanScreen() {
       await refreshSubscription();
       setNotice({ tone: 'success', message: 'Your plan is up to date.' });
     } catch (error) {
-      setNotice({ tone: 'danger', message: getApiErrorMessage(error, 'We couldn’t refresh your plan. Try again.') });
+      setNotice({ tone: 'danger', message: error instanceof Error && error.message ? error.message : getApiErrorMessage(error, 'We couldn’t restore your purchases. Try again.') });
     } finally {
       setRestoring(false);
     }
@@ -128,6 +128,9 @@ export default function MyPlanScreen() {
             <BenefitRow text={`${getLimit(PlanLimit.PERSONAL_MESSAGES) ?? 'Unlimited'} written messages`} />
             <BenefitRow text={`${getLimit(PlanLimit.VIDEO_MESSAGES) ?? 'Unlimited'} video messages`} />
             <BenefitRow text={canUseFeature(Feature.CUSTOM_CHECK_IN) ? 'Monthly or weekly check-ins' : 'Monthly check-ins'} />
+            <BenefitRow text={canUseFeature(Feature.CUSTOM_GRACE_PERIOD) ? 'Choose your review deadline' : 'Review after 3 months without a check-in'} />
+            {canUseFeature(Feature.SMS_CALL_REMINDERS) ? <BenefitRow text="SMS and phone-call reminders when overdue" /> : null}
+            {canUseFeature(Feature.IN_PERSON_VISIT) ? <BenefitRow text="An in-person visit before any release" /> : null}
             <BenefitRow text="Encrypted storage and choosing who receives each item" />
           </View>
         </View>
@@ -137,17 +140,11 @@ export default function MyPlanScreen() {
         <View style={styles.actionsContainer}>
           {!isFamily ? <Button title="Compare plans" onPress={() => router.push('/(auth)/plans' as never)} /> : null}
           {!isStarter && purchaseVerification === 'VERIFIED' ? (
-            <Button title="Manage subscription in store" variant="secondary" onPress={() => void handleManage()} />
+            <Button title="Manage in Google Play" variant="secondary" onPress={() => void handleManage()} />
           ) : null}
-          <Button title="Refresh my plan" variant="tertiary" onPress={() => void handleRestore()} loading={restoring} />
+          <Button title="Restore purchases" variant="tertiary" onPress={() => void handleRestore()} loading={restoring} />
         </View>
 
-        <InlineNotice
-          tone="info"
-          title="Coming soon"
-          message="Paid plans, automatic reminders, invitations and releasing items aren’t available yet."
-          style={styles.noticeGap}
-        />
 
         {/* Downgrade & Continuity Policy Guarantee */}
         <View style={styles.guaranteeBox}>

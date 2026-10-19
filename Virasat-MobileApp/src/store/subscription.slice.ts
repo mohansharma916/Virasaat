@@ -41,6 +41,8 @@ const defaultEntitlements: Record<Feature, boolean> = {
   [Feature.FULL_ACTIVITY_HISTORY]: false,
   [Feature.PRIORITY_SUPPORT]: false,
   [Feature.FAMILY_EMERGENCY_INSTRUCTIONS]: false,
+  [Feature.SMS_CALL_REMINDERS]: false,
+  [Feature.IN_PERSON_VISIT]: false,
 };
 
 const defaultLimits: Record<PlanLimit, number | null> = {

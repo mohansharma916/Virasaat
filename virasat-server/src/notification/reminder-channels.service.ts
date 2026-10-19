@@ -1,11 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 
 import type { ReminderChannel } from '../check-in/check-in-schedule';
+import { FcmPushSender } from './channels/fcm-push.sender';
+import { ExotelCallSender, ExotelSmsSender } from './channels/exotel.senders';
 
 export interface ReminderMessage {
   /** Short text for push, SMS and voice. */
   title: string;
   body: string;
+  /** DLT-registered SMS text (India). SMS is skipped without it. */
+  sms?: string;
   /** The full email, already addressed. */
   sendEmail: () => Promise<unknown>;
 }
@@ -27,6 +31,14 @@ export class ReminderChannelsService {
   private readonly logger = new Logger(ReminderChannelsService.name);
   private readonly senders = new Map<ReminderChannel, ChannelSender>();
   private readonly reportedMissing = new Set<ReminderChannel>();
+
+  constructor(
+    @Optional() push?: FcmPushSender,
+    @Optional() sms?: ExotelSmsSender,
+    @Optional() call?: ExotelCallSender,
+  ) {
+    for (const sender of [push, sms, call]) if (sender) this.register(sender);
+  }
 
   register(sender: ChannelSender) {
     this.senders.set(sender.channel, sender);

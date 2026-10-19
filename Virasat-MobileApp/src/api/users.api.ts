@@ -2,6 +2,7 @@ import { api } from './client';
 import type { AuthenticatedUser } from './auth.api';
 
 export interface Profile extends AuthenticatedUser {
+  phone?: string | null;
   country: string | null;
   preferredLanguage: string | null;
   timezone: string;
@@ -9,6 +10,7 @@ export interface Profile extends AuthenticatedUser {
 
 export interface ProfileInput {
   name?: string;
+  phone?: string;
   country?: string;
   preferredLanguage?: string;
   timezone?: string;

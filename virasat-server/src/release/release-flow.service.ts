@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -32,6 +33,8 @@ import {
   CheckInEventStatus,
 } from '../check-in/entities/check-in-event.entity';
 import { UsersService } from '../users/users.service';
+import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
+import { Feature } from '../subscriptions/subscription.constants';
 import {
   AuthorizationStatus,
   ReleaseAuthorization,
@@ -65,6 +68,13 @@ export interface CaseEvidence {
   lastCheckInAt?: string | null;
   note?: string;
   statements: CaseStatement[];
+  /** Family plan: a team member visits before approval. */
+  inPersonVisit?: {
+    required: boolean;
+    completedAt: string | null;
+    completedBy: string | null;
+    notes: string | null;
+  };
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -102,6 +112,7 @@ export class ReleaseFlowService {
     private readonly mailService: MailService,
     private readonly legacyItemsService: LegacyItemsService,
     private readonly config: ConfigService,
+    @Optional() private readonly plans?: PlanEntitlementService,
   ) {}
 
   // -----------------------------------------------------------------
@@ -298,6 +309,16 @@ export class ReleaseFlowService {
           dueAt: evidence.dueAt.toISOString(),
           lastCheckInAt: evidence.lastCheckInAt?.toISOString() ?? null,
           statements: [],
+          ...((await this.plans?.canUseFeature(ownerId, Feature.IN_PERSON_VISIT))
+            ? {
+                inPersonVisit: {
+                  required: true,
+                  completedAt: null,
+                  completedBy: null,
+                  notes: null,
+                },
+              }
+            : {}),
         } satisfies CaseEvidence),
       }),
     );
@@ -772,7 +793,10 @@ export class ReleaseFlowService {
       reviewedAt: releaseCase.reviewedAt,
       closedAt: releaseCase.closedAt,
       reviewerNotes: releaseCase.reviewerNotes,
-      owner: owner ? { name: owner.name, email: owner.email } : null,
+      owner: owner
+        ? { name: owner.name, email: owner.email, phone: owner.phone ?? null }
+        : null,
+      inPersonVisit: evidence.inPersonVisit ?? null,
       overdueDays: evidence.overdueDays ?? null,
       dueAt: evidence.dueAt ?? null,
       lastCheckInAt: evidence.lastCheckInAt ?? null,
@@ -820,6 +844,10 @@ export class ReleaseFlowService {
     )
       throw new BadRequestException('Only open cases can be approved.');
     const evidence = this.parseEvidence(releaseCase.evidence);
+    if (evidence.inPersonVisit?.required && !evidence.inPersonVisit.completedAt)
+      throw new BadRequestException(
+        'This owner is on the Family plan. Record the in-person visit before approving.',
+      );
     const eligible = (await this.eligibleRecipients(releaseCase.userId)).filter(
       ({ person }) =>
         // People the owner marked "verification required" must have confirmed who they are.
@@ -883,6 +911,34 @@ export class ReleaseFlowService {
         'Your items were released',
         'Virasat approved the release of the items you assigned to your trusted people. If you can read this, open Virasat and check in: that cancels the release and removes their access immediately.',
       );
+    return this.adminCaseDetail(adminId, caseId);
+  }
+
+  /** Family plan: a reviewer records the visit made before a release. */
+  async recordVisit(adminId: string, caseId: string, notes: string) {
+    const admin = await this.assertAdmin(adminId);
+    const releaseCase = await this.caseRepository.findOne({ where: { id: caseId } });
+    if (!releaseCase) throw new NotFoundException('Release case not found');
+    const evidence = this.parseEvidence(releaseCase.evidence);
+    if (!evidence.inPersonVisit?.required)
+      throw new BadRequestException('This case does not need an in-person visit.');
+    if (!notes?.trim())
+      throw new BadRequestException('Describe the visit: who you met and what you found.');
+    evidence.inPersonVisit = {
+      required: true,
+      completedAt: new Date().toISOString(),
+      completedBy: admin.id,
+      notes: notes.trim(),
+    };
+    releaseCase.evidence = JSON.stringify(evidence);
+    await this.caseRepository.save(releaseCase);
+    await this.auditService.log({
+      actorId: admin.id,
+      action: 'release_visit_recorded',
+      targetType: 'release_case',
+      targetId: caseId,
+      result: AuditResult.SUCCESS,
+    });
     return this.adminCaseDetail(adminId, caseId);
   }
 

@@ -68,6 +68,7 @@ export class UsersService {
       email: user.email,
       emailVerified: user.emailVerified,
       avatar: user.avatar,
+      phone: user.phone,
       country: user.country,
       preferredLanguage: user.preferredLanguage,
       timezone: user.timezone,

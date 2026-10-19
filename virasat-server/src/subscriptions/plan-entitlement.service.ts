@@ -5,8 +5,10 @@ import {
   Logger,
   NotFoundException,
   OnModuleInit,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
@@ -22,6 +24,14 @@ import {
 import { PurchaseDto } from './dto/purchase.dto';
 import { RestorePurchaseDto } from './dto/restore-purchase.dto';
 import { ReleasePolicy } from '../release/entities/release-policy.entity';
+import {
+  GooglePlayVerifier,
+  PLAY_PRODUCT_IDS,
+  PlaySubscription,
+  hashPurchaseToken,
+  planForProduct,
+  playAccountRef,
+} from './google-play.verifier';
 
 @Injectable()
 export class PlanEntitlementService implements OnModuleInit {
@@ -39,6 +49,8 @@ export class PlanEntitlementService implements OnModuleInit {
 
     @InjectRepository(ReleasePolicy)
     private readonly releasePolicyRepository: Repository<ReleasePolicy>,
+      @Optional()
+    private readonly playVerifier?: GooglePlayVerifier,
   ) {}
 
   async onModuleInit() {
@@ -230,7 +242,10 @@ export class PlanEntitlementService implements OnModuleInit {
         cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
       },
       effectivePlanCode: effectivePlan.code,
-      billingAvailable: false,
+      billingAvailable: Boolean(this.playVerifier?.isConfigured()),
+      // Passed to Google Play at checkout; ties purchases to this account.
+      playAccountRef: playAccountRef(userId),
+      playProductIds: PLAY_PRODUCT_IDS,
       purchaseVerification:
         plan.code === PlanCode.STARTER
           ? 'NOT_REQUIRED'
@@ -344,43 +359,186 @@ export class PlanEntitlementService implements OnModuleInit {
     return this.snapshotRepository.save(snapshot);
   }
 
+  private billingUnavailable(): never {
+    throw new ServiceUnavailableException({
+      statusCode: 503,
+      code: 'BILLING_UNAVAILABLE',
+      message:
+        'Purchases are not available right now. No subscription has been changed.',
+    });
+  }
+
+  private static readonly ENTITLED_STATES = new Set([
+    'SUBSCRIPTION_STATE_ACTIVE',
+    'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+    // Cancelled but paid until expiry.
+    'SUBSCRIPTION_STATE_CANCELED',
+  ]);
+
   /**
-   * Keep checkout unavailable until a real store verifier is implemented.
+   * Applies a Google Play subscription to the account after verifying it with
+   * Google. Nothing from the client is trusted except the purchase token.
    */
-  verifyAndProcessPurchase(
-    _userId: string,
-    _dto: PurchaseDto,
+  async verifyAndProcessPurchase(
+    userId: string,
+    dto: PurchaseDto,
   ): Promise<Subscription> {
-    void _userId;
-    void _dto;
-    // A token string is not proof of payment. No store verifier is configured yet.
-    return Promise.reject(
-      new ServiceUnavailableException({
-        statusCode: 503,
-        code: 'BILLING_UNAVAILABLE',
-        message:
-          'Purchases are unavailable until secure store verification is configured. No subscription has been changed.',
-      }),
-    );
+    if (dto.provider !== 'GOOGLE_PLAY')
+      throw new BadRequestException('Only Google Play purchases are supported.');
+    if (!this.playVerifier?.isConfigured()) this.billingUnavailable();
+    const verified = await this.playVerifier.getSubscription(dto.purchaseToken);
+    return this.applyPlaySubscription(userId, dto.purchaseToken, verified, dto.planCode);
+  }
+
+  private async applyPlaySubscription(
+    userId: string,
+    purchaseToken: string,
+    verified: PlaySubscription | null,
+    expectedPlan?: PlanCode,
+  ): Promise<Subscription> {
+    const line = verified?.lineItems?.[0];
+    const planCode = line ? planForProduct(line.productId) : null;
+    if (!verified || !line || !planCode)
+      throw new BadRequestException('Google Play could not confirm this purchase.');
+    if (expectedPlan && expectedPlan !== planCode)
+      throw new BadRequestException('This purchase is for a different plan.');
+    const ref = verified.externalAccountIdentifiers?.obfuscatedExternalAccountId;
+    if (ref !== playAccountRef(userId))
+      throw new ForbiddenException('This purchase belongs to a different Virasat account.');
+    const expiry = line.expiryTime ? new Date(line.expiryTime) : null;
+    if (
+      !PlanEntitlementService.ENTITLED_STATES.has(verified.subscriptionState ?? '') ||
+      !expiry ||
+      expiry.getTime() <= Date.now()
+    )
+      throw new BadRequestException('This subscription is not active.');
+
+    const tokenHash = hashPurchaseToken(purchaseToken);
+    const saved = await this.withSubscriptionLock(userId, async (manager) => {
+      const repository = manager.getRepository(Subscription);
+      // A token may back exactly one Virasat account.
+      const other = await repository
+        .createQueryBuilder('s')
+        .where("s.metadata ->> 'purchaseTokenHash' = :tokenHash AND s.userId != :userId", {
+          tokenHash,
+          userId,
+        })
+        .getOne();
+      if (other) throw new ForbiddenException('This purchase is already used by another account.');
+      const sub = await this.getOrCreateUserSubscription(userId, repository);
+      const plan = await this.getPlanByCode(planCode);
+      sub.plan = plan;
+      sub.planId = plan.id;
+      sub.provider = 'GOOGLE_PLAY';
+      sub.providerSubscriptionId = line.productId;
+      sub.providerPurchaseToken = purchaseToken;
+      sub.providerVerifiedAt = new Date();
+      sub.expiryDate = expiry;
+      sub.autoRenew = Boolean(line.autoRenewingPlan?.autoRenewEnabled);
+      sub.cancelAtPeriodEnd = verified.subscriptionState === 'SUBSCRIPTION_STATE_CANCELED';
+      sub.status =
+        verified.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+          ? SubscriptionStatus.GRACE_PERIOD
+          : SubscriptionStatus.ACTIVE;
+      sub.metadata = {
+        ...(sub.metadata ?? {}),
+        purchaseTokenHash: tokenHash,
+        latestOrderId: verified.latestOrderId ?? null,
+        testPurchase: Boolean(verified.testPurchase),
+      };
+      return repository.save(sub);
+    });
+
+    // Unacknowledged purchases are refunded by Google after 3 days.
+    if (verified.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING')
+      await this.playVerifier!.acknowledge(line.productId, purchaseToken).catch((error: Error) =>
+        this.logger.error(`Purchase saved but not acknowledged yet: ${error.message}`),
+      );
+    return saved;
   }
 
   /**
-   * Restore purchases.
+   * Restore: verify a token from the device (new phone, reinstall), or
+   * re-check the one already on file.
    */
   async restorePurchases(
     userId: string,
     dto: RestorePurchaseDto,
   ): Promise<Subscription> {
-    if (dto.purchaseToken || dto.originalTransactionId) {
-      throw new ServiceUnavailableException({
-        statusCode: 503,
-        code: 'BILLING_UNAVAILABLE',
-        message:
-          'Store purchase restoration is unavailable. No subscription has been changed.',
-      });
+    const supplied = Boolean(dto.purchaseToken || dto.originalTransactionId);
+    if (dto.provider !== 'GOOGLE_PLAY' || !this.playVerifier?.isConfigured()) {
+      // Never accept store credentials that cannot be verified.
+      if (supplied) this.billingUnavailable();
+      return this.getUserSubscription(userId);
     }
-    // This only refreshes server state; it does not inspect or verify a store account.
+    if (dto.purchaseToken)
+      return this.applyPlaySubscription(
+        userId,
+        dto.purchaseToken,
+        await this.playVerifier.getSubscription(dto.purchaseToken),
+      );
+    await this.reverify(userId);
     return this.getUserSubscription(userId);
+  }
+
+  /** Re-checks the stored Play subscription and records what Google says. */
+  private async reverify(userId: string) {
+    const stored = await this.subscriptionRepository
+      .createQueryBuilder('s')
+      .addSelect('s.providerPurchaseToken')
+      .where('s.userId = :userId AND s.provider = :provider', { userId, provider: 'GOOGLE_PLAY' })
+      .orderBy('s.createdAt', 'DESC')
+      .getOne();
+    if (!stored?.providerPurchaseToken || !this.playVerifier) return;
+    const verified = await this.playVerifier.getSubscription(stored.providerPurchaseToken);
+    const line = verified?.lineItems?.[0];
+    const expiry = line?.expiryTime ? new Date(line.expiryTime) : null;
+    const entitled =
+      Boolean(verified && expiry && expiry.getTime() > Date.now()) &&
+      PlanEntitlementService.ENTITLED_STATES.has(verified!.subscriptionState ?? '');
+    await this.withSubscriptionLock(userId, async (manager) => {
+      const repository = manager.getRepository(Subscription);
+      const sub = await repository.findOne({ where: { id: stored.id } });
+      if (!sub) return;
+      sub.expiryDate = expiry ?? sub.expiryDate;
+      sub.autoRenew = Boolean(line?.autoRenewingPlan?.autoRenewEnabled);
+      sub.cancelAtPeriodEnd = verified?.subscriptionState === 'SUBSCRIPTION_STATE_CANCELED';
+      sub.status = entitled
+        ? verified!.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+          ? SubscriptionStatus.GRACE_PERIOD
+          : SubscriptionStatus.ACTIVE
+        : verified?.subscriptionState === 'SUBSCRIPTION_STATE_ON_HOLD'
+          ? SubscriptionStatus.PAYMENT_FAILED
+          : SubscriptionStatus.EXPIRED;
+      sub.providerVerifiedAt = new Date();
+      await repository.save(sub);
+    });
+    // Losing a paid plan keeps all data; only new limits fall back to Starter.
+    if (!entitled) await this.preserveReleasePolicySnapshot(userId, 'SUBSCRIPTION_LAPSED');
+  }
+
+  /** Daily: re-check Play subscriptions that renew or end within 2 days. */
+  @Cron('0 30 3 * * *')
+  async reverifyExpiringSubscriptions() {
+    if (!this.playVerifier?.isConfigured() || process.env.CHECK_IN_MONITOR === 'off') return;
+    const soon = new Date(Date.now() + 2 * 86_400_000);
+    const due = await this.subscriptionRepository
+      .createQueryBuilder('s')
+      .select('s.userId', 'userId')
+      .where('s.provider = :provider AND s.expiryDate <= :soon', { provider: 'GOOGLE_PLAY', soon })
+      .andWhere('s.status IN (:...statuses)', {
+        statuses: [
+          SubscriptionStatus.ACTIVE,
+          SubscriptionStatus.GRACE_PERIOD,
+          SubscriptionStatus.PAYMENT_FAILED,
+        ],
+      })
+      .getRawMany<{ userId: string }>();
+    for (const { userId } of due) {
+      await this.reverify(userId).catch((error: Error) =>
+        this.logger.warn(`Subscription re-check failed: ${error.message}`),
+      );
+    }
   }
 
   /**

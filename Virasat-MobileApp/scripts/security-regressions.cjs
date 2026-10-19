@@ -13,7 +13,20 @@ function fixture() {
   const cache = new Map();
   const storage = new Map();
   const platform = { OS: 'ios', select: (options) => options.ios ?? options.default };
+  // A scriptable Google Play: tests decide what the store returns.
+  const store = { listeners: { updated: [], failed: [] }, onRequest: null, finished: [], products: [], owned: [] };
   const mocks = {
+    'expo-iap': {
+      initConnection: async () => true,
+      fetchProducts: async () => store.products,
+      getAvailablePurchases: async () => store.owned,
+      finishTransaction: async ({ purchase }) => { store.finished.push(purchase); },
+      deepLinkToSubscriptions: async () => undefined,
+      isUserCancelledError: (error) => error?.code === 'user-cancelled',
+      purchaseUpdatedListener: (fn) => { store.listeners.updated.push(fn); return { remove: () => { store.listeners.updated = store.listeners.updated.filter((f) => f !== fn); } }; },
+      purchaseErrorListener: (fn) => { store.listeners.failed.push(fn); return { remove: () => { store.listeners.failed = store.listeners.failed.filter((f) => f !== fn); } }; },
+      requestPurchase: async (request) => { store.onRequest?.(request); },
+    },
     'react-native': { Platform: platform },
     'expo-secure-store': {
       setItemAsync: async (key, value) => { storage.set(key, value); },
@@ -46,7 +59,7 @@ function fixture() {
     run(localRequire, module, module.exports, absolute, dirname(absolute));
     return module.exports;
   }
-  return { load, storage };
+  return { load, storage, store, platform };
 }
 
 test('saving a session requires an explicit biometric opt-in; disabling removes its token', async () => {
@@ -234,10 +247,43 @@ test('late authenticated successes and failures cannot affect a replacement sess
   assert.equal(expireCount, 1);
 });
 
-test('paid checkout cannot manufacture purchase tokens in development', async () => {
-  const { load } = fixture();
+test('paid checkout only sends the token Google Play returned, and only when billing is on', async () => {
+  const { load, store, platform } = fixture();
+  const { api } = load('src/api/client.ts');
   const { PurchaseService } = load('src/services/purchase.service.ts');
-  await assert.rejects(PurchaseService.purchasePlan('FAMILY'), /not available yet/);
+  // iOS has no store integration yet.
+  await assert.rejects(PurchaseService.purchasePlan('FAMILY'), /iOS app is coming soon/);
+
+  platform.OS = 'android';
+  const sent = [];
+  let billingAvailable = false;
+  api.defaults.adapter = async (config) => {
+    if (config.url === '/subscriptions/me') {
+      return { config, status: 200, statusText: 'OK', headers: {}, data: { billingAvailable, playAccountRef: 'ref-123', playProductIds: { SECURE: 'in.virasat.subscription.secure', FAMILY: 'in.virasat.subscription.family' } } };
+    }
+    sent.push({ url: config.url, body: JSON.parse(config.data) });
+    return { config, status: 200, statusText: 'OK', headers: {}, data: { effectivePlanCode: 'FAMILY' } };
+  };
+  await assert.rejects(PurchaseService.purchasePlan('FAMILY'), /aren’t available right now/);
+  assert.equal(sent.length, 0);
+
+  billingAvailable = true;
+  store.products = [{ id: 'in.virasat.subscription.family', displayPrice: '₹2,499', subscriptionOffers: [{ offerTokenAndroid: 'offer-1' }] }];
+  store.onRequest = (request) => {
+    assert.equal(request.request.google.obfuscatedAccountId, 'ref-123');
+    for (const fn of store.listeners.updated) fn({ productId: 'in.virasat.subscription.family', purchaseToken: 'play-token', purchaseState: 'purchased' });
+  };
+  await PurchaseService.purchasePlan('FAMILY');
+  assert.deepEqual(sent, [{ url: '/subscriptions/purchase', body: { planCode: 'FAMILY', provider: 'GOOGLE_PLAY', purchaseToken: 'play-token' } }]);
+  // Acknowledged on the device only after the server confirmed it.
+  assert.equal(store.finished.length, 1);
+
+  // A cancelled or pending payment never reaches the server.
+  store.onRequest = () => { for (const fn of store.listeners.failed) fn({ code: 'user-cancelled', message: 'cancelled' }); };
+  await assert.rejects(PurchaseService.purchasePlan('FAMILY'), /cancelled/);
+  store.onRequest = () => { for (const fn of store.listeners.updated) fn({ productId: 'in.virasat.subscription.family', purchaseToken: 'p', purchaseState: 'pending' }); };
+  await assert.rejects(PurchaseService.purchasePlan('FAMILY'), /pending/);
+  assert.equal(sent.length, 1);
 });
 
 test('saved-file downloads match the API route and preserve bytes and cancellation', async () => {

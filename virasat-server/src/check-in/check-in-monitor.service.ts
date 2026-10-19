@@ -13,12 +13,15 @@ import {
 } from '../release/entities/release-policy.entity';
 import { ReleaseFlowService } from '../release/release-flow.service';
 import { UsersService } from '../users/users.service';
+import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
+import { Feature } from '../subscriptions/subscription.constants';
+import { reminderSms } from '../notification/channels/exotel.senders';
 import {
   CHECK_IN_OPENS_DAYS_BEFORE,
   DAY_MS,
   channelsForOffset,
   checkInDeadline,
-  deadlineDays,
+  effectiveDeadlineDays,
   reminderOffsets,
 } from './check-in-schedule';
 import {
@@ -55,7 +58,12 @@ export class CheckInMonitorService {
     private readonly notificationsService: NotificationsService,
     private readonly channels: ReminderChannelsService,
     @Optional() private readonly releaseFlow?: ReleaseFlowService,
+    @Optional() private readonly plans?: PlanEntitlementService,
   ) {}
+
+  private can(userId: string, feature: Feature) {
+    return this.plans ? this.plans.canUseFeature(userId, feature) : Promise.resolve(false);
+  }
 
   @Cron('0 */10 * * * *')
   async scheduledPass() {
@@ -90,7 +98,10 @@ export class CheckInMonitorService {
     });
     return {
       releasePolicy: policy,
-      deadline: deadlineDays(policy?.escalationConfig?.checkInDeadlineDays),
+      deadline: effectiveDeadlineDays(
+        policy?.escalationConfig?.checkInDeadlineDays,
+        await this.can(userId, Feature.CUSTOM_GRACE_PERIOD),
+      ),
     };
   }
 
@@ -167,8 +178,9 @@ export class CheckInMonitorService {
 
     await this.channels.deliver(
       { userId: user.id, phone: user.phone ?? null },
-      channelsForOffset(offset),
+      channelsForOffset(offset, await this.can(user.id, Feature.SMS_CALL_REMINDERS)),
       {
+        sms: overdue ? reminderSms(Math.floor(overdueDays), date(deadlineAt)) : undefined,
         title: overdue ? 'Your Virasat check-in is overdue' : 'Time to check in',
         body: overdue
           ? `You have not checked in for ${Math.floor(overdueDays)} days. Open Virasat and check in before ${date(deadlineAt)}, or a release review will start.`

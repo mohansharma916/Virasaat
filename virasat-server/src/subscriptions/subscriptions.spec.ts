@@ -1,9 +1,11 @@
+jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 jest.mock('@nestjs/typeorm', () => ({
   InjectRepository: () => () => undefined,
 }));
 
 import {
   BadRequestException,
+  ForbiddenException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { validate } from 'class-validator';
@@ -15,8 +17,9 @@ import {
 } from './subscription.constants';
 import { Subscription } from './entities/subscription.entity';
 import { DowngradeDto } from './dto/downgrade.dto';
+import { hashPurchaseToken, playAccountRef } from './google-play.verifier';
 
-function fixture() {
+function fixture(playVerifier?: unknown) {
   const plans = DEFAULT_PLANS.map((plan) => ({ ...plan, id: plan.code }));
   const subscriptions = new Map<string, any>();
   const snapshots: any[] = [];
@@ -35,6 +38,37 @@ function fixture() {
       return value;
     }),
     manager: {} as any,
+    // Supports the two query shapes the service uses on subscriptions.
+    createQueryBuilder: jest.fn(() => {
+      let params: any = {};
+      const builder: any = {
+        select: () => builder,
+        addSelect: () => builder,
+        andWhere: () => builder,
+        orderBy: () => builder,
+        where: (_sql: string, values: any) => {
+          params = values;
+          return builder;
+        },
+        getOne: async () => {
+          const all = [...subscriptions.values()];
+          const found = params.tokenHash
+            ? all.find(
+                (sub) =>
+                  sub.metadata?.purchaseTokenHash === params.tokenHash &&
+                  sub.userId !== params.userId,
+              )
+            : all.find(
+                (sub) =>
+                  sub.userId === params.userId &&
+                  sub.provider === params.provider,
+              );
+          return found ? structuredClone(found) : null;
+        },
+        getRawMany: async () => [],
+      };
+      return builder;
+    }),
   };
   let tail = Promise.resolve();
   repository.manager.transaction = async (run: any) => {
@@ -76,6 +110,7 @@ function fixture() {
         async ({ where }: any) => policies.get(where.userId) ?? null,
       ),
     } as never,
+    playVerifier as never,
   );
   const seed = (
     userId: string,
@@ -120,6 +155,14 @@ describe('Subscription security and lifecycle', () => {
         service.verifyAndProcessPurchase('buyer', {
           planCode: PlanCode.FAMILY,
           provider: 'UNTRUSTED',
+          purchaseToken,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      // Google Play tokens are refused while no verifier is configured.
+      await expect(
+        service.verifyAndProcessPurchase('buyer', {
+          planCode: PlanCode.FAMILY,
+          provider: 'GOOGLE_PLAY',
           purchaseToken,
         }),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
@@ -226,6 +269,90 @@ describe('Subscription security and lifecycle', () => {
     const { service, seed } = fixture();
     seed('buyer', PlanCode.FAMILY, { status });
     expect((await service.getUserPlan('buyer')).code).toBe(PlanCode.STARTER);
+  });
+
+  const play = (overrides: Record<string, unknown> = {}) => {
+    const purchase = {
+      subscriptionState: 'SUBSCRIPTION_STATE_ACTIVE',
+      acknowledgementState: 'ACKNOWLEDGEMENT_STATE_PENDING',
+      latestOrderId: 'GPA.1234',
+      externalAccountIdentifiers: { obfuscatedExternalAccountId: playAccountRef('buyer') },
+      lineItems: [
+        {
+          productId: 'in.virasat.subscription.family',
+          expiryTime: new Date(Date.now() + 365 * 86400000).toISOString(),
+          autoRenewingPlan: { autoRenewEnabled: true },
+        },
+      ],
+      ...overrides,
+    };
+    return {
+      purchase,
+      verifier: {
+        isConfigured: () => true,
+        getSubscription: jest.fn(async () => purchase),
+        acknowledge: jest.fn(async () => undefined),
+      },
+    };
+  };
+
+  it('upgrades only after Google confirms the purchase, and acknowledges it', async () => {
+    const { verifier } = play();
+    const { service } = fixture(verifier);
+    const sub = await service.verifyAndProcessPurchase('buyer', {
+      planCode: PlanCode.FAMILY,
+      provider: 'GOOGLE_PLAY',
+      purchaseToken: 'real-token',
+    });
+    expect(sub).toMatchObject({ provider: 'GOOGLE_PLAY', status: SubscriptionStatus.ACTIVE, autoRenew: true });
+    expect(sub.metadata?.purchaseTokenHash).not.toContain('real-token');
+    expect(verifier.acknowledge).toHaveBeenCalledWith('in.virasat.subscription.family', 'real-token');
+    const payload = await service.getUserEntitlementsPayload('buyer');
+    expect(payload.effectivePlanCode).toBe(PlanCode.FAMILY);
+    expect(payload.entitlements.IN_PERSON_VISIT).toBe(true);
+    expect(payload.billingAvailable).toBe(true);
+  });
+
+  it.each([
+    ['another account bought it', { externalAccountIdentifiers: { obfuscatedExternalAccountId: 'someone-else' } }],
+    ['it has expired', { subscriptionState: 'SUBSCRIPTION_STATE_EXPIRED' }],
+    ['it is on hold for payment', { subscriptionState: 'SUBSCRIPTION_STATE_ON_HOLD' }],
+    ['Google does not know the token', null],
+  ])('refuses a purchase when %s', async (_reason, overrides) => {
+    const { verifier } = play(overrides ?? {});
+    if (overrides === null) verifier.getSubscription.mockResolvedValue(null as never);
+    const { service, repository } = fixture(verifier);
+    await expect(
+      service.verifyAndProcessPurchase('buyer', {
+        planCode: PlanCode.FAMILY,
+        provider: 'GOOGLE_PLAY',
+        purchaseToken: 'token',
+      }),
+    ).rejects.toThrow();
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(verifier.acknowledge).not.toHaveBeenCalled();
+  });
+
+  it('refuses a token claimed for a different plan, or already used by another account', async () => {
+    const { verifier } = play();
+    const { service, seed } = fixture(verifier);
+    await expect(
+      service.verifyAndProcessPurchase('buyer', {
+        planCode: PlanCode.SECURE,
+        provider: 'GOOGLE_PLAY',
+        purchaseToken: 'token',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    seed('first-owner', PlanCode.FAMILY, {
+      metadata: { purchaseTokenHash: hashPurchaseToken('shared-token') },
+    });
+    await expect(
+      service.verifyAndProcessPurchase('buyer', {
+        planCode: PlanCode.FAMILY,
+        provider: 'GOOGLE_PLAY',
+        purchaseToken: 'shared-token',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('refreshes state without claiming store restoration and refuses supplied store credentials', async () => {

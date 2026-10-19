@@ -34,6 +34,6 @@ export const faqsData: FaqItem[] = [
   },
   {
     question: 'Where can I get Virasat?',
-    answer: 'Virasat is available free on Google Play for Android: https://play.google.com/store/apps/details?id=in.virasat.app. Starter is free; paid plans are not on sale yet. The iOS app is coming soon.',
+    answer: 'Virasat is available free on Google Play for Android: https://play.google.com/store/apps/details?id=in.virasat.app. Starter is free. Secure (₹999/year) and Family (₹2,499/year) can be bought in the app through Google Play. The iOS app is coming soon.',
   },
 ];
