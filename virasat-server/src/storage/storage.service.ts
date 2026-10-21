@@ -274,6 +274,81 @@ export class StorageService {
     return complete;
   }
 
+  /**
+   * Create a direct presigned upload URL for client-side direct S3 uploads.
+   */
+  async createPresignedUploadUrl(params: {
+    vaultId: string;
+    itemId: string;
+    fileId?: string;
+    extension?: string;
+    mimeType?: string;
+    metadata?: Record<string, string>;
+    expiresInSeconds?: number;
+  }): Promise<{ uploadUrl: string; s3Key: string; s3Uri: string }> {
+    if (!this.s3StorageService.isConfigured()) {
+      throw new ServiceUnavailableException(
+        'Cloud storage is temporarily unavailable. Direct uploads require AWS S3 to be configured.',
+      );
+    }
+
+    const fileId = params.fileId || randomUUID();
+    const ext = params.extension ? `.${params.extension.replace(/^\./, '')}` : '.bin';
+    const s3Key = `vaults/${params.vaultId}/items/${params.itemId}/${fileId}${ext}`;
+
+    const result = await this.s3StorageService.getPresignedUploadUrl({
+      key: s3Key,
+      contentType: params.mimeType,
+      metadata: {
+        'vault-id': params.vaultId,
+        'item-id': params.itemId,
+        ...(params.metadata || {}),
+      },
+      expiresInSeconds: params.expiresInSeconds ?? 1800,
+    });
+
+    return {
+      uploadUrl: result.uploadUrl,
+      s3Key: result.key,
+      s3Uri: result.s3Uri,
+    };
+  }
+
+  /**
+   * Generate a presigned download URL for direct access to an S3 object.
+   */
+  async getPresignedDownloadUrl(s3Key: string, expiresInSeconds = 900): Promise<string> {
+    if (!this.s3StorageService.isConfigured()) {
+      throw new ServiceUnavailableException('AWS S3 is not configured.');
+    }
+    return this.s3StorageService.getPresignedDownloadUrl(
+      this.extractS3Key(s3Key),
+      expiresInSeconds,
+    );
+  }
+
+  /**
+   * Verify that an object exists on S3 and has non-zero size after direct upload.
+   */
+  async verifyUploadedObject(s3Key: string): Promise<{
+    sizeBytes: number;
+    contentType?: string;
+    metadata: Record<string, string>;
+  }> {
+    if (!this.s3StorageService.isConfigured()) {
+      throw new ServiceUnavailableException('AWS S3 is not configured.');
+    }
+    const key = this.extractS3Key(s3Key);
+    const details = await this.s3StorageService.getObjectDetails(key);
+    if (!details || details.sizeBytes <= 0) {
+      throw new BadRequestException(
+        'Uploaded file not found or empty on cloud storage.',
+      );
+    }
+    return details;
+  }
+
+
   private isS3Key(ref: string): boolean {
     return ref.startsWith('vaults/') || ref.startsWith('s3://');
   }

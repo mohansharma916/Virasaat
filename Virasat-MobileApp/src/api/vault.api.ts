@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { File, UploadType, type UploadProgress } from 'expo-file-system';
 import { api } from './client';
 
 export type LegacyItemType =
@@ -166,6 +167,132 @@ export async function uploadLegacyItem(
 
   return response.data;
 }
+
+export interface RequestUploadUrlRequest {
+  type: LegacyItemType;
+  category: string;
+  title: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  fileName?: string;
+  description?: string;
+  requestKey?: string;
+}
+
+export interface RequestUploadUrlResponse {
+  itemId: string;
+  uploadUrl: string | null;
+  s3Key: string;
+  expiresInSeconds: number;
+  alreadyActive: boolean;
+  item?: LegacyItem;
+}
+
+export interface ConfirmDirectUploadRequest {
+  itemId: string;
+  s3Key: string;
+  thumbnailBase64?: string;
+}
+
+export async function requestDirectUploadUrl(
+  data: RequestUploadUrlRequest,
+): Promise<RequestUploadUrlResponse> {
+  const response = await api.post<RequestUploadUrlResponse>(
+    '/vault/items/upload-url',
+    data,
+  );
+  return response.data;
+}
+
+export async function uploadFileToPresignedUrl(
+  uploadUrl: string,
+  uri: string,
+  mimeType: string,
+  options?: {
+    onProgress?: (percent: number) => void;
+    signal?: AbortSignal;
+  },
+): Promise<void> {
+  const cleanMime = mimeType || 'application/octet-stream';
+
+  if (Platform.OS === 'web') {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadUrl, true);
+      xhr.setRequestHeader('Content-Type', cleanMime);
+
+      if (options?.signal) {
+        options.signal.addEventListener('abort', () => {
+          xhr.abort();
+          reject(new Error('Upload aborted'));
+        });
+      }
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && options?.onProgress) {
+          options.onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Direct cloud upload failed with status ${xhr.status}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Direct cloud upload network error. Check your connection.'));
+      xhr.ontimeout = () => reject(new Error('Direct cloud upload timed out.'));
+
+      fetch(uri)
+        .then((res) => res.blob())
+        .then((blob) => xhr.send(blob))
+        .catch(reject);
+    });
+  }
+
+  // Native (iOS & Android) via expo-file-system File.upload
+  const file = new File(uri);
+  const result = await file.upload(uploadUrl, {
+    httpMethod: 'PUT',
+    uploadType: UploadType.BINARY_CONTENT,
+    headers: {
+      'Content-Type': cleanMime,
+    },
+    onProgress: (progress: UploadProgress) => {
+      if (progress.totalBytes > 0 && options?.onProgress) {
+        options.onProgress(
+          Math.min(100, Math.round((progress.bytesSent / progress.totalBytes) * 100)),
+        );
+      }
+    },
+  });
+
+  if (result.status < 200 || result.status >= 300) {
+    throw new Error(`Direct cloud upload failed (status ${result.status})`);
+  }
+}
+
+export async function confirmDirectUpload(
+  data: ConfirmDirectUploadRequest,
+): Promise<LegacyItem> {
+  const response = await api.post<LegacyItem>(
+    '/vault/items/confirm-upload',
+    data,
+  );
+  return response.data;
+}
+
+export async function getLegacyItemFileUrl(
+  id: string,
+): Promise<{ downloadUrl: string; fileName: string; mimeType: string; sizeBytes: number }> {
+  const response = await api.get<{ downloadUrl: string; fileName: string; mimeType: string; sizeBytes: number }>(
+    `/vault/items/${id}/file-url`,
+  );
+  return response.data;
+}
+
 
 // Changing an existing assignment also needs the password or a fresh Google sign-in.
 export async function assignLegacyItem(id: string, data: {

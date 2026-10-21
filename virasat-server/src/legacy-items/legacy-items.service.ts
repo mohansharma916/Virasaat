@@ -31,10 +31,12 @@ import {
 import { StorageService } from '../storage/storage.service';
 import { S3StorageService } from '../storage/s3-storage.service';
 import { Optional } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { PlanEntitlementService } from '../subscriptions/plan-entitlement.service';
 import { PlanLimit } from '../subscriptions/subscription.constants';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
+import { RequestUploadUrlDto } from './dto/request-upload-url.dto';
+import { ConfirmDirectUploadDto } from './dto/confirm-direct-upload.dto';
 import { ReauthService } from '../users/reauth.service';
 import {
   MAX_DOCUMENT_BYTES,
@@ -103,6 +105,7 @@ interface ItemKeyRef extends StoredEnvelope {
   description?: StoredEnvelope;
   fileMetadata?: StoredEnvelope;
   contentKind?: 'VIDEO';
+  directS3Upload?: boolean;
 }
 
 @Injectable()
@@ -229,7 +232,7 @@ export class LegacyItemsService {
     if (fileBuffer.length > (isVideo ? MAX_VIDEO_BYTES : MAX_DOCUMENT_BYTES)) {
       throw new BadRequestException(
         isVideo
-          ? 'Videos must be 100 MB or smaller.'
+          ? 'Videos must be 1 GB or smaller.'
           : 'Files must be 25 MB or smaller.',
       );
     }
@@ -326,6 +329,223 @@ export class LegacyItemsService {
     }
   }
 
+  /**
+   * Generates a direct presigned S3 PUT URL for uploading large files (such as 1 GB videos).
+   * Verifies user entitlement and vault capacity, then stages a DRAFT item in the database.
+   */
+  async requestDirectUploadUrl(userId: string, dto: RequestUploadUrlDto) {
+    if (!this.storageService.isS3Enabled()) {
+      throw new ServiceUnavailableException(
+        'Direct cloud uploads require AWS S3 storage to be configured.',
+      );
+    }
+
+    const mimeType = this.safeMimeType(dto.mimeType);
+    const isVideo =
+      dto.type === LegacyItemType.VIDEO || mimeType.startsWith('video/');
+
+    if (dto.fileSizeBytes > (isVideo ? MAX_VIDEO_BYTES : MAX_DOCUMENT_BYTES)) {
+      throw new BadRequestException(
+        isVideo
+          ? 'Videos must be 1 GB or smaller.'
+          : 'Files must be 25 MB or smaller.',
+      );
+    }
+
+    const vault = await this.vaultService.getUserVault(userId);
+
+    // If idempotent requestKey was passed, check if already active
+    if (dto.requestKey) {
+      const existing = await this.itemRepository.findOne({
+        where: { vaultId: vault.id, requestKey: dto.requestKey },
+      });
+      if (existing && existing.status === LegacyItemStatus.ACTIVE) {
+        return {
+          itemId: existing.id,
+          alreadyActive: true,
+          uploadUrl: null,
+          s3Key: existing.ciphertextRef,
+          item: this.withPlainTitle(existing),
+        };
+      }
+    }
+
+    // Verify user vault capacity before generating upload URL
+    await this.itemRepository.manager.transaction(async (manager) => {
+      await this.assertCapacity(manager, userId, vault.id, {
+        isText: dto.type === LegacyItemType.TEXT,
+        isVideo,
+        bytes: dto.fileSizeBytes,
+      });
+    });
+
+    const extension = dto.fileName?.includes('.')
+      ? dto.fileName.split('.').pop()
+      : isVideo
+        ? 'mp4'
+        : 'bin';
+
+    const itemId = randomUUID();
+    const presigned = await this.storageService.createPresignedUploadUrl({
+      vaultId: vault.id,
+      itemId,
+      extension,
+      mimeType,
+      expiresInSeconds: 1800,
+    });
+
+    const encryptedDescription = dto.description
+      ? this.encryptInline(dto.description, vault.id, 'description')
+      : null;
+
+    const fileMetadata = dto.fileName
+      ? this.encryptInline(
+          JSON.stringify({ fileName: this.safeFileName(dto.fileName) }),
+          vault.id,
+          'file-metadata',
+        )
+      : undefined;
+
+    const item = this.itemRepository.create({
+      id: itemId,
+      vaultId: vault.id,
+      requestKey: dto.requestKey ?? null,
+      type: dto.type,
+      category: dto.category,
+      title: this.sealTitle(dto.title, vault.id),
+      description: null,
+      ciphertextRef: presigned.s3Key,
+      encryptionKeyRef: JSON.stringify({
+        storageType: 'S3',
+        storageKey: presigned.s3Key,
+        s3Uri: presigned.s3Uri,
+        mimeType,
+        sizeBytes: dto.fileSizeBytes,
+        description: encryptedDescription || undefined,
+        fileMetadata,
+        contentKind: isVideo ? 'VIDEO' : undefined,
+        directS3Upload: true,
+      }),
+      encryptionKeyVersion: 'direct-s3',
+      payloadStorageType: 'S3',
+      thumbnail: null,
+      hasThumbnail: false,
+      status: LegacyItemStatus.DRAFT,
+    });
+
+    await this.itemRepository.save(item);
+
+    return {
+      itemId: item.id,
+      uploadUrl: presigned.uploadUrl,
+      s3Key: presigned.s3Key,
+      expiresInSeconds: 1800,
+      alreadyActive: false,
+    };
+  }
+
+  /**
+   * Confirms a direct S3 upload, verifies the object in S3, attaches thumbnail if present,
+   * verifies capacity against actual size, and transitions the item to ACTIVE.
+   */
+  async confirmDirectUpload(userId: string, dto: ConfirmDirectUploadDto) {
+    const vault = await this.vaultService.getUserVault(userId);
+
+    const item = await this.itemRepository.findOne({
+      where: { id: dto.itemId, vaultId: vault.id },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Vault item not found.');
+    }
+
+    if (item.status === LegacyItemStatus.ACTIVE) {
+      return this.withPlainTitle(item);
+    }
+
+    // Verify file existence and actual size on S3
+    const s3Object = await this.storageService.verifyUploadedObject(dto.s3Key);
+    const keyRef = this.keyRef(item);
+    const isVideo =
+      item.type === LegacyItemType.VIDEO ||
+      keyRef.contentKind === 'VIDEO' ||
+      Boolean(keyRef.mimeType?.startsWith('video/'));
+
+    // Check capacity with verified size
+    await this.itemRepository.manager.transaction(async (manager) => {
+      await this.assertCapacity(manager, userId, vault.id, {
+        isText: item.type === LegacyItemType.TEXT,
+        isVideo,
+        bytes: s3Object.sizeBytes,
+      });
+    });
+
+    // Update keyRef with actual uploaded details
+    keyRef.sizeBytes = s3Object.sizeBytes;
+    if (s3Object.metadata?.['sha256-checksum']) {
+      keyRef.checksumSha256 = s3Object.metadata['sha256-checksum'];
+    }
+    item.encryptionKeyRef = JSON.stringify(keyRef);
+    item.ciphertextRef = dto.s3Key;
+    item.payloadStorageType = 'S3';
+
+    // Handle thumbnail if provided
+    if (dto.thumbnailBase64) {
+      try {
+        const thumbBuffer = Buffer.from(dto.thumbnailBase64, 'base64');
+        if (
+          thumbBuffer.length > 3 &&
+          thumbBuffer.length <= MAX_THUMBNAIL_BYTES &&
+          thumbBuffer[0] === 0xff &&
+          thumbBuffer[1] === 0xd8 &&
+          thumbBuffer[2] === 0xff
+        ) {
+          item.thumbnail = JSON.stringify(
+            this.encryptBinary(thumbBuffer, vault.id, 'thumbnail'),
+          );
+          item.hasThumbnail = true;
+        }
+      } catch {
+        // Thumbnail is optional
+      }
+    }
+
+    item.status = LegacyItemStatus.ACTIVE;
+    const saved = await this.itemRepository.save(item);
+
+    return this.withPlainTitle(saved);
+  }
+
+  /**
+   * Generates a time-limited S3 Presigned GET URL for streaming/downloading large files.
+   */
+  async getDirectFileDownloadUrl(userId: string, itemId: string) {
+    const item = await this.loadOwnedItem(userId, itemId);
+    const keyRef = this.keyRef(item);
+    const storageType = this.storageType(item, keyRef);
+
+    if (!item.ciphertextRef || storageType !== 'S3') {
+      throw new BadRequestException(
+        'Direct download URL is only available for cloud-stored files.',
+      );
+    }
+
+    const downloadUrl = await this.storageService.getPresignedDownloadUrl(
+      item.ciphertextRef,
+      1800,
+    );
+
+    const detail = this.ownerDetail(item);
+    return {
+      downloadUrl,
+      fileName: detail.fileName,
+      mimeType: detail.mimeType,
+      sizeBytes: detail.sizeBytes,
+      expiresInSeconds: 1800,
+    };
+  }
+
+
   private requestHash(
     data: {
       type: string;
@@ -409,7 +629,7 @@ export class LegacyItemsService {
     const current = rows[0] ?? { items: 0, bytes: 0, texts: 0, videos: 0 };
     const maxItems = positiveSetting(process.env.VAULT_MAX_ITEMS, 500);
     const maxBytes =
-      positiveSetting(process.env.VAULT_STORAGE_QUOTA_MB, 1024) * 1024 * 1024;
+      positiveSetting(process.env.VAULT_STORAGE_QUOTA_MB, 5120) * 1024 * 1024;
     if (Number(current.items) >= maxItems)
       throw new ForbiddenException({
         statusCode: 403,
@@ -976,6 +1196,18 @@ export class LegacyItemsService {
       item.ciphertextRef,
     );
 
+    const detail = this.ownerDetail(item);
+
+    if (keyRef.directS3Upload) {
+      return {
+        buffer: ciphertext,
+        mimeType: detail.mimeType!,
+        filename: detail.fileName!,
+        sizeBytes: ciphertext.length,
+        storageType,
+      };
+    }
+
     const decrypted = this.decryptEnvelope(
       keyRef,
       ciphertext,
@@ -983,7 +1215,6 @@ export class LegacyItemsService {
       item.vaultId,
       'file',
     );
-    const detail = this.ownerDetail(item);
 
     return {
       buffer: decrypted,

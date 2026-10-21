@@ -32,7 +32,14 @@ import { typography } from '@/src/theme/typography';
 import { parseLegacyCategories } from '@/src/utils/legacy-flow';
 import { MAX_VIDEO_BYTES, MAX_VIDEO_LABEL } from '@/src/utils/upload-limits';
 import { createUploadThumbnail, deleteThumbnail } from '@/src/utils/thumbnails';
-import { uploadLegacyItem, createItemRequestKey } from '@/src/api/vault.api';
+import {
+  createItemRequestKey,
+  requestDirectUploadUrl,
+  uploadFileToPresignedUrl,
+  confirmDirectUpload,
+  uploadLegacyItem,
+  type LegacyItem,
+} from '@/src/api/vault.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { addLegacyItem } from '@/src/store/vault.slice';
@@ -40,9 +47,9 @@ import { useSubscription } from '@/src/store/subscription.slice';
 import { PlanLimit } from '@/src/types/subscription.types';
 import { UpgradeModal } from '@/src/components/UpgradeModal';
 
-const MAX_DURATION_SECONDS = 5 * 60;
+const MAX_DURATION_SECONDS = 10 * 60; // 10 minutes
 // Leave headroom under the upload limit for the container's final metadata.
-const MAX_RECORDING_BYTES = MAX_VIDEO_BYTES - 2 * 1024 * 1024;
+const MAX_RECORDING_BYTES = MAX_VIDEO_BYTES - 10 * 1024 * 1024;
 
 type SelectedVideo = {
   uri: string;
@@ -240,21 +247,79 @@ export default function LegacyVideoMessageScreen() {
         || (video.name ?? video.uri).split('?')[0].toLowerCase().endsWith('.mov');
       const extension = isQuickTime ? 'mov' : 'mp4';
       thumbnailUri = await createUploadThumbnail(video.uri, 'video/mp4');
-      const item = await uploadLegacyItem({
-        requestKey: requestKey.current,
-        type: 'VIDEO',
-        category: 'VIDEOS',
-        title: 'Video message',
-        description: video.source === 'recorded'
-          ? 'A video message was recorded on the owner’s device.'
-          : 'A video message was uploaded from the owner’s device.',
-        file: {
-          uri: video.uri,
-          name: `virasat-video-${Date.now()}.${extension}`,
-          mimeType: isQuickTime ? 'video/quicktime' : 'video/mp4',
-        },
-        thumbnailUri,
-      }, { signal: controller.signal, onProgress: setProgress });
+
+      let thumbnailBase64: string | undefined;
+      if (thumbnailUri) {
+        try {
+          const thumbFile = new File(thumbnailUri);
+          const thumbBytes = await thumbFile.arrayBuffer();
+          let binary = '';
+          const bytes = new Uint8Array(thumbBytes);
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          thumbnailBase64 = btoa(binary);
+        } catch {
+          // Thumbnail preview is optional
+        }
+      }
+
+      const fileName = `virasat-video-${Date.now()}.${extension}`;
+      const mimeType = isQuickTime ? 'video/quicktime' : 'video/mp4';
+
+      let item: LegacyItem;
+      try {
+        // 1. Request direct S3 presigned PUT URL
+        const uploadInit = await requestDirectUploadUrl({
+          type: 'VIDEO',
+          category: 'VIDEOS',
+          title: 'Video message',
+          fileSizeBytes: videoFile.size,
+          mimeType,
+          fileName,
+          description: video.source === 'recorded'
+            ? 'A video message was recorded on the owner’s device.'
+            : 'A video message was uploaded from the owner’s device.',
+          requestKey: requestKey.current,
+        });
+
+        if (uploadInit.alreadyActive && uploadInit.item) {
+          item = uploadInit.item;
+        } else if (uploadInit.uploadUrl) {
+          // 2. Direct binary HTTP PUT from phone to S3
+          await uploadFileToPresignedUrl(uploadInit.uploadUrl, video.uri, mimeType, {
+            onProgress: setProgress,
+            signal: controller.signal,
+          });
+
+          // 3. Confirm upload with backend
+          item = await confirmDirectUpload({
+            itemId: uploadInit.itemId,
+            s3Key: uploadInit.s3Key,
+            thumbnailBase64,
+          });
+        } else {
+          throw new Error('Unable to initialize cloud upload.');
+        }
+      } catch (directError) {
+        if (controller.signal.aborted) throw directError;
+        // Fallback to legacy server upload if S3 direct upload is unconfigured
+        item = await uploadLegacyItem({
+          requestKey: requestKey.current,
+          type: 'VIDEO',
+          category: 'VIDEOS',
+          title: 'Video message',
+          description: video.source === 'recorded'
+            ? 'A video message was recorded on the owner’s device.'
+            : 'A video message was uploaded from the owner’s device.',
+          file: {
+            uri: video.uri,
+            name: fileName,
+            mimeType,
+          },
+          thumbnailUri,
+        }, { signal: controller.signal, onProgress: setProgress });
+      }
       if (!alive.current) return;
       dispatch(addLegacyItem(item));
       haptics.success();

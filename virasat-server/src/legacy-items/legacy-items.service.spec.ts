@@ -66,6 +66,7 @@ describe('owner vault recovery', () => {
       }),
       createQueryBuilder: () => query,
       find: jest.fn(async () => [...rows.values()]),
+      findOne: jest.fn(async ({ where }) => (where?.id ? rows.get(where.id) ?? null : null)),
       manager: {
         transaction: async (run) =>
           run({ getRepository: () => repository, query: async () => [] }),
@@ -73,6 +74,18 @@ describe('owner vault recovery', () => {
     };
     const storage = {
       isS3Enabled: () => true,
+      createPresignedUploadUrl: jest.fn(async (input) => ({
+        uploadUrl: `https://s3.amazonaws.com/bucket/vaults/${input.vaultId}/items/${input.itemId}/file.mp4?signed=1`,
+        s3Key: `vaults/${input.vaultId}/items/${input.itemId}/file.mp4`,
+        s3Uri: `s3://bucket/vaults/${input.vaultId}/items/${input.itemId}/file.mp4`,
+      })),
+      getPresignedDownloadUrl: jest.fn(async (key: string) => `https://s3.amazonaws.com/bucket/${key}?signed-get=1`),
+      verifyUploadedObject: jest.fn(async (key: string) => ({
+        sizeBytes: 500 * 1024 * 1024,
+        contentType: 'video/mp4',
+        metadata: { 'sha256-checksum': 'abc123sha' },
+        eTag: 'etag123',
+      })),
       saveVaultItemFile: jest.fn(async (input) => {
         const key = `vaults/vault/items/item/${ciphertexts.size}.bin`;
         ciphertexts.set(key, input.ciphertext);
@@ -389,4 +402,58 @@ describe('owner vault recovery', () => {
       original,
     );
   });
+
+  it('supports direct S3 upload flow up to 1 GB for videos', async () => {
+    const { service, storage, rows } = fixture();
+
+    // 1. Request presigned upload URL for a 500 MB video
+    const uploadInit = await service.requestDirectUploadUrl('owner', {
+      type: LegacyItemType.VIDEO,
+      category: 'VIDEOS',
+      title: 'Direct Video Message',
+      fileSizeBytes: 500 * 1024 * 1024,
+      mimeType: 'video/mp4',
+      fileName: 'my-message.mp4',
+      description: 'A 500 MB video message',
+    });
+
+    expect(uploadInit.uploadUrl).toContain('https://s3.amazonaws.com');
+    expect(uploadInit.itemId).toBeDefined();
+    expect(uploadInit.alreadyActive).toBe(false);
+    expect(storage.createPresignedUploadUrl).toHaveBeenCalled();
+
+    // The item should be in DRAFT state
+    const draftItem = rows.get(uploadInit.itemId);
+    expect(draftItem?.status).toBe('DRAFT');
+
+    // 2. Confirm direct upload
+    const confirmed = await service.confirmDirectUpload('owner', {
+      itemId: uploadInit.itemId,
+      s3Key: uploadInit.s3Key,
+    });
+
+    expect(confirmed.status).toBe('ACTIVE');
+    expect(storage.verifyUploadedObject).toHaveBeenCalledWith(uploadInit.s3Key);
+
+    // 3. Get direct file download URL
+    const fileUrl = await service.getDirectFileDownloadUrl('owner', uploadInit.itemId);
+    expect(fileUrl.downloadUrl).toContain('signed-get=1');
+    expect(fileUrl.mimeType).toBe('video/mp4');
+  });
+
+  it('rejects video files exceeding 1 GB', async () => {
+    const { service } = fixture();
+    const overOneGb = 1024 * 1024 * 1024 + 1;
+
+    await expect(
+      service.requestDirectUploadUrl('owner', {
+        type: LegacyItemType.VIDEO,
+        category: 'VIDEOS',
+        title: 'Too Large Video',
+        fileSizeBytes: overOneGb,
+        mimeType: 'video/mp4',
+      }),
+    ).rejects.toThrow('Videos must be 1 GB or smaller.');
+  });
 });
+

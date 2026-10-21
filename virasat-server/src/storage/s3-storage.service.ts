@@ -336,4 +336,70 @@ export class S3StorageService {
       expiresIn: expiresInSeconds,
     });
   }
+
+  /**
+   * Generate a time-limited presigned PUT URL for direct client-to-S3 uploads.
+   * Default expiration is 1800s (30 minutes) to allow 1 GB uploads on mobile connections.
+   */
+  async getPresignedUploadUrl(params: {
+    key: string;
+    contentType?: string;
+    metadata?: Record<string, string>;
+    expiresInSeconds?: number;
+  }): Promise<{ uploadUrl: string; key: string; s3Uri: string; bucket: string; region: string }> {
+    if (!this.s3Client || !this.bucketName) {
+      throw new Error(
+        'Cannot generate upload URL: AWS S3 is not configured.',
+      );
+    }
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: params.key,
+      ...(params.contentType ? { ContentType: params.contentType } : {}),
+      ...(params.metadata ? { Metadata: params.metadata } : {}),
+    });
+
+    const uploadUrl = await getSignedUrl(this.s3Client, command, {
+      expiresIn: params.expiresInSeconds ?? 1800,
+    });
+
+    return {
+      uploadUrl,
+      key: params.key,
+      s3Uri: `s3://${this.bucketName}/${params.key}`,
+      bucket: this.bucketName,
+      region: this.region,
+    };
+  }
+
+  /**
+   * Fetch object existence, size and metadata using HeadObject.
+   */
+  async getObjectDetails(key: string): Promise<{
+    sizeBytes: number;
+    contentType?: string;
+    metadata: Record<string, string>;
+    eTag?: string;
+  } | null> {
+    if (!this.s3Client || !this.bucketName) return null;
+
+    try {
+      const response = await this.s3Client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        }),
+      );
+      return {
+        sizeBytes: response.ContentLength ?? 0,
+        contentType: response.ContentType,
+        metadata: response.Metadata || {},
+        eTag: response.ETag,
+      };
+    } catch {
+      return null;
+    }
+  }
 }
+

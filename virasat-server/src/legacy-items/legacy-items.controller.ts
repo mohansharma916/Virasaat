@@ -26,6 +26,8 @@ import { MAX_VIDEO_BYTES } from './upload-limits';
 
 import { CreateLegacyItemDto } from './dto/create-legacy-item.dto';
 import { UpdateLegacyItemDto } from './dto/update-legacy-item.dto';
+import { RequestUploadUrlDto } from './dto/request-upload-url.dto';
+import { ConfirmDirectUploadDto } from './dto/confirm-direct-upload.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserRateLimit } from '../auth/guards/user-rate-limit.guard';
@@ -41,6 +43,55 @@ export class LegacyItemsController {
       await this.legacyItemsService.create(req.user.id, dto),
     );
   }
+
+  /**
+   * Request a direct presigned S3 PUT URL for uploading large files (up to 1 GB).
+   */
+  @Post('upload-url')
+  async requestUploadUrl(
+    @Req() req: any,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    )
+    dto: RequestUploadUrlDto,
+  ) {
+    const result = await this.legacyItemsService.requestDirectUploadUrl(
+      req.user.id,
+      dto,
+    );
+    if ('item' in result && result.item) {
+      return {
+        ...result,
+        item: this.safeItem(result.item),
+      };
+    }
+    return result;
+  }
+
+  /**
+   * Confirm that direct S3 upload completed and activate the vault item.
+   */
+  @Post('confirm-upload')
+  async confirmUpload(
+    @Req() req: any,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    )
+    dto: ConfirmDirectUploadDto,
+  ) {
+    return this.safeItem(
+      await this.legacyItemsService.confirmDirectUpload(req.user.id, dto),
+    );
+  }
+
 
   @Post('upload')
   @UseInterceptors(
@@ -187,6 +238,18 @@ export class LegacyItemsController {
     res.setHeader('Cache-Control', 'no-store');
     res.end(fileResult.buffer);
   }
+
+  /**
+   * Get direct S3 presigned download URL for fast streaming / download.
+   */
+  @Get(':id/file-url')
+  async getFileDownloadUrl(
+    @Req() req: any,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.legacyItemsService.getDirectFileDownloadUrl(req.user.id, id);
+  }
+
 
   /**
    * Decrypted JPEG preview made on the owner's device at upload time.

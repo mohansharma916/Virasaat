@@ -6,7 +6,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import type { File } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { downloadLegacyItem, getLegacyItem, updateLegacyItem, type LegacyItemDetail } from '@/src/api/vault.api';
+import {
+  downloadLegacyItem,
+  getLegacyItem,
+  updateLegacyItem,
+  getLegacyItemFileUrl,
+  type LegacyItemDetail,
+} from '@/src/api/vault.api';
 import { downloadReleasedFile, getReleasedItem } from '@/src/api/shared.api';
 import { getApiErrorMessage } from '@/src/utils/api-error';
 import { useAppDispatch } from '@/src/store/hooks';
@@ -147,8 +153,22 @@ export default function SavedItemScreen() {
     const signal = controller.current?.signal;
     setBusy(true);
     setError('');
-    setVideoProgress(0);
+
     try {
+      if (!shared) {
+        try {
+          const direct = await getLegacyItemFileUrl(item.id);
+          if (direct.downloadUrl) {
+            removeVideoCopy();
+            setVideoUri(direct.downloadUrl);
+            return;
+          }
+        } catch {
+          // Fallback to local download cache if direct S3 URL is not available
+        }
+      }
+
+      setVideoProgress(0);
       removeVideoCopy();
       const extension = item.mimeType === 'video/quicktime' ? 'mov' : 'mp4';
       const file = await downloadVaultFileToCache(item.id, `${item.id}-play.${extension}`, {
