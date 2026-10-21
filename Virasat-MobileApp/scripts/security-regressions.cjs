@@ -33,6 +33,22 @@ function fixture() {
       getItemAsync: async (key) => storage.get(key) ?? null,
       deleteItemAsync: async (key) => { storage.delete(key); },
     },
+    'expo-file-system': {
+      File: class MockFile {
+        constructor(...uris) { this.uri = uris.join('/'); this.exists = true; this.size = 100; }
+        create() {}
+        delete() {}
+        upload() { return Promise.resolve({ status: 200 }); }
+        static downloadFileAsync() { return Promise.resolve(new this()); }
+      },
+      Directory: class MockDirectory {
+        constructor(...uris) { this.uri = uris.join('/'); }
+        create() {}
+        delete() {}
+      },
+      UploadType: { BINARY_CONTENT: 0, MULTIPART: 1 },
+      Paths: { cache: '/tmp', document: '/tmp' },
+    },
   };
   function load(file) {
     const absolute = resolve(root, file);
